@@ -1,0 +1,48 @@
+---
+description: After completing work, commit and push to the default branch (master).
+alwaysApply: true
+---
+
+# Auto commit and push
+
+When you finish a task that changed files in this repo, **commit and push without waiting for a separate request**, unless the user explicitly says not to commit in that turn.
+
+## Branch
+
+- Push to **`origin/master`** (this repo’s default branch; there is no `main` branch unless renamed).
+
+## When to skip
+
+- No file changes to commit.
+- Changes are only secrets (`.dev.vars`, credentials, API keys) — warn the user; do not commit those files.
+- A commit or push already failed — fix the issue and make a **new** commit; do not amend unless the user’s global git rules allow it.
+- The user says “don’t commit”, “WIP only”, or similar in the same message.
+
+## Git safety (required)
+
+- Do not update `git config`.
+- No destructive git (force push, hard reset) unless the user explicitly asks.
+- No `--no-verify` unless the user explicitly asks.
+- Never force-push `master`.
+
+## Workflow
+
+1. Run `git status` and `git diff` to see what changed.
+2. Stage relevant files (never secrets).
+3. Write a concise 1–2 sentence commit message focused on **why**.
+4. Commit, then `git push origin master`.
+5. Briefly tell the user the commit hash and that push succeeded (or what failed).
+
+On Windows PowerShell, use a here-string for multi-line commit messages when needed:
+
+```powershell
+git commit -m @"
+Summary line.
+
+Optional body.
+"@
+```
+
+## Deploy
+
+Do **not** auto-deploy to Cloudflare unless the user asks. Commit/push only.
