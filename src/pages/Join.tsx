@@ -1,5 +1,6 @@
 import { Layout, PageHeader, DemoBanner } from '../views/Layout'
-import { joinBenefits, memberTypes, site } from '../data/demo'
+import { JoinApplicationAside, JoinApplicationForm } from '../views/JoinApplicationForm'
+import { joinBenefits, memberTypes } from '../data/demo'
 
 import type { PageProps } from '../types/page'
 
@@ -12,6 +13,38 @@ export function JoinPage({ theme }: PageProps) {
         lead="Membership connects your firm to advocacy, safety resources, events, and a network of industry peers."
       />
       <section class="section">
+        <div class="container split">
+          <div>
+            <h2>Why members join</h2>
+            <p class="section-lead">
+              From Washington advocacy to local networking, NUCA gives utility and excavation firms a voice and a
+              playbook.
+            </p>
+            <ul class="check-list">
+              <li>Member pricing on chapter events</li>
+              <li>Committee leadership and board pathways</li>
+              <li>Safety and training resources</li>
+              <li>Full national NUCA member benefits</li>
+            </ul>
+          </div>
+          <div class="stat-panel">
+            <div class="stat">
+              <span class="stat-value">50+</span>
+              <span class="stat-label">Years of national NUCA safety leadership</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value">Local</span>
+              <span class="stat-label">Las Vegas chapter focused on Nevada projects &amp; policy</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value">Industry</span>
+              <span class="stat-label">Contractors, associates, and institutional partners</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section-muted">
         <div class="container">
           <h2>Member benefits</h2>
           <ul class="benefit-grid">
@@ -25,7 +58,7 @@ export function JoinPage({ theme }: PageProps) {
         </div>
       </section>
 
-      <section class="section section-muted">
+      <section class="section">
         <div class="container">
           <h2>Membership types</h2>
           <div class="type-cards">
@@ -40,58 +73,16 @@ export function JoinPage({ theme }: PageProps) {
       </section>
 
       <section class="section">
-        <div class="container join-grid">
+        <div class="container join-grid join-grid--application">
           <div>
             <h2>Apply online</h2>
             <p class="section-lead">
-              Demo form — submissions are not stored yet. Production will email {site.email} and save to D1.
+              Complete the same information as the chapter membership application. You can also download the PDF and
+              return it by email.
             </p>
-            <form class="form" method="post" action="/join" id="join-form">
-              <div class="form-field">
-                <label for="member_type">Membership type</label>
-                <select name="member_type" id="member_type" required>
-                  <option value="">Select…</option>
-                  {memberTypes.map((t) => (
-                    <option value={t.id} key={t.id}>{t.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div class="form-field">
-                <label for="company">Company name</label>
-                <input type="text" name="company" id="company" required />
-              </div>
-              <div class="form-row">
-                <div class="form-field">
-                  <label for="contact_name">Contact name</label>
-                  <input type="text" name="contact_name" id="contact_name" required />
-                </div>
-                <div class="form-field">
-                  <label for="contact_email">Email</label>
-                  <input type="email" name="contact_email" id="contact_email" required />
-                </div>
-              </div>
-              <div class="form-field">
-                <label for="phone">Phone</label>
-                <input type="tel" name="phone" id="phone" />
-              </div>
-              <div class="form-field">
-                <label for="notes">Notes</label>
-                <textarea name="notes" id="notes" rows={4} placeholder="Optional details about your firm or application"></textarea>
-              </div>
-              <button type="submit" class="btn btn-primary">Submit application (demo)</button>
-            </form>
+            <JoinApplicationForm />
           </div>
-          <aside class="join-aside">
-            <h3>PDF application</h3>
-            <p>
-              Prefer a paper form? Download the application, complete it, and email to{' '}
-              <a href="mailto:info@nucalasvegas.com">{site.email}</a>.
-            </p>
-            <a class="btn btn-secondary" href="#">Download PDF (placeholder)</a>
-            <p class="aside-note">
-              For questions, contact Jennifer Bott at <a href="tel:7025778556">{site.phone}</a>.
-            </p>
-          </aside>
+          <JoinApplicationAside />
         </div>
       </section>
     </Layout>

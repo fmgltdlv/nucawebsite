@@ -685,6 +685,10 @@ a:hover {
   margin: 0 0 1.5rem;
 }
 
+.section-footer-link {
+  margin: 1.5rem 0 0;
+}
+
 .split {
   display: grid;
   gap: 2rem;
@@ -1059,6 +1063,14 @@ a:hover {
   .join-grid {
     grid-template-columns: 1.2fr 0.8fr;
   }
+
+  .join-grid--application {
+    grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+  }
+}
+
+.join-grid--application {
+  align-items: start;
 }
 
 .join-aside {
@@ -1132,6 +1144,149 @@ a:hover {
 .form-hint-warn {
   color: var(--color-accent);
   font-weight: 500;
+}
+
+.form-wide {
+  max-width: none;
+}
+
+.form-section {
+  margin: 0;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.form-section legend {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 0 0.35rem;
+}
+
+.form-radio-list,
+.committee-interest-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.form-radio-list li {
+  margin: 0.5rem 0;
+}
+
+.form-radio-label,
+.form-check-label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.form-radio-label input,
+.form-check-label input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.form-checkbox-grid {
+  display: grid;
+  gap: 0.35rem 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+}
+
+.form-checkbox-grid--compact {
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+}
+
+.form-check-label span {
+  line-height: 1.35;
+}
+
+@media (min-width: 700px) {
+  .form-row-3 {
+    grid-template-columns: 2fr 1fr 1.4fr;
+  }
+}
+
+.zip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.zip-row input:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.zip-row input[name='zip_ext'] {
+  width: 5.5rem;
+  flex: 0 0 auto;
+}
+
+.zip-sep {
+  color: var(--color-muted);
+}
+
+.key-person-row {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.key-person-row:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.key-person-row-label {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+@media (min-width: 600px) {
+  .form-row-2x2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.committee-interest-list li {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.committee-interest-list li:last-child {
+  border-bottom: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.committee-interest-label {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.join-type-placeholder {
+  margin: 0;
+}
+
+.join-type-panel-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+
+.join-type-subtitle {
+  margin: 1.25rem 0 0.35rem;
+  font-size: 0.95rem;
 }
 
 /* Contact */
