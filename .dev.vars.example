@@ -1,0 +1,3 @@
+# Copy to `.dev.vars` for local dev (gitignored)
+JWT_SECRET=local-jwt-secret-change-in-production
+ADMIN_PASSWORD=ChangeThisAdminPassword!

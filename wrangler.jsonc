@@ -1,0 +1,32 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "nucawebsite",
+  "main": "src/index.tsx",
+  "compatibility_date": "2025-04-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "nuca-lv",
+      "database_id": "5c1a2747-1aa5-40e8-bccc-23ca40c1af7f",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "nuca-lv-assets"
+    }
+  ],
+  "send_email": [
+    {
+      "name": "EMAIL"
+    }
+  ],
+  "vars": {
+    "ADMIN_EMAIL": "info@nucalasvegas.com"
+  }
+}

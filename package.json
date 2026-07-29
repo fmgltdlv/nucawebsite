@@ -1,0 +1,19 @@
+{
+  "name": "nucawebsite",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "check": "wrangler check"
+  },
+  "dependencies": {
+    "hono": "^4.7.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260722.1",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.24.0"
+  }
+}
