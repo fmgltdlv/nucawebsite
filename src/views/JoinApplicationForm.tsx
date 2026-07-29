@@ -156,10 +156,10 @@ export function JoinApplicationForm() {
         Select a membership type above to show dues and category questions for that application.
       </p>
 
-      <fieldset class="form-section" id="join-membership-details" hidden>
+      <fieldset class="form-section" id="join-membership-details">
         <legend>Membership details</legend>
 
-        <div class="join-type-panel" data-member-type="contractor" hidden>
+        <div class="join-type-panel" data-member-type="contractor">
           <h3 class="join-type-panel-title">Contractor member</h3>
           <p class="form-hint">Dues are based on your company&apos;s total annual utility construction revenue.</p>
           <ul class="form-radio-list">
@@ -186,7 +186,7 @@ export function JoinApplicationForm() {
           </div>
         </div>
 
-        <div class="join-type-panel" data-member-type="associate" hidden>
+        <div class="join-type-panel" data-member-type="associate">
           <h3 class="join-type-panel-title">Associate member</h3>
           <p class="form-hint">Dues are based on your company&apos;s total annual revenue.</p>
           <ul class="form-radio-list">
@@ -215,7 +215,7 @@ export function JoinApplicationForm() {
           </div>
         </div>
 
-        <div class="join-type-panel" data-member-type="institutional" hidden>
+        <div class="join-type-panel" data-member-type="institutional">
           <h3 class="join-type-panel-title">Institutional member</h3>
           <p class="form-hint">
             Annual dues of <strong>$1,350</strong> include chapter and national NUCA membership.

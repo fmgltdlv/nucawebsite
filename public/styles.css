@@ -1277,6 +1277,31 @@ a:hover {
   margin: 0;
 }
 
+/* Membership type panels — CSS shows the matching block; JS enables/disables fields */
+.join-application-form #join-membership-details,
+.join-application-form .join-type-panel {
+  display: none;
+}
+
+.join-application-form:has(#member_type option[value='contractor']:checked) #join-membership-details,
+.join-application-form:has(#member_type option[value='associate']:checked) #join-membership-details,
+.join-application-form:has(#member_type option[value='institutional']:checked) #join-membership-details {
+  display: block;
+}
+
+.join-application-form:has(#member_type option[value='contractor']:checked) .join-type-panel[data-member-type='contractor'],
+.join-application-form:has(#member_type option[value='associate']:checked) .join-type-panel[data-member-type='associate'],
+.join-application-form:has(#member_type option[value='institutional']:checked)
+  .join-type-panel[data-member-type='institutional'] {
+  display: block;
+}
+
+.join-application-form:has(#member_type option[value='contractor']:checked) #join-type-placeholder,
+.join-application-form:has(#member_type option[value='associate']:checked) #join-type-placeholder,
+.join-application-form:has(#member_type option[value='institutional']:checked) #join-type-placeholder {
+  display: none;
+}
+
 .join-type-panel-title {
   margin: 0 0 0.5rem;
   font-size: 1.05rem;

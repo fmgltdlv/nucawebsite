@@ -45,11 +45,8 @@
 
   if (joinForm && memberTypeSelect) {
     const panels = joinForm.querySelectorAll('.join-type-panel')
-    const detailsSection = document.getElementById('join-membership-details')
-    const placeholder = document.getElementById('join-type-placeholder')
 
     function setPanelActive(panel, active) {
-      panel.hidden = !active
       panel.querySelectorAll('input, select, textarea').forEach((el) => {
         el.disabled = !active
         if (!active && (el.type === 'checkbox' || el.type === 'radio')) {
@@ -81,14 +78,12 @@
         setPanelActive(panel, panel.getAttribute('data-member-type') === type)
       })
 
-      if (detailsSection) detailsSection.hidden = !type
-      if (placeholder) placeholder.hidden = Boolean(type)
-
       syncRevenueRequired(type)
       syncInstitutionalRequired(type)
     }
 
     memberTypeSelect.addEventListener('change', updateJoinTypePanels)
+    memberTypeSelect.addEventListener('input', updateJoinTypePanels)
     updateJoinTypePanels()
 
     const associatePanel = joinForm.querySelector('.join-type-panel[data-member-type="associate"]')
