@@ -2,9 +2,28 @@ export type LeadershipRecord = {
   id: string
   name: string
   role_title: string
+  chair_title: string | null
+  company: string | null
+  website: string | null
+  linkedin_url: string | null
   sort_order: number
   photo_r2_key: string | null
   published: number
+}
+
+const LEADERSHIP_COLUMNS =
+  'id, name, role_title, chair_title, company, website, linkedin_url, sort_order, photo_r2_key, published'
+
+export type LeadershipInput = {
+  name: string
+  role_title: string
+  chair_title?: string | null
+  company?: string | null
+  website?: string | null
+  linkedin_url?: string | null
+  sort_order?: number
+  photo_r2_key?: string | null
+  published?: boolean
 }
 
 export async function listLeadership(
@@ -12,9 +31,9 @@ export async function listLeadership(
   publishedOnly = false,
 ): Promise<LeadershipRecord[]> {
   const sql = publishedOnly
-    ? `SELECT id, name, role_title, sort_order, photo_r2_key, published
+    ? `SELECT ${LEADERSHIP_COLUMNS}
        FROM leadership WHERE published = 1 ORDER BY sort_order ASC, name ASC`
-    : `SELECT id, name, role_title, sort_order, photo_r2_key, published
+    : `SELECT ${LEADERSHIP_COLUMNS}
        FROM leadership ORDER BY sort_order ASC, name ASC`
   const { results } = await db.prepare(sql).all<LeadershipRecord>()
   return results ?? []
@@ -26,24 +45,13 @@ export async function getLeadershipById(
 ): Promise<LeadershipRecord | null> {
   return (
     (await db
-      .prepare(
-        `SELECT id, name, role_title, sort_order, photo_r2_key, published FROM leadership WHERE id = ?`,
-      )
+      .prepare(`SELECT ${LEADERSHIP_COLUMNS} FROM leadership WHERE id = ?`)
       .bind(id)
       .first<LeadershipRecord>()) ?? null
   )
 }
 
-export async function createLeadership(
-  db: D1Database,
-  data: {
-    name: string
-    role_title: string
-    sort_order?: number
-    photo_r2_key?: string
-    published?: boolean
-  },
-): Promise<string> {
+export async function createLeadership(db: D1Database, data: LeadershipInput): Promise<string> {
   const id = crypto.randomUUID()
   const maxRow = await db
     .prepare('SELECT COALESCE(MAX(sort_order), -1) as m FROM leadership')
@@ -51,13 +59,20 @@ export async function createLeadership(
   const sort_order = data.sort_order ?? (maxRow?.m ?? -1) + 1
   await db
     .prepare(
-      `INSERT INTO leadership (id, name, role_title, sort_order, photo_r2_key, published, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
+      `INSERT INTO leadership (
+         id, name, role_title, chair_title, company, website, linkedin_url,
+         sort_order, photo_r2_key, published, updated_at
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
     )
     .bind(
       id,
       data.name,
       data.role_title,
+      data.chair_title ?? null,
+      data.company ?? null,
+      data.website ?? null,
+      data.linkedin_url ?? null,
       sort_order,
       data.photo_r2_key ?? null,
       data.published === false ? 0 : 1,
@@ -69,22 +84,22 @@ export async function createLeadership(
 export async function updateLeadership(
   db: D1Database,
   id: string,
-  data: {
-    name: string
-    role_title: string
-    sort_order: number
-    photo_r2_key?: string | null
-    published: boolean
-  },
+  data: LeadershipInput & { sort_order: number; published: boolean },
 ): Promise<void> {
   await db
     .prepare(
-      `UPDATE leadership SET name = ?, role_title = ?, sort_order = ?, photo_r2_key = ?, published = ?,
-       updated_at = datetime('now') WHERE id = ?`,
+      `UPDATE leadership
+       SET name = ?, role_title = ?, chair_title = ?, company = ?, website = ?, linkedin_url = ?,
+           sort_order = ?, photo_r2_key = ?, published = ?, updated_at = datetime('now')
+       WHERE id = ?`,
     )
     .bind(
       data.name,
       data.role_title,
+      data.chair_title ?? null,
+      data.company ?? null,
+      data.website ?? null,
+      data.linkedin_url ?? null,
       data.sort_order,
       data.photo_r2_key ?? null,
       data.published ? 1 : 0,

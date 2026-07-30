@@ -36,6 +36,44 @@ function LeaderEditRow({ person }: { person: LeadershipRecord }) {
       <td>
         <input
           form={formId}
+          type="text"
+          name="chair_title"
+          class="admin-table-input"
+          value={person.chair_title ?? ''}
+        />
+      </td>
+      <td>
+        <input
+          form={formId}
+          type="text"
+          name="company"
+          class="admin-table-input"
+          value={person.company ?? ''}
+        />
+      </td>
+      <td>
+        <input
+          form={formId}
+          type="url"
+          name="website"
+          class="admin-table-input"
+          value={person.website ?? ''}
+          placeholder="https://"
+        />
+      </td>
+      <td>
+        <input
+          form={formId}
+          type="url"
+          name="linkedin_url"
+          class="admin-table-input"
+          value={person.linkedin_url ?? ''}
+          placeholder="https://linkedin.com/in/…"
+        />
+      </td>
+      <td>
+        <input
+          form={formId}
           type="number"
           name="sort_order"
           class="admin-table-input admin-table-input-narrow"
@@ -93,6 +131,22 @@ export function AdminContentLeadershipPage({
               <input type="text" name="role_title" id="role_title" required />
             </div>
             <div class="form-field">
+              <label for="chair_title">Chair / committee title (optional)</label>
+              <input type="text" name="chair_title" id="chair_title" />
+            </div>
+            <div class="form-field">
+              <label for="company">Company (optional)</label>
+              <input type="text" name="company" id="company" />
+            </div>
+            <div class="form-field">
+              <label for="website">Website (optional)</label>
+              <input type="url" name="website" id="website" placeholder="https://" />
+            </div>
+            <div class="form-field">
+              <label for="linkedin_url">LinkedIn (optional)</label>
+              <input type="url" name="linkedin_url" id="linkedin_url" placeholder="https://linkedin.com/in/…" />
+            </div>
+            <div class="form-field">
               <label for="photo">Photo (optional)</label>
               <input type="file" name="photo" id="photo" accept="image/*" />
             </div>
@@ -104,12 +158,16 @@ export function AdminContentLeadershipPage({
         emptyMessage="No leaders yet."
         hasItems={leaders.length > 0}
         table={
-          <table class="admin-members-table">
+          <table class="admin-members-table admin-leadership-table">
             <thead>
               <tr>
                 <th>Photo</th>
                 <th>Name</th>
                 <th>Role</th>
+                <th>Chair</th>
+                <th>Company</th>
+                <th>Website</th>
+                <th>LinkedIn</th>
                 <th>Order</th>
                 <th>Status</th>
                 <th></th>

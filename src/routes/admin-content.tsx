@@ -65,6 +65,24 @@ function parseSortOrder(value: string): number {
   return Number.isFinite(n) ? n : 0
 }
 
+function optionalText(body: Record<string, unknown>, key: string): string | null {
+  const value = body[key]
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed || null
+}
+
+function leadershipFromBody(body: Record<string, unknown>) {
+  return {
+    name: typeof body.name === 'string' ? body.name.trim() : '',
+    role_title: typeof body.role_title === 'string' ? body.role_title.trim() : '',
+    chair_title: optionalText(body, 'chair_title'),
+    company: optionalText(body, 'company'),
+    website: optionalText(body, 'website'),
+    linkedin_url: optionalText(body, 'linkedin_url'),
+  }
+}
+
 function flashMessage(c: { req: { query: (k: string) => string | undefined } }, key: string): string | undefined {
   return c.req.query('ok') === key ? 'Saved.' : c.req.query('ok') === '1' ? 'Saved.' : undefined
 }
@@ -367,15 +385,21 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const auth = await requireAdmin(c)
     if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
     const body = await c.req.parseBody()
-    const name = typeof body.name === 'string' ? body.name.trim() : ''
-    const role_title = typeof body.role_title === 'string' ? body.role_title.trim() : ''
-    if (!name || !role_title) return c.redirect('/admin/content/leadership', 303)
-    const id = await createLeadership(c.env.DB, { name, role_title })
+    const fields = leadershipFromBody(body)
+    if (!fields.name || !fields.role_title) return c.redirect('/admin/content/leadership', 303)
+    const id = await createLeadership(c.env.DB, fields)
     const photo = body.photo instanceof File && body.photo.size > 0 ? body.photo : null
     if (photo) {
       const key = leadershipPhotoKey(id, photo.name)
       const upload = await uploadImage(c.env.R2, photo, key)
-      if (upload.ok) await updateLeadership(c.env.DB, id, { name, role_title, sort_order: 0, photo_r2_key: key, published: true })
+      if (upload.ok) {
+        await updateLeadership(c.env.DB, id, {
+          ...fields,
+          sort_order: 0,
+          photo_r2_key: key,
+          published: true,
+        })
+      }
     }
     return c.redirect('/admin/content/leadership?ok=1', 303)
   })
@@ -398,6 +422,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
       }
     }
     await updateLeadership(c.env.DB, id, {
+      ...leadershipFromBody(body),
       name: typeof body.name === 'string' ? body.name.trim() : existing.name,
       role_title: typeof body.role_title === 'string' ? body.role_title.trim() : existing.role_title,
       sort_order: parseSortOrder(typeof body.sort_order === 'string' ? body.sort_order : '0'),

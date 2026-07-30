@@ -50,11 +50,42 @@ function stripHtml(html) {
     .trim()
 }
 
-function buildRoleTitle(designation, description) {
-  const role = stripHtml(designation)
-  const extra = stripHtml(description)
-  if (!extra || extra === role) return role
-  return `${role} — ${extra}`
+function buildRoleTitle(designation) {
+  return stripHtml(designation)
+}
+
+function parseDescription(descHtml) {
+  if (!descHtml) return { chair_title: null, company: null }
+  const lines = descHtml
+    .split(/<br\s*\/?>/gi)
+    .map((line) => stripHtml(line))
+    .filter(Boolean)
+  if (lines.length === 0) return { chair_title: null, company: null }
+  if (lines.length === 1) return { chair_title: null, company: lines[0] }
+  return {
+    chair_title: lines.slice(0, -1).join(' · '),
+    company: lines[lines.length - 1],
+  }
+}
+
+function normalizeUrl(url) {
+  if (!url) return null
+  const trimmed = url.trim()
+  if (!trimmed || trimmed.startsWith('mailto:')) return null
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
+}
+
+function parseWebsite(block) {
+  const match = block.match(/class="uabb-team-name-text"[^>]*>\s*<a[^>]*href="([^"]+)"/i)
+  return normalizeUrl(match?.[1])
+}
+
+function parseLinkedIn(block) {
+  const social = block.match(/class="uabb-team-social[\s\S]*?<\/div>/i)?.[0]
+  if (!social) return null
+  const match = social.match(/href="([^"]*linkedin\.com[^"]*)"/i)
+  return normalizeUrl(match?.[1])
 }
 
 function leadershipPhotoKey(id, ext) {
@@ -139,7 +170,10 @@ function parseLeadership(html) {
     if (!nameMatch || !roleMatch) continue
 
     const name = stripHtml(nameMatch[1])
-    const role_title = buildRoleTitle(roleMatch[1], descMatch?.[1] ?? '')
+    const role_title = buildRoleTitle(roleMatch[1])
+    const { chair_title, company } = parseDescription(descMatch?.[1] ?? '')
+    const website = parseWebsite(block)
+    const linkedin_url = parseLinkedIn(block)
     const photoUrl = photoMatch?.[1]?.replace(/\\\//g, '/') ?? null
     const id = crypto.randomUUID()
     const photoExt = photoUrl ? extFromUrl(photoUrl) : null
@@ -149,6 +183,10 @@ function parseLeadership(html) {
       id,
       name,
       role_title,
+      chair_title,
+      company,
+      website,
+      linkedin_url,
       sort_order: leaders.length,
       photoUrl,
       photo_r2_key,
@@ -166,7 +204,9 @@ async function scrapeLeadership() {
     throw new Error('No leadership entries found — page structure may have changed.')
   }
   for (const person of leaders) {
-    process.stdout.write(`Scraped: ${person.name} (${person.role_title})\n`)
+    process.stdout.write(
+      `Scraped: ${person.name} (${person.role_title}${person.company ? ` @ ${person.company}` : ''})\n`,
+    )
   }
   return leaders
 }
@@ -179,12 +219,16 @@ function buildSql(leaders) {
       `'${sqlEscape(person.id)}'`,
       `'${sqlEscape(person.name)}'`,
       `'${sqlEscape(person.role_title)}'`,
+      person.chair_title ? `'${sqlEscape(person.chair_title)}'` : 'NULL',
+      person.company ? `'${sqlEscape(person.company)}'` : 'NULL',
+      person.website ? `'${sqlEscape(person.website)}'` : 'NULL',
+      person.linkedin_url ? `'${sqlEscape(person.linkedin_url)}'` : 'NULL',
       String(person.sort_order),
       person.photo_r2_key ? `'${sqlEscape(person.photo_r2_key)}'` : 'NULL',
       '1',
     ]
     lines.push(
-      `INSERT INTO leadership (id, name, role_title, sort_order, photo_r2_key, published) VALUES (${values.join(', ')});`,
+      `INSERT INTO leadership (id, name, role_title, chair_title, company, website, linkedin_url, sort_order, photo_r2_key, published) VALUES (${values.join(', ')});`,
     )
   }
 

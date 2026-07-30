@@ -51,7 +51,7 @@ export function Layout({
           href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap"
           rel="stylesheet"
         />
-        <link rel="stylesheet" href="/styles.css?v=5" />
+        <link rel="stylesheet" href="/styles.css?v=6" />
       </head>
       <body>
         <a class="skip-link" href="#main">Skip to content</a>

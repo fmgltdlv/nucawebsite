@@ -1443,7 +1443,7 @@ button.pill {
   margin: 0 0 0.5rem;
 }
 
-/* Leadership */
+/* Leadership roster */
 
 .leadership-featured-grid {
   display: grid;
@@ -1453,6 +1453,22 @@ button.pill {
   margin: 0 auto 2.5rem;
   padding: 0;
   list-style: none;
+}
+
+.leadership-officers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  max-width: 52rem;
+  margin: 0 auto 2.5rem;
+  padding: 0;
+  list-style: none;
+  justify-content: center;
+}
+
+.leadership-board-grid {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
 }
 
 .leader-bubble-featured {
@@ -1469,10 +1485,32 @@ button.pill {
   font-size: 1.05rem;
 }
 
+.leader-bubble-detailed {
+  padding: 1.5rem 1.25rem;
+  min-height: 100%;
+}
+
+.leader-bubble-detailed .member-bubble-body {
+  gap: 0.4rem;
+}
+
 .leader-bubble-role {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.35;
+}
+
+.leader-bubble-chair {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  line-height: 1.45;
+}
+
+.leader-bubble-company {
   font-size: 0.85rem;
   color: var(--color-muted);
-  line-height: 1.3;
+  line-height: 1.45;
 }
 
 .leader-bubble-photo {
@@ -1935,6 +1973,11 @@ button.pill {
 
 .admin-members-table td {
   vertical-align: middle;
+}
+
+.admin-leadership-table {
+  display: block;
+  overflow-x: auto;
 }
 
 .admin-member-list-table {
