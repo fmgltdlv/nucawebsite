@@ -6,7 +6,9 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "types": "wrangler types",
-    "check": "wrangler check"
+    "check": "wrangler check",
+    "import-members": "node scripts/import-wp-members.mjs",
+    "import-leadership": "node scripts/import-wp-leadership.mjs"
   },
   "dependencies": {
     "hono": "^4.7.7"
