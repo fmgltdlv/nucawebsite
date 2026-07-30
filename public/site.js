@@ -241,6 +241,103 @@
     fileInput.files = transfer.files
   }
 
+  function getFormSubmitButtons(form) {
+    if (!(form instanceof HTMLFormElement)) return []
+    const buttons = new Set()
+    form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach((el) => buttons.add(el))
+    if (form.id) {
+      document
+        .querySelectorAll(`button[type="submit"][form="${CSS.escape(form.id)}"]`)
+        .forEach((el) => buttons.add(el))
+    }
+    return Array.from(buttons)
+  }
+
+  function pendingLabelForButton(button) {
+    if (button instanceof HTMLInputElement) return 'Saving…'
+    const custom = button.dataset.pendingLabel
+    if (custom) return custom
+    const lower = (button.textContent || '').trim().toLowerCase()
+    if (lower.includes('delete')) return 'Deleting…'
+    if (lower.includes('approve')) return 'Approving…'
+    if (lower.includes('reject')) return 'Rejecting…'
+    if (lower.includes('add')) return 'Adding…'
+    if (lower.includes('update')) return 'Updating…'
+    if (lower.includes('sign out') || lower.includes('sign in')) return 'Please wait…'
+    return 'Saving…'
+  }
+
+  function setButtonBusy(button, busy, pendingLabel) {
+    if (!(button instanceof HTMLButtonElement) && !(button instanceof HTMLInputElement)) return
+    if (busy) {
+      if (!button.dataset.originalLabel) {
+        button.dataset.originalLabel =
+          button instanceof HTMLInputElement ? button.value : button.textContent?.trim() ?? ''
+      }
+      button.disabled = true
+      button.setAttribute('aria-busy', 'true')
+      if (button instanceof HTMLButtonElement) button.textContent = pendingLabel
+      else button.value = pendingLabel
+      return
+    }
+
+    button.disabled = false
+    button.removeAttribute('aria-busy')
+    const original = button.dataset.originalLabel
+    if (!original) return
+    if (button instanceof HTMLButtonElement) button.textContent = original
+    else button.value = original
+    delete button.dataset.originalLabel
+  }
+
+  function resetFormBusyState(form) {
+    if (!(form instanceof HTMLFormElement)) return
+    getFormSubmitButtons(form).forEach((btn) => setButtonBusy(btn, false))
+    form.removeAttribute('aria-busy')
+    delete form.dataset.logoProcessed
+
+    const dialog = form.closest('.admin-modal')
+    if (!(dialog instanceof HTMLElement)) return
+    delete dialog.dataset.saving
+    dialog.querySelectorAll('[data-modal-close]').forEach((el) => {
+      if (el instanceof HTMLButtonElement) el.disabled = false
+    })
+    dialog.querySelectorAll('button[type="submit"]').forEach((btn) => setButtonBusy(btn, false))
+  }
+
+  function setFormSavingState(form, submitter) {
+    if (!(form instanceof HTMLFormElement)) return
+    const pendingLabel = submitter ? pendingLabelForButton(submitter) : 'Saving…'
+    getFormSubmitButtons(form).forEach((btn) => {
+      setButtonBusy(btn, true, btn === submitter ? pendingLabel : pendingLabelForButton(btn))
+    })
+    form.setAttribute('aria-busy', 'true')
+    form
+      .querySelectorAll('input:not([type="hidden"]), textarea, select')
+      .forEach((el) => {
+        if (
+          el instanceof HTMLInputElement ||
+          el instanceof HTMLTextAreaElement ||
+          el instanceof HTMLSelectElement
+        ) {
+          el.disabled = true
+        }
+      })
+
+    const dialog = form.closest('.admin-modal')
+    if (!(dialog instanceof HTMLElement)) return
+    dialog.dataset.saving = '1'
+    dialog.querySelectorAll('[data-modal-close]').forEach((el) => {
+      if (el instanceof HTMLButtonElement) el.disabled = true
+    })
+    dialog.querySelectorAll('form').forEach((nestedForm) => {
+      if (nestedForm === form) return
+      nestedForm.querySelectorAll('button[type="submit"]').forEach((btn) => {
+        if (btn instanceof HTMLButtonElement) btn.disabled = true
+      })
+    })
+  }
+
   document.querySelectorAll('form[data-member-logo-form]').forEach((form) => {
     form.addEventListener('submit', async (event) => {
       if (form.dataset.logoProcessed === '1') return
@@ -251,12 +348,13 @@
 
       event.preventDefault()
 
-      const submitBtn = form.querySelector('button[type="submit"]')
-      const originalText = submitBtn?.textContent ?? ''
-      if (submitBtn) {
-        submitBtn.disabled = true
-        submitBtn.textContent = 'Compressing logo…'
-      }
+      const submitBtn =
+        event.submitter instanceof HTMLButtonElement
+          ? event.submitter
+          : getFormSubmitButtons(form).find((btn) => btn.classList.contains('btn-primary')) ??
+            getFormSubmitButtons(form)[0]
+
+      if (submitBtn) setButtonBusy(submitBtn, true, 'Compressing logo…')
 
       try {
         const compressed = await compressMemberLogo(file)
@@ -266,13 +364,21 @@
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Logo could not be compressed.'
         window.alert(message)
-        if (submitBtn) {
-          submitBtn.disabled = false
-          submitBtn.textContent = originalText
-        }
+        if (submitBtn) setButtonBusy(submitBtn, false)
       }
     })
   })
+
+  const adminShell = document.querySelector('.admin-shell')
+  if (adminShell) {
+    adminShell.addEventListener('submit', (event) => {
+      if (event.defaultPrevented) return
+      const form = event.target
+      if (!(form instanceof HTMLFormElement)) return
+      if (form.classList.contains('admin-logout')) return
+      setFormSavingState(form, event.submitter)
+    })
+  }
 
   function wireAdminModal(dialog) {
     if (!(dialog instanceof HTMLDialogElement)) return
@@ -282,6 +388,7 @@
     })
 
     dialog.addEventListener('click', (event) => {
+      if (dialog.dataset.saving === '1') return
       const rect = dialog.getBoundingClientRect()
       const inDialog =
         rect.top <= event.clientY &&
@@ -295,10 +402,7 @@
       const form = dialog.querySelector('form')
       if (!(form instanceof HTMLFormElement)) return
       form.reset()
-      delete form.dataset.logoProcessed
-      form.querySelectorAll('button[type="submit"]').forEach((btn) => {
-        btn.disabled = false
-      })
+      resetFormBusyState(form)
     })
   }
 

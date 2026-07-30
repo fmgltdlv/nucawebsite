@@ -840,6 +840,32 @@ a:hover {
   font-size: 0.85rem;
 }
 
+.btn[aria-busy="true"] {
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.btn[aria-busy="true"]::after {
+  content: '';
+  width: 0.85em;
+  height: 0.85em;
+  margin-left: 0.45em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: btn-spin 0.65s linear infinite;
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.admin-modal[data-saving="1"] .admin-modal-form {
+  opacity: 0.92;
+}
+
 /* Members */
 
 .members-toolbar {

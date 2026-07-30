@@ -123,7 +123,7 @@ export function Layout({
             <ThemeSwitcher activeTheme={theme} />
           </div>
         </footer>
-        <script src="/site.js?v=7" defer></script>
+        <script src="/site.js?v=8" defer></script>
       </body>
     </html>
   )
