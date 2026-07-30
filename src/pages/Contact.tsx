@@ -1,4 +1,5 @@
 import { Layout, PageHeader } from '../views/Layout'
+import { StatusPage } from '../views/StatusPage'
 import type { ContactInfo } from '../lib/site-settings'
 import { phoneTelHref } from '../lib/site-settings'
 import type { PageProps } from '../types/page'
@@ -62,34 +63,31 @@ export function ContactPage({
   )
 }
 
-export function ContactThanksPage({ theme, contact, footer, breakingNews }: PageProps) {
+export function ContactThanksPage(props: PageProps) {
   return (
-    <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title="Message sent">
-      <PageHeader title="Thank you" lead="Your message has been sent to the chapter." />
-      <section class="section">
-        <div class="container">
-          <a class="btn btn-primary" href="/">Back to home</a>
-        </div>
-      </section>
-    </Layout>
+    <StatusPage
+      {...props}
+      title="Message sent"
+      heading="Thank you"
+      lead="Your message has been sent to the chapter."
+      ctaHref="/"
+      ctaLabel="Back to home"
+    />
   )
 }
 
 export function ContactErrorPage({
-  theme,
-  contact,
-  footer,
-  breakingNews,
   error,
+  ...props
 }: PageProps & { error: string }) {
   return (
-    <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title="Contact">
-      <PageHeader title="Contact us" lead={error} />
-      <section class="section">
-        <div class="container">
-          <a class="btn btn-primary" href="/contact">Try again</a>
-        </div>
-      </section>
-    </Layout>
+    <StatusPage
+      {...props}
+      title="Contact"
+      heading="Contact us"
+      lead={error}
+      ctaHref="/contact"
+      ctaLabel="Try again"
+    />
   )
 }

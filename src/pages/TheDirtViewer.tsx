@@ -1,15 +1,9 @@
 import { Layout, PageHeader } from '../views/Layout'
+import { StatusPage } from '../views/StatusPage'
 import type { DirtReleaseRecord } from '../lib/dirt-db'
+import { formatArchiveDate } from '../lib/format'
 import { getAssetUrl } from '../lib/r2-assets'
 import type { PageProps } from '../types/page'
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
 
 export function TheDirtViewerPage({
   theme,
@@ -22,7 +16,7 @@ export function TheDirtViewerPage({
 
   return (
     <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title={release.title}>
-      <PageHeader title={release.title} lead={`Published ${formatDate(release.published_at)}`} />
+      <PageHeader title={release.title} lead={`Published ${formatArchiveDate(release.published_at)}`} />
       <section class="section">
         <div class="container">
           <p>
@@ -49,15 +43,15 @@ export function TheDirtViewerPage({
   )
 }
 
-export function TheDirtNotFoundPage({ theme, contact, footer, breakingNews }: PageProps) {
+export function TheDirtNotFoundPage(props: PageProps) {
   return (
-    <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title="Release not found">
-      <PageHeader title="Release not found" lead="That issue is not in the archive." />
-      <section class="section">
-        <div class="container">
-          <a class="btn btn-primary" href="/about/the-dirt">Back to THE DIRT archive</a>
-        </div>
-      </section>
-    </Layout>
+    <StatusPage
+      {...props}
+      title="Release not found"
+      heading="Release not found"
+      lead="That issue is not in the archive."
+      ctaHref="/about/the-dirt"
+      ctaLabel="Back to THE DIRT archive"
+    />
   )
 }

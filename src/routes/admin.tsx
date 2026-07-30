@@ -6,6 +6,7 @@ import type { Env } from '../env'
 import { assignChairCommittees, approveMemberLink, createUser, listUsersWithMemberInfo, rejectMemberLink, requestMemberLink, verifyUserLogin } from '../lib/auth'
 import { canAccessRole, resolveAdminContext } from '../lib/admin-context'
 import { createEvent, deleteEvent, listAllEventsForAdmin, updateEvent } from '../lib/events'
+import { parseDatetimeLocal } from '../lib/datetime'
 import { registerAdminContentRoutes } from './admin-content'
 import { listActiveMembers } from '../lib/members'
 import {
@@ -33,14 +34,6 @@ import { AdminProfilePage } from '../pages/admin/AdminProfile'
 import { AdminUsersPage } from '../pages/admin/AdminUsers'
 
 type AdminVariables = { theme: ThemeId }
-
-function parseDatetimeLocal(value: string): string | null {
-  const trimmed = value.trim()
-  if (!trimmed) return null
-  const d = new Date(trimmed)
-  if (Number.isNaN(d.getTime())) return null
-  return d.toISOString()
-}
 
 function parseMemberType(value: string): MemberType {
   return MEMBER_TYPES.includes(value as MemberType) ? (value as MemberType) : 'contractor'

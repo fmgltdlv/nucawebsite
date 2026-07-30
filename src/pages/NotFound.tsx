@@ -1,16 +1,15 @@
-import { Layout, PageHeader } from '../views/Layout'
-
+import { StatusPage } from '../views/StatusPage'
 import type { PageProps } from '../types/page'
 
-export function NotFoundPage({ theme, contact, footer, breakingNews }: PageProps) {
+export function NotFoundPage(props: PageProps) {
   return (
-    <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title="Page not found">
-      <PageHeader title="Page not found" lead="That link doesn’t exist on this site." />
-      <section class="section">
-        <div class="container">
-          <a class="btn btn-primary" href="/">Go home</a>
-        </div>
-      </section>
-    </Layout>
+    <StatusPage
+      {...props}
+      title="Page not found"
+      heading="Page not found"
+      lead="That link doesn’t exist on this site."
+      ctaHref="/"
+      ctaLabel="Go home"
+    />
   )
 }

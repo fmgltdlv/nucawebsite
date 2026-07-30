@@ -1,5 +1,8 @@
 import type { PostRecord } from '../../../lib/posts-db'
+import { toDatetimeLocalValue } from '../../../lib/datetime'
 import { AdminShell } from '../../../views/AdminShell'
+import { AdminCrudSections } from '../../../views/admin/AdminCrudSections'
+import { AdminEditActions } from '../../../views/admin/AdminEditActions'
 import type { AdminContext } from '../../../lib/admin-context'
 import type { PageProps } from '../../../types/page'
 
@@ -19,7 +22,7 @@ function PostEditRow({ post }: { post: PostRecord }) {
           type="datetime-local"
           name="published_at"
           class="admin-table-input"
-          value={post.published_at ? toLocal(post.published_at) : ''}
+          value={post.published_at ? toDatetimeLocalValue(post.published_at) : ''}
         />
       </td>
       <td>
@@ -39,22 +42,14 @@ function PostEditRow({ post }: { post: PostRecord }) {
         </textarea>
       </td>
       <td>
-        <form id={formId} method="post" action={`/admin/content/posts/${post.id}`}>
-          <button type="submit" class="btn btn-secondary btn-sm">Save</button>
-        </form>
-        <form method="post" action={`/admin/content/posts/${post.id}/delete`} class="admin-inline-form">
-          <button type="submit" class="btn btn-secondary btn-sm">Delete</button>
-        </form>
+        <AdminEditActions
+          formId={formId}
+          saveAction={`/admin/content/posts/${post.id}`}
+          deleteAction={`/admin/content/posts/${post.id}/delete`}
+        />
       </td>
     </tr>
   )
-}
-
-function toLocal(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 export function AdminContentPostsPage({
@@ -71,39 +66,44 @@ export function AdminContentPostsPage({
       title="Industry updates"
       activePath="/admin/content"
     >
-      <p class="admin-note">
-        <a href="/admin/content">← Content</a> · <a href="/industry-updates">View public listing</a>
-      </p>
-      {flash && <p class="admin-flash">{flash}</p>}
-      <section class="admin-form-section">
-        <h2>New post</h2>
-        <form class="form" method="post" action="/admin/content/posts">
-          <div class="form-field">
-            <label for="title">Title</label>
-            <input type="text" name="title" id="title" required />
-          </div>
-          <div class="form-field">
-            <label for="slug">Slug (optional)</label>
-            <input type="text" name="slug" id="slug" placeholder="auto-generated from title" />
-          </div>
-          <div class="form-field">
-            <label for="excerpt">Excerpt</label>
-            <textarea name="excerpt" id="excerpt" rows={2}></textarea>
-          </div>
-          <div class="form-field">
-            <label for="body_md">Body (markdown)</label>
-            <textarea name="body_md" id="body_md" rows={8} required></textarea>
-          </div>
-          <label class="admin-check">
-            <input type="checkbox" name="published" value="1" />
-            Publish immediately
-          </label>
-          <button type="submit" class="btn btn-primary">Create post</button>
-        </form>
-      </section>
-      <section class="section">
-        <h2>Posts ({posts.length})</h2>
-        {posts.length > 0 ? (
+      <AdminCrudSections
+        breadcrumb={
+          <p class="admin-note">
+            <a href="/admin/content">← Content</a> · <a href="/industry-updates">View public listing</a>
+          </p>
+        }
+        flash={flash}
+        addTitle="New post"
+        addForm={
+          <form class="form" method="post" action="/admin/content/posts">
+            <div class="form-field">
+              <label for="title">Title</label>
+              <input type="text" name="title" id="title" required />
+            </div>
+            <div class="form-field">
+              <label for="slug">Slug (optional)</label>
+              <input type="text" name="slug" id="slug" placeholder="auto-generated from title" />
+            </div>
+            <div class="form-field">
+              <label for="excerpt">Excerpt</label>
+              <textarea name="excerpt" id="excerpt" rows={2}></textarea>
+            </div>
+            <div class="form-field">
+              <label for="body_md">Body (markdown)</label>
+              <textarea name="body_md" id="body_md" rows={8} required></textarea>
+            </div>
+            <label class="admin-check">
+              <input type="checkbox" name="published" value="1" />
+              Publish immediately
+            </label>
+            <button type="submit" class="btn btn-primary">Create post</button>
+          </form>
+        }
+        listTitle="Posts"
+        listCount={posts.length}
+        emptyMessage="No posts yet."
+        hasItems={posts.length > 0}
+        table={
           <table class="admin-members-table">
             <thead>
               <tr>
@@ -122,10 +122,8 @@ export function AdminContentPostsPage({
               ))}
             </tbody>
           </table>
-        ) : (
-          <p class="muted">No posts yet.</p>
-        )}
-      </section>
+        }
+      />
     </AdminShell>
   )
 }

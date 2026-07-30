@@ -106,9 +106,4 @@ export async function deleteEvent(db: D1Database, id: string): Promise<void> {
   await db.prepare('DELETE FROM events WHERE id = ?').bind(id).run()
 }
 
-export function toDatetimeLocalValue(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
+export { toDatetimeLocalValue } from './datetime'

@@ -46,6 +46,7 @@ import {
   type BreakingNews,
 } from '../lib/site-settings'
 import { listApplications, updateApplicationStatus } from '../lib/applications-db'
+import { parseDatetimeLocal } from '../lib/datetime'
 import { AdminApplicationsPage } from '../pages/admin/AdminApplications'
 import { AdminContentPage } from '../pages/admin/AdminContent'
 import { AdminContentDirtPage } from '../pages/admin/content/AdminContentDirt'
@@ -58,14 +59,6 @@ import { AdminContentResourcesPage } from '../pages/admin/content/AdminContentRe
 import { AdminContentSettingsPage } from '../pages/admin/content/AdminContentSettings'
 
 type AdminVariables = { theme: ThemeId }
-
-function parseDatetimeLocal(value: string): string | null {
-  const trimmed = value.trim()
-  if (!trimmed) return null
-  const d = new Date(trimmed)
-  if (Number.isNaN(d.getTime())) return null
-  return d.toISOString()
-}
 
 function parseSortOrder(value: string): number {
   const n = Number.parseInt(value, 10)

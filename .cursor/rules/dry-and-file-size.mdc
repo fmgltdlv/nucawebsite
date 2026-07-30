@@ -1,0 +1,50 @@
+---
+description: Reduce duplication and avoid god files (1500+ lines)
+alwaysApply: true
+---
+
+# DRY and file size
+
+Keep modules focused. Prefer shared abstractions over copy-paste.
+
+## God files
+
+- **Hard limit:** no source file over **1500 lines** in this project.
+- **Soft target:** route files and page components should stay under **500 lines** when practical.
+- If a file is growing large, split by responsibility (e.g. `lib/*-db.ts`, `views/*`, `routes/*`) before adding more logic.
+
+## Reduce duplication
+
+Before copying markup or helpers into a second file:
+
+1. **Check existing shared code** — `Layout`, `PageHeader`, `ContentPage`, `StatusPage`, `EventCard`, `ArchiveCard`, `AdminCrudSections`, `AdminEditActions`, `lib/format.ts`, `lib/datetime.ts`.
+2. **Extract when repeated twice** — date formatting, thanks/error pages, admin save/delete actions, archive/event cards.
+3. **Keep page-specific content in pages** — only extract structure that is truly identical or parameterized.
+
+## Examples
+
+```tsx
+// ❌ BAD — duplicate formatter in a page file
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
+
+// ✅ GOOD — import from lib/format.ts
+import { formatArchiveDate } from '../lib/format'
+```
+
+```tsx
+// ❌ BAD — copy-pasted thanks page shell
+<Layout ...><PageHeader .../><section>...</section></Layout>
+
+// ✅ GOOD
+<StatusPage {...site} title="..." heading="..." lead="..." ctaHref="/" ctaLabel="Go home" />
+```
+
+## New work checklist
+
+- [ ] No new file approaching 1500 lines
+- [ ] No duplicated date/time helpers (use `lib/format.ts` / `lib/datetime.ts`)
+- [ ] No duplicated admin save/delete form pairs (use `AdminEditActions`)
+- [ ] No duplicated status/thanks page layout (use `StatusPage`)
+- [ ] Remove dead/orphan page files when routes move to CMS or shared components

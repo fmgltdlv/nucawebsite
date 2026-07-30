@@ -1,5 +1,7 @@
 import type { QaRecord } from '../../../lib/qa-db'
 import { AdminShell } from '../../../views/AdminShell'
+import { AdminCrudSections } from '../../../views/admin/AdminCrudSections'
+import { AdminEditActions } from '../../../views/admin/AdminEditActions'
 import type { AdminContext } from '../../../lib/admin-context'
 import type { PageProps } from '../../../types/page'
 
@@ -38,12 +40,11 @@ function QaEditRow({ item }: { item: QaRecord }) {
         </label>
       </td>
       <td>
-        <form id={formId} method="post" action={`/admin/content/qa/${item.id}`}>
-          <button type="submit" class="btn btn-secondary btn-sm">Save</button>
-        </form>
-        <form method="post" action={`/admin/content/qa/${item.id}/delete`} class="admin-inline-form">
-          <button type="submit" class="btn btn-secondary btn-sm">Delete</button>
-        </form>
+        <AdminEditActions
+          formId={formId}
+          saveAction={`/admin/content/qa/${item.id}`}
+          deleteAction={`/admin/content/qa/${item.id}/delete`}
+        />
       </td>
     </tr>
   )
@@ -63,27 +64,32 @@ export function AdminContentQaPage({
       title="Q & A"
       activePath="/admin/content"
     >
-      <p class="admin-note">
-        <a href="/admin/content">← Content</a> · <a href="/about/q-and-a">View public page</a>
-      </p>
-      {flash && <p class="admin-flash">{flash}</p>}
-      <section class="admin-form-section">
-        <h2>Add question</h2>
-        <form class="form" method="post" action="/admin/content/qa">
-          <div class="form-field">
-            <label for="question">Question</label>
-            <input type="text" name="question" id="question" required />
-          </div>
-          <div class="form-field">
-            <label for="answer_md">Answer (markdown)</label>
-            <textarea name="answer_md" id="answer_md" rows={4} required></textarea>
-          </div>
-          <button type="submit" class="btn btn-primary">Add question</button>
-        </form>
-      </section>
-      <section class="section">
-        <h2>Questions ({items.length})</h2>
-        {items.length > 0 ? (
+      <AdminCrudSections
+        breadcrumb={
+          <p class="admin-note">
+            <a href="/admin/content">← Content</a> · <a href="/about/q-and-a">View public page</a>
+          </p>
+        }
+        flash={flash}
+        addTitle="Add question"
+        addForm={
+          <form class="form" method="post" action="/admin/content/qa">
+            <div class="form-field">
+              <label for="question">Question</label>
+              <input type="text" name="question" id="question" required />
+            </div>
+            <div class="form-field">
+              <label for="answer_md">Answer (markdown)</label>
+              <textarea name="answer_md" id="answer_md" rows={4} required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Add question</button>
+          </form>
+        }
+        listTitle="Questions"
+        listCount={items.length}
+        emptyMessage="No questions yet."
+        hasItems={items.length > 0}
+        table={
           <table class="admin-members-table">
             <thead>
               <tr>
@@ -100,10 +106,8 @@ export function AdminContentQaPage({
               ))}
             </tbody>
           </table>
-        ) : (
-          <p class="muted">No questions yet.</p>
-        )}
-      </section>
+        }
+      />
     </AdminShell>
   )
 }

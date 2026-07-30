@@ -1,4 +1,5 @@
 import { themeOptions } from '../../../config/themes'
+import { toDatetimeLocalValue } from '../../../lib/datetime'
 import type { BreakingNews, ContactInfo, FooterInfo } from '../../../lib/site-settings'
 import { AdminShell } from '../../../views/AdminShell'
 import type { AdminContext } from '../../../lib/admin-context'
@@ -104,7 +105,7 @@ export function AdminContentSettingsPage({
             type="datetime-local"
             name="breaking_expires"
             id="breaking_expires"
-            value={breakingNews.expiresAt ? toLocalDatetime(breakingNews.expiresAt) : ''}
+            value={breakingNews.expiresAt ? toDatetimeLocalValue(breakingNews.expiresAt) : ''}
           />
         </div>
 
@@ -112,11 +113,4 @@ export function AdminContentSettingsPage({
       </form>
     </AdminShell>
   )
-}
-
-function toLocalDatetime(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }

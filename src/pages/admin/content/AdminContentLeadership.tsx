@@ -1,6 +1,8 @@
 import type { LeadershipRecord } from '../../../lib/leadership-db'
 import { getAssetUrl } from '../../../lib/r2-assets'
 import { AdminShell } from '../../../views/AdminShell'
+import { AdminCrudSections } from '../../../views/admin/AdminCrudSections'
+import { AdminEditActions } from '../../../views/admin/AdminEditActions'
 import type { AdminContext } from '../../../lib/admin-context'
 import type { PageProps } from '../../../types/page'
 
@@ -47,12 +49,12 @@ function LeaderEditRow({ person }: { person: LeadershipRecord }) {
         </label>
       </td>
       <td>
-        <form id={formId} method="post" action={`/admin/content/leadership/${person.id}`} encType="multipart/form-data">
-          <button type="submit" class="btn btn-secondary btn-sm">Save</button>
-        </form>
-        <form method="post" action={`/admin/content/leadership/${person.id}/delete`} class="admin-inline-form">
-          <button type="submit" class="btn btn-secondary btn-sm">Delete</button>
-        </form>
+        <AdminEditActions
+          formId={formId}
+          saveAction={`/admin/content/leadership/${person.id}`}
+          deleteAction={`/admin/content/leadership/${person.id}/delete`}
+          encType="multipart/form-data"
+        />
       </td>
     </tr>
   )
@@ -72,31 +74,36 @@ export function AdminContentLeadershipPage({
       title="Leadership"
       activePath="/admin/content"
     >
-      <p class="admin-note">
-        <a href="/admin/content">← Content</a> · <a href="/about/leadership">View public page</a>
-      </p>
-      {flash && <p class="admin-flash">{flash}</p>}
-      <section class="admin-form-section">
-        <h2>Add leader</h2>
-        <form class="form" method="post" action="/admin/content/leadership" encType="multipart/form-data">
-          <div class="form-field">
-            <label for="name">Name</label>
-            <input type="text" name="name" id="name" required />
-          </div>
-          <div class="form-field">
-            <label for="role_title">Role</label>
-            <input type="text" name="role_title" id="role_title" required />
-          </div>
-          <div class="form-field">
-            <label for="photo">Photo (optional)</label>
-            <input type="file" name="photo" id="photo" accept="image/*" />
-          </div>
-          <button type="submit" class="btn btn-primary">Add leader</button>
-        </form>
-      </section>
-      <section class="section">
-        <h2>Roster ({leaders.length})</h2>
-        {leaders.length > 0 ? (
+      <AdminCrudSections
+        breadcrumb={
+          <p class="admin-note">
+            <a href="/admin/content">← Content</a> · <a href="/about/leadership">View public page</a>
+          </p>
+        }
+        flash={flash}
+        addTitle="Add leader"
+        addForm={
+          <form class="form" method="post" action="/admin/content/leadership" encType="multipart/form-data">
+            <div class="form-field">
+              <label for="name">Name</label>
+              <input type="text" name="name" id="name" required />
+            </div>
+            <div class="form-field">
+              <label for="role_title">Role</label>
+              <input type="text" name="role_title" id="role_title" required />
+            </div>
+            <div class="form-field">
+              <label for="photo">Photo (optional)</label>
+              <input type="file" name="photo" id="photo" accept="image/*" />
+            </div>
+            <button type="submit" class="btn btn-primary">Add leader</button>
+          </form>
+        }
+        listTitle="Roster"
+        listCount={leaders.length}
+        emptyMessage="No leaders yet."
+        hasItems={leaders.length > 0}
+        table={
           <table class="admin-members-table">
             <thead>
               <tr>
@@ -114,10 +121,8 @@ export function AdminContentLeadershipPage({
               ))}
             </tbody>
           </table>
-        ) : (
-          <p class="muted">No leaders yet.</p>
-        )}
-      </section>
+        }
+      />
     </AdminShell>
   )
 }

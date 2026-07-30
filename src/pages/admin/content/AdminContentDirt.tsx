@@ -1,12 +1,10 @@
 import type { DirtReleaseRecord } from '../../../lib/dirt-db'
 import { getAssetUrl } from '../../../lib/r2-assets'
 import { AdminShell } from '../../../views/AdminShell'
+import { AdminCrudSections } from '../../../views/admin/AdminCrudSections'
+import { AdminEditActions } from '../../../views/admin/AdminEditActions'
 import type { AdminContext } from '../../../lib/admin-context'
 import type { PageProps } from '../../../types/page'
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { dateStyle: 'medium' })
-}
 
 function DirtEditRow({ release }: { release: DirtReleaseRecord }) {
   const formId = `dirt-${release.id}`
@@ -47,12 +45,12 @@ function DirtEditRow({ release }: { release: DirtReleaseRecord }) {
         </label>
       </td>
       <td>
-        <form id={formId} method="post" action={`/admin/content/the-dirt/${release.id}`} encType="multipart/form-data">
-          <button type="submit" class="btn btn-secondary btn-sm">Save</button>
-        </form>
-        <form method="post" action={`/admin/content/the-dirt/${release.id}/delete`} class="admin-inline-form">
-          <button type="submit" class="btn btn-secondary btn-sm">Delete</button>
-        </form>
+        <AdminEditActions
+          formId={formId}
+          saveAction={`/admin/content/the-dirt/${release.id}`}
+          deleteAction={`/admin/content/the-dirt/${release.id}/delete`}
+          encType="multipart/form-data"
+        />
       </td>
     </tr>
   )
@@ -78,36 +76,41 @@ export function AdminContentDirtPage({
       title="THE DIRT"
       activePath="/admin/content"
     >
-      <p class="admin-note">
-        <a href="/admin/content">← Content</a> · <a href="/about/the-dirt">View archive</a>
-      </p>
-      {flash && <p class="admin-flash">{flash}</p>}
-      {error && <p class="admin-flash admin-flash-error">{error}</p>}
-      <section class="admin-form-section">
-        <h2>Upload release</h2>
-        <form class="form" method="post" action="/admin/content/the-dirt" encType="multipart/form-data">
-          <div class="form-field">
-            <label for="title">Title</label>
-            <input type="text" name="title" id="title" required />
-          </div>
-          <div class="form-field">
-            <label for="published_at">Published date</label>
-            <input type="date" name="published_at" id="published_at" required />
-          </div>
-          <div class="form-field">
-            <label for="summary">Summary (optional)</label>
-            <input type="text" name="summary" id="summary" />
-          </div>
-          <div class="form-field">
-            <label for="pdf">PDF file</label>
-            <input type="file" name="pdf" id="pdf" accept="application/pdf" required />
-          </div>
-          <button type="submit" class="btn btn-primary">Upload & publish</button>
-        </form>
-      </section>
-      <section class="section">
-        <h2>Releases ({releases.length})</h2>
-        {releases.length > 0 ? (
+      <AdminCrudSections
+        breadcrumb={
+          <p class="admin-note">
+            <a href="/admin/content">← Content</a> · <a href="/about/the-dirt">View archive</a>
+          </p>
+        }
+        flash={flash}
+        error={error}
+        addTitle="Upload release"
+        addForm={
+          <form class="form" method="post" action="/admin/content/the-dirt" encType="multipart/form-data">
+            <div class="form-field">
+              <label for="title">Title</label>
+              <input type="text" name="title" id="title" required />
+            </div>
+            <div class="form-field">
+              <label for="published_at">Published date</label>
+              <input type="date" name="published_at" id="published_at" required />
+            </div>
+            <div class="form-field">
+              <label for="summary">Summary (optional)</label>
+              <input type="text" name="summary" id="summary" />
+            </div>
+            <div class="form-field">
+              <label for="pdf">PDF file</label>
+              <input type="file" name="pdf" id="pdf" accept="application/pdf" required />
+            </div>
+            <button type="submit" class="btn btn-primary">Upload & publish</button>
+          </form>
+        }
+        listTitle="Releases"
+        listCount={releases.length}
+        emptyMessage="No releases yet."
+        hasItems={releases.length > 0}
+        table={
           <table class="admin-members-table">
             <thead>
               <tr>
@@ -125,10 +128,8 @@ export function AdminContentDirtPage({
               ))}
             </tbody>
           </table>
-        ) : (
-          <p class="muted">No releases yet.</p>
-        )}
-      </section>
+        }
+      />
     </AdminShell>
   )
 }

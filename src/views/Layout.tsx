@@ -148,7 +148,3 @@ export function PageHeader({
     </div>
   )
 }
-
-export function DemoBanner() {
-  return null
-}

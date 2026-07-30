@@ -1,15 +1,10 @@
 import type { EventRecord } from '../../lib/events'
-import { toDatetimeLocalValue } from '../../lib/events'
+import { toDatetimeLocalValue } from '../../lib/datetime'
 import { AdminShell } from '../../views/AdminShell'
+import { AdminCrudSections } from '../../views/admin/AdminCrudSections'
+import { AdminEditActions } from '../../views/admin/AdminEditActions'
 import type { AdminContext } from '../../lib/admin-context'
 import type { PageProps } from '../../types/page'
-
-function formatEventDate(iso: string) {
-  return new Date(iso).toLocaleString('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  })
-}
 
 function EventEditRow({ event }: { event: EventRecord }) {
   const formId = `event-${event.id}`
@@ -61,12 +56,11 @@ function EventEditRow({ event }: { event: EventRecord }) {
         </label>
       </td>
       <td>
-        <form id={formId} method="post" action={`/admin/events/${event.id}`}>
-          <button type="submit" class="btn btn-secondary btn-sm">Save</button>
-        </form>
-        <form method="post" action={`/admin/events/${event.id}/delete`} class="admin-inline-form">
-          <button type="submit" class="btn btn-secondary btn-sm">Delete</button>
-        </form>
+        <AdminEditActions
+          formId={formId}
+          saveAction={`/admin/events/${event.id}`}
+          deleteAction={`/admin/events/${event.id}/delete`}
+        />
       </td>
     </tr>
   )
@@ -86,42 +80,45 @@ export function AdminEventsPage({
       title="Events"
       activePath="/admin/events"
     >
-      {flash && <p class="admin-flash">{flash}</p>}
-      <section class="admin-form-section">
-        <h2>Add event</h2>
-        <form class="form" method="post" action="/admin/events">
-          <div class="form-field">
-            <label for="title">Title</label>
-            <input type="text" name="title" id="title" required />
-          </div>
-          <div class="form-row">
+      <AdminCrudSections
+        flash={flash}
+        addTitle="Add event"
+        addForm={
+          <form class="form" method="post" action="/admin/events">
             <div class="form-field">
-              <label for="starts_at">Starts (local date/time)</label>
-              <input type="datetime-local" name="starts_at" id="starts_at" required />
+              <label for="title">Title</label>
+              <input type="text" name="title" id="title" required />
+            </div>
+            <div class="form-row">
+              <div class="form-field">
+                <label for="starts_at">Starts (local date/time)</label>
+                <input type="datetime-local" name="starts_at" id="starts_at" required />
+              </div>
+              <div class="form-field">
+                <label for="ends_at">Ends (optional)</label>
+                <input type="datetime-local" name="ends_at" id="ends_at" />
+              </div>
             </div>
             <div class="form-field">
-              <label for="ends_at">Ends (optional)</label>
-              <input type="datetime-local" name="ends_at" id="ends_at" />
+              <label for="location">Location</label>
+              <input type="text" name="location" id="location" />
             </div>
-          </div>
-          <div class="form-field">
-            <label for="location">Location</label>
-            <input type="text" name="location" id="location" />
-          </div>
-          <div class="form-field">
-            <label for="description">Description</label>
-            <textarea name="description" id="description" rows={3}></textarea>
-          </div>
-          <div class="form-field">
-            <label for="registration_url">Registration URL</label>
-            <input type="url" name="registration_url" id="registration_url" />
-          </div>
-          <button type="submit" class="btn btn-primary">Publish event</button>
-        </form>
-      </section>
-      <section class="section">
-        <h2>Events ({events.length})</h2>
-        {events.length > 0 ? (
+            <div class="form-field">
+              <label for="description">Description</label>
+              <textarea name="description" id="description" rows={3}></textarea>
+            </div>
+            <div class="form-field">
+              <label for="registration_url">Registration URL</label>
+              <input type="url" name="registration_url" id="registration_url" />
+            </div>
+            <button type="submit" class="btn btn-primary">Publish event</button>
+          </form>
+        }
+        listTitle="Events"
+        listCount={events.length}
+        emptyMessage="No events in the database yet."
+        hasItems={events.length > 0}
+        table={
           <table class="admin-members-table">
             <thead>
               <tr>
@@ -136,15 +133,13 @@ export function AdminEventsPage({
               </tr>
             </thead>
             <tbody>
-              {events.map((e) => (
-                <EventEditRow event={e} key={e.id} />
+              {events.map((event) => (
+                <EventEditRow event={event} key={event.id} />
               ))}
             </tbody>
           </table>
-        ) : (
-          <p class="muted">No events in the database yet.</p>
-        )}
-      </section>
+        }
+      />
     </AdminShell>
   )
 }

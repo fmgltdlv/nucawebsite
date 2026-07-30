@@ -1,16 +1,9 @@
 import { Layout, PageHeader } from '../views/Layout'
+import { ArchiveCard, ArchiveCardList } from '../views/ArchiveCard'
 import { markdownToSafeHtml } from '../lib/markdown'
+import { formatArchiveDate } from '../lib/format'
 import type { PostRecord } from '../lib/posts-db'
 import type { PageProps } from '../types/page'
-
-function formatDate(iso: string | null) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
 
 export function IndustryUpdatesPage({
   theme,
@@ -34,24 +27,18 @@ export function IndustryUpdatesPage({
       <section class="section">
         <div class="container">
           {posts.length > 0 ? (
-            <ul class="dirt-archive">
+            <ArchiveCardList>
               {posts.map((post) => (
                 <li key={post.id}>
-                  <article class="dirt-card">
-                    <div class="dirt-card-meta">
-                      <time dateTime={post.published_at ?? undefined}>{formatDate(post.published_at)}</time>
-                    </div>
-                    <h2>
-                      <a href={`/industry-updates/${post.slug}`}>{post.title}</a>
-                    </h2>
-                    {post.excerpt && <p>{post.excerpt}</p>}
-                    <a class="text-link" href={`/industry-updates/${post.slug}`}>
-                      Read more →
-                    </a>
-                  </article>
+                  <ArchiveCard
+                    href={`/industry-updates/${post.slug}`}
+                    date={post.published_at ?? ''}
+                    title={post.title}
+                    summary={post.excerpt}
+                  />
                 </li>
               ))}
-            </ul>
+            </ArchiveCardList>
           ) : (
             <p class="prose">No industry updates have been published yet.</p>
           )}
@@ -78,7 +65,7 @@ export function IndustryUpdateDetailPage({
     >
       <PageHeader
         title={post.title}
-        lead={post.excerpt ?? formatDate(post.published_at)}
+        lead={post.excerpt ?? formatArchiveDate(post.published_at)}
       />
       <section class="section">
         <div class="container">
