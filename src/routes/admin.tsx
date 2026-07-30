@@ -39,11 +39,6 @@ function parseMemberType(value: string): MemberType {
   return MEMBER_TYPES.includes(value as MemberType) ? (value as MemberType) : 'contractor'
 }
 
-function parseDisplayOrder(value: string): number {
-  const n = Number.parseInt(value, 10)
-  return Number.isFinite(n) && n >= 0 ? n : 0
-}
-
 function parseMemberFormBody(body: Record<string, File | string>) {
   const company_name = typeof body.company_name === 'string' ? body.company_name.trim() : ''
   const member_type = parseMemberType(
@@ -53,9 +48,6 @@ function parseMemberFormBody(body: Record<string, File | string>) {
   const phone = typeof body.phone === 'string' ? body.phone.trim() : ''
   const email = typeof body.email === 'string' ? body.email.trim() : ''
   const active = body.active === '1'
-  const display_order = parseDisplayOrder(
-    typeof body.display_order === 'string' ? body.display_order : '0',
-  )
 
   return {
     company_name,
@@ -64,7 +56,6 @@ function parseMemberFormBody(body: Record<string, File | string>) {
     phone: phone || undefined,
     email: email || undefined,
     active,
-    display_order,
   }
 }
 

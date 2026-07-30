@@ -4,7 +4,6 @@ import { memberLogoUrl } from './member-logos'
 
 export type AdminMember = Member & {
   active: boolean
-  display_order: number
   logo_r2_key?: string
 }
 
@@ -53,15 +52,14 @@ export async function getMemberLogoR2Key(db: D1Database, id: string): Promise<st
 export async function listMembersForAdmin(db: D1Database): Promise<AdminMember[]> {
   const { results } = await db
     .prepare(
-      `SELECT id, company_name, member_type, website, phone, email, active, display_order, logo_r2_key
-       FROM members ORDER BY display_order ASC, company_name ASC`,
+      `SELECT id, company_name, member_type, website, phone, email, active, logo_r2_key
+       FROM members ORDER BY company_name ASC`,
     )
-    .all<MemberRow & { active: number; display_order: number }>()
+    .all<MemberRow & { active: number }>()
 
   return (results ?? []).map((r) => ({
     ...mapMemberRow(r),
     active: r.active === 1,
-    display_order: r.display_order,
     logo_r2_key: r.logo_r2_key ?? undefined,
   }))
 }
@@ -75,15 +73,14 @@ export async function createMember(
     phone?: string
     email?: string
     active?: boolean
-    display_order?: number
     logo_r2_key?: string
   },
 ): Promise<string> {
   const id = crypto.randomUUID()
   await db
     .prepare(
-      `INSERT INTO members (id, company_name, member_type, website, phone, email, active, display_order, logo_r2_key)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO members (id, company_name, member_type, website, phone, email, active, logo_r2_key)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       id,
@@ -93,7 +90,6 @@ export async function createMember(
       data.phone ?? null,
       data.email ?? null,
       data.active ? 1 : 0,
-      data.display_order ?? 0,
       data.logo_r2_key ?? null,
     )
     .run()
@@ -110,14 +106,13 @@ export async function updateMember(
     phone?: string
     email?: string
     active: boolean
-    display_order: number
   },
 ): Promise<void> {
   await db
     .prepare(
       `UPDATE members
        SET company_name = ?, member_type = ?, website = ?, phone = ?, email = ?,
-           active = ?, display_order = ?, updated_at = datetime('now')
+           active = ?, updated_at = datetime('now')
        WHERE id = ?`,
     )
     .bind(
@@ -127,7 +122,6 @@ export async function updateMember(
       data.phone ?? null,
       data.email ?? null,
       data.active ? 1 : 0,
-      data.display_order,
       id,
     )
     .run()

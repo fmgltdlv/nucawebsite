@@ -85,16 +85,6 @@ function MemberEditRow({ member }: { member: AdminMember }) {
         </label>
       </td>
       <td>
-        <input
-          form={formId}
-          type="number"
-          name="display_order"
-          class="admin-table-input admin-table-input-narrow"
-          value={String(member.display_order)}
-          min={0}
-        />
-      </td>
-      <td>
         <code class="admin-id">{member.id}</code>
       </td>
       <td>
@@ -169,15 +159,9 @@ export function AdminMembersPage({
               <input type="tel" name="phone" id="phone" />
             </div>
           </div>
-          <div class="form-row">
-            <div class="form-field">
-              <label for="email">Email</label>
-              <input type="email" name="email" id="email" />
-            </div>
-            <div class="form-field">
-              <label for="display_order">Display order</label>
-              <input type="number" name="display_order" id="display_order" min={0} value={0} />
-            </div>
+          <div class="form-field">
+            <label for="email">Email</label>
+            <input type="email" name="email" id="email" />
           </div>
           <div class="form-field">
             <label for="logo">Company logo</label>
@@ -213,7 +197,6 @@ export function AdminMembersPage({
                   <th>Phone</th>
                   <th>Email</th>
                   <th>Status</th>
-                  <th>Order</th>
                   <th>ID</th>
                   <th></th>
                 </tr>
