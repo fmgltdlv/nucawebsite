@@ -9,7 +9,7 @@ function MemberBubble({ member }: { member: Member }) {
   const initial = member.company.trim().charAt(0).toUpperCase() || '?'
 
   return (
-    <li class="member-bubble">
+    <li class="member-bubble" data-member-type={member.type}>
       <div class="member-bubble-avatar" aria-hidden="true">
         {member.logoUrl ? (
           <img src={member.logoUrl} alt="" class="member-bubble-logo" />
@@ -47,7 +47,7 @@ export function MembersPage({
   filter,
   members,
 }: PageProps & { filter?: MemberType; members: Member[] }) {
-  const filtered = (filter ? members.filter((m) => m.type === filter) : members).sort((a, b) =>
+  const sorted = [...members].sort((a, b) =>
     a.company.localeCompare(b.company, undefined, { sensitivity: 'base' }),
   )
 
@@ -73,27 +73,27 @@ export function MembersPage({
                 autocomplete="organization"
               />
             </label>
-            <div class="filter-pills" role="tablist" aria-label="Member type">
+            <div class="filter-pills" id="member-type-filters" role="tablist" aria-label="Member type">
               {filters.map((f) => {
-                const href = f.id === 'all' ? '/members' : `/members?type=${f.id}`
                 const active = (filter ?? 'all') === f.id
                 return (
-                  <a
+                  <button
+                    type="button"
                     key={f.id}
                     class={`pill ${active ? 'pill-active' : ''}`}
-                    href={href}
+                    data-filter={f.id}
                     role="tab"
                     aria-selected={active}
                   >
                     {f.label}
-                  </a>
+                  </button>
                 )
               })}
             </div>
           </div>
 
           <ul class="member-grid" id="member-grid">
-            {filtered.map((member) => (
+            {sorted.map((member) => (
               <MemberBubble key={member.id} member={member} />
             ))}
           </ul>

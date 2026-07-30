@@ -21,23 +21,63 @@
   const search = document.getElementById('member-search')
   const grid = document.getElementById('member-grid')
   const empty = document.getElementById('member-search-empty')
+  const filterBar = document.getElementById('member-type-filters')
 
-  if (search && grid && empty) {
+  if (grid && empty) {
     const items = grid.querySelectorAll('.member-bubble')
+    const validTypes = new Set(['contractor', 'associate', 'institutional'])
 
-    search.addEventListener('input', () => {
-      const q = search.value.trim().toLowerCase()
+    function readTypeFromUrl() {
+      const type = new URLSearchParams(window.location.search).get('type')
+      return validTypes.has(type) ? type : 'all'
+    }
+
+    let activeType = readTypeFromUrl()
+
+    function applyMemberFilters() {
+      const q = search?.value.trim().toLowerCase() ?? ''
       let visible = 0
 
       items.forEach((item) => {
+        const memberType = item.getAttribute('data-member-type') ?? ''
+        const typeMatch = activeType === 'all' || memberType === activeType
         const text = item.textContent?.toLowerCase() ?? ''
-        const show = !q || text.includes(q)
+        const searchMatch = !q || text.includes(q)
+        const show = typeMatch && searchMatch
         item.hidden = !show
         if (show) visible += 1
       })
 
       empty.hidden = visible > 0
+    }
+
+    function setActiveType(type) {
+      activeType = type
+      filterBar?.querySelectorAll('[data-filter]').forEach((pill) => {
+        const pillType = pill.getAttribute('data-filter') ?? 'all'
+        const isActive = pillType === type
+        pill.classList.toggle('pill-active', isActive)
+        pill.setAttribute('aria-selected', isActive ? 'true' : 'false')
+      })
+
+      const url = type === 'all' ? '/members' : `/members?type=${type}`
+      window.history.replaceState(null, '', url)
+      applyMemberFilters()
+    }
+
+    search?.addEventListener('input', applyMemberFilters)
+
+    filterBar?.querySelectorAll('[data-filter]').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        setActiveType(pill.getAttribute('data-filter') ?? 'all')
+      })
     })
+
+    if (activeType !== 'all') {
+      setActiveType(activeType)
+    } else {
+      applyMemberFilters()
+    }
   }
 
   const joinForm = document.getElementById('join-form')

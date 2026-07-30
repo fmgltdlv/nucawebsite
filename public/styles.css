@@ -883,6 +883,12 @@ a:hover {
   border-radius: 999px;
 }
 
+button.pill {
+  cursor: pointer;
+  font: inherit;
+  font-family: inherit;
+}
+
 .pill-active,
 .pill:hover {
   color: var(--color-primary);
@@ -934,6 +940,10 @@ a:hover {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.member-bubble[hidden] {
+  display: none;
 }
 
 .member-bubble {
