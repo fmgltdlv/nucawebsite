@@ -75,7 +75,7 @@ export const siteNavigation: NavEntry[] = [
     children: [
       ...CHAPTER_COMMITTEES.map((committee) => ({
         label: committee.name,
-        href: `/about/committees#${committee.key}`,
+        href: `/about/committees/${committee.key}`,
         status: 'stub' as const,
         indent: true,
       })),

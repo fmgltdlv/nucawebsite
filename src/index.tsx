@@ -9,6 +9,8 @@ import { sendContactMessage, notifyStaffOfApplication } from './lib/email'
 import { listUpcomingEvents } from './lib/events'
 import { listLeadership } from './lib/leadership-db'
 import { listActiveMembers } from './lib/members'
+import { committeePageSlug } from './lib/chair-pages'
+import { parseCommitteeKey } from './lib/committee-pages'
 import { getPageBySlug } from './lib/pages-db'
 import { getPostBySlug, listPublishedPosts } from './lib/posts-db'
 import { listQaItems } from './lib/qa-db'
@@ -20,6 +22,7 @@ import { seedContentIfEmpty, seedDemoMembersIfEmpty, seedDirtIfEmpty } from './l
 import { THEME_COOKIE } from './lib/theme'
 import { registerAdminRoutes } from './routes/admin'
 import { CommitteesPage } from './pages/Committees'
+import { CommitteeDetailPage } from './pages/CommitteeDetail'
 import { ContentPage } from './pages/ContentPage'
 import { ContactPage, ContactErrorPage, ContactThanksPage } from './pages/Contact'
 import { EventsPage } from './pages/Events'
@@ -115,6 +118,15 @@ app.get('/about/committees', async (c) => {
   const site = await siteProps(c)
   const page = await getPageBySlug(c.env.DB, 'committees', true)
   return c.html(<CommitteesPage {...site} page={page} />)
+})
+
+app.get('/about/committees/:key', async (c) => {
+  const site = await siteProps(c)
+  const committeeKey = parseCommitteeKey(c.req.param('key'))
+  if (!committeeKey) return c.html(<NotFoundPage {...site} />, 404)
+  const page = await getPageBySlug(c.env.DB, committeePageSlug(committeeKey), true)
+  if (!page) return c.html(<NotFoundPage {...site} />, 404)
+  return c.html(<CommitteeDetailPage {...site} committeeKey={committeeKey} page={page} />)
 })
 
 app.get('/about/the-dirt', async (c) => {

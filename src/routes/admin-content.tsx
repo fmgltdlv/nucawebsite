@@ -20,6 +20,7 @@ import {
 } from '../lib/leadership-db'
 import { createPost, deletePost, getPostById, listAllPosts, updatePost } from '../lib/posts-db'
 import { getPageBySlug, isPageSlug, listPages, upsertPage } from '../lib/pages-db'
+import { blocksToMarkdown, parsePageBlocks } from '../lib/page-blocks'
 import { createQaItem, deleteQaItem, listQaItems, updateQaItem } from '../lib/qa-db'
 import {
   createResourceItem,
@@ -357,10 +358,19 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const slug = c.req.param('slug')
     if (!chairCanEditPage(ctx, slug)) return c.redirect('/admin', 303)
     const body = await c.req.parseBody()
+    const body_json = typeof body.body_json === 'string' ? body.body_json : null
+    const blocks = parsePageBlocks(body_json)
+    const body_md =
+      blocks && blocks.length > 0
+        ? blocksToMarkdown(blocks)
+        : typeof body.body_md === 'string'
+          ? body.body_md
+          : ''
     await upsertPage(c.env.DB, {
       slug,
       title: typeof body.title === 'string' ? body.title.trim() : slug,
-      body_md: typeof body.body_md === 'string' ? body.body_md : '',
+      body_md,
+      body_json: blocks && blocks.length > 0 ? body_json : null,
       meta_description:
         typeof body.meta_description === 'string' ? body.meta_description.trim() : null,
       published: body.published === '1',

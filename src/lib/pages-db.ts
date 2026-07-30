@@ -2,6 +2,7 @@ export type PageRecord = {
   slug: string
   title: string
   body_md: string
+  body_json: string | null
   meta_description: string | null
   published: number
 }
@@ -37,7 +38,7 @@ export function isPageSlug(slug: string): slug is PageSlug {
 export async function listPages(db: D1Database): Promise<PageRecord[]> {
   const { results } = await db
     .prepare(
-      `SELECT slug, title, body_md, meta_description, published FROM pages ORDER BY slug ASC`,
+      `SELECT slug, title, body_md, body_json, meta_description, published FROM pages ORDER BY slug ASC`,
     )
     .all<PageRecord>()
   return results ?? []
@@ -50,7 +51,7 @@ export async function getPageBySlug(
 ): Promise<PageRecord | null> {
   const row = await db
     .prepare(
-      `SELECT slug, title, body_md, meta_description, published FROM pages WHERE slug = ?`,
+      `SELECT slug, title, body_md, body_json, meta_description, published FROM pages WHERE slug = ?`,
     )
     .bind(slug)
     .first<PageRecord>()
@@ -65,17 +66,19 @@ export async function upsertPage(
     slug: string
     title: string
     body_md: string
+    body_json?: string | null
     meta_description?: string | null
     published: boolean
   },
 ): Promise<void> {
   await db
     .prepare(
-      `INSERT INTO pages (slug, title, body_md, meta_description, published, updated_at)
-       VALUES (?, ?, ?, ?, ?, datetime('now'))
+      `INSERT INTO pages (slug, title, body_md, body_json, meta_description, published, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
        ON CONFLICT(slug) DO UPDATE SET
          title = excluded.title,
          body_md = excluded.body_md,
+         body_json = excluded.body_json,
          meta_description = excluded.meta_description,
          published = excluded.published,
          updated_at = datetime('now')`,
@@ -84,6 +87,7 @@ export async function upsertPage(
       data.slug,
       data.title,
       data.body_md,
+      data.body_json ?? null,
       data.meta_description ?? null,
       data.published ? 1 : 0,
     )

@@ -9,6 +9,10 @@ import { setContactInfo, setFooterInfo, setThemeId } from './site-settings'
 import { upsertPage } from './pages-db'
 import { createLeadership } from './leadership-db'
 import { createResourceItem } from './resource-items-db'
+import { CHAPTER_COMMITTEES } from '../data/committees'
+import { defaultCommitteeBlocks } from './committee-pages'
+import { blocksToMarkdown, serializePageBlocks } from './page-blocks'
+import { committeePageSlug } from './chair-pages'
 
 /** Seed first admin from Worker secrets when no users exist. */
 export async function seedAdminIfNeeded(env: Env): Promise<void> {
@@ -40,6 +44,7 @@ export async function seedContentIfEmpty(env: Env): Promise<void> {
   await seedQaIfEmpty(env)
   await seedEventsIfEmpty(env)
   await seedPagesIfEmpty(env)
+  await seedCommitteePagesIfMissing(env)
   await seedResourcesIfEmpty(env)
   await seedLeadershipIfEmpty(env)
 }
@@ -131,6 +136,29 @@ Contact the chapter for current criteria, deadlines, and application materials.`
     meta_description: 'Reference links for local utilities, national organizations, and Southern Nevada municipalities.',
     published: true,
   })
+}
+
+async function seedCommitteePagesIfMissing(env: Env): Promise<void> {
+  for (const committee of CHAPTER_COMMITTEES) {
+    const slug = committeePageSlug(committee.key)
+    const existing = await env.DB.prepare('SELECT slug FROM pages WHERE slug = ?')
+      .bind(slug)
+      .first<{ slug: string }>()
+    if (existing) continue
+
+    const blocks = defaultCommitteeBlocks(committee.name)
+    const body_json = serializePageBlocks(blocks)
+    const body_md = blocksToMarkdown(blocks)
+
+    await upsertPage(env.DB, {
+      slug,
+      title: committee.name,
+      body_md,
+      body_json,
+      meta_description: `${committee.name} — NUCA of Las Vegas`,
+      published: true,
+    })
+  }
 }
 
 async function seedResourcesIfEmpty(env: Env): Promise<void> {

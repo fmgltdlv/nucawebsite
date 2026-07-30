@@ -1,5 +1,5 @@
 import { Layout, PageHeader } from '../views/Layout'
-import { markdownToSafeHtml } from '../lib/markdown'
+import { renderPageContent } from '../lib/page-blocks'
 import { groupResourceItems, type ResourceItemRecord } from '../lib/resource-items-db'
 import type { PageRecord } from '../lib/pages-db'
 import type { PageProps } from '../types/page'
@@ -13,7 +13,7 @@ export function ResourcesPage({
   items,
 }: PageProps & { page: PageRecord | null; items: ResourceItemRecord[] }) {
   const groups = groupResourceItems(items)
-  const intro = page?.body_md?.trim()
+  const intro = page?.body_json || page?.body_md?.trim()
 
   return (
     <Layout
@@ -30,7 +30,7 @@ export function ResourcesPage({
       />
       <section class="section">
         <div class="container prose">
-          {intro && <div>{markdownToSafeHtml(intro)}</div>}
+          {intro && <div>{renderPageContent(page?.body_md ?? '', page?.body_json)}</div>}
           {groups.map((group) => (
             <div class="resource-section" key={group.category}>
               <h3>{group.category}</h3>

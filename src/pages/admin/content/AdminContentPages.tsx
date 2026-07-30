@@ -8,10 +8,10 @@ const publicPaths: Record<string, string> = {
   resources: '/resources',
   scholarships: '/scholarships',
   committees: '/about/committees',
-  'committee-legislative': '/about/committees#legislative',
-  'committee-safety': '/about/committees#safety',
-  'committee-standards': '/about/committees#standards',
-  'committee-damage_prevention': '/about/committees#damage_prevention',
+  'committee-legislative': '/about/committees/legislative',
+  'committee-safety': '/about/committees/safety',
+  'committee-standards': '/about/committees/standards',
+  'committee-damage_prevention': '/about/committees/damage_prevention',
 }
 
 export function AdminContentPagesPage({
