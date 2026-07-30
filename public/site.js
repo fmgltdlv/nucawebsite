@@ -415,17 +415,6 @@
       setButtonBusy(btn, true, btn === submitter ? pendingLabel : pendingLabelForButton(btn))
     })
     form.setAttribute('aria-busy', 'true')
-    form
-      .querySelectorAll('input:not([type="hidden"]), textarea, select')
-      .forEach((el) => {
-        if (
-          el instanceof HTMLInputElement ||
-          el instanceof HTMLTextAreaElement ||
-          el instanceof HTMLSelectElement
-        ) {
-          el.disabled = true
-        }
-      })
 
     const dialog = form.closest('.admin-modal')
     if (!(dialog instanceof HTMLElement)) return

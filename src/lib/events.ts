@@ -137,7 +137,7 @@ export async function resolveEventCoordinates(
     return { latitude: existing.latitude, longitude: existing.longitude }
   }
 
-  const geocoded = await geocodeClarkCountyAddress(trimmed)
+  const geocoded = await geocodeClarkCountyAddress(trimmed).catch(() => null)
   if (!geocoded) return { latitude: null, longitude: null }
 
   return { latitude: geocoded.lat, longitude: geocoded.lng }
