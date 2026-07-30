@@ -437,7 +437,8 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const body = await c.req.parseBody()
     const label = typeof body.label === 'string' ? body.label.trim() : ''
     const url = typeof body.url === 'string' ? body.url.trim() : ''
-    if (label && url) await createResourceItem(c.env.DB, { label, url })
+    const category = typeof body.category === 'string' ? body.category.trim() : ''
+    if (label && url) await createResourceItem(c.env.DB, { label, url, category })
     return c.redirect('/admin/content/resources?ok=1', 303)
   })
 
@@ -448,6 +449,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     await updateResourceItem(c.env.DB, c.req.param('id'), {
       label: typeof body.label === 'string' ? body.label.trim() : '',
       url: typeof body.url === 'string' ? body.url.trim() : '',
+      category: typeof body.category === 'string' ? body.category.trim() : '',
       sort_order: parseSortOrder(typeof body.sort_order === 'string' ? body.sort_order : '0'),
       published: body.published === '1',
     })

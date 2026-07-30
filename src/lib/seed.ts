@@ -2,11 +2,13 @@ import type { Env } from '../env'
 import { demoEvents, demoLeadership, demoMembers, site } from '../data/demo'
 import { demoQaItems } from '../data/qa'
 import { demoDirtReleases } from '../data/the-dirt'
+import { demoResourceItems } from '../data/resources'
 import { countUsers, createUser } from './auth'
 import { createEvent } from './events'
 import { setContactInfo, setFooterInfo, setThemeId } from './site-settings'
 import { upsertPage } from './pages-db'
 import { createLeadership } from './leadership-db'
+import { createResourceItem } from './resource-items-db'
 
 /** Seed first admin from Worker secrets when no users exist. */
 export async function seedAdminIfNeeded(env: Env): Promise<void> {
@@ -38,6 +40,7 @@ export async function seedContentIfEmpty(env: Env): Promise<void> {
   await seedQaIfEmpty(env)
   await seedEventsIfEmpty(env)
   await seedPagesIfEmpty(env)
+  await seedResourcesIfEmpty(env)
   await seedLeadershipIfEmpty(env)
 }
 
@@ -124,9 +127,25 @@ Contact the chapter for current criteria, deadlines, and application materials.`
   await upsertPage(env.DB, {
     slug: 'resources',
     title: 'Resources',
-    body_md: `Reference links and documents for NUCA members and the utility construction industry in Southern Nevada.`,
+    body_md: '',
+    meta_description: 'Reference links for local utilities, national organizations, and Southern Nevada municipalities.',
     published: true,
   })
+}
+
+async function seedResourcesIfEmpty(env: Env): Promise<void> {
+  const row = await env.DB.prepare('SELECT COUNT(*) as c FROM resource_items').first<{ c: number }>()
+  if ((row?.c ?? 0) > 0) return
+  let order = 0
+  for (const item of demoResourceItems) {
+    await createResourceItem(env.DB, {
+      label: item.label,
+      url: item.url,
+      category: item.category,
+      sort_order: order++,
+      published: true,
+    })
+  }
 }
 
 async function seedLeadershipIfEmpty(env: Env): Promise<void> {

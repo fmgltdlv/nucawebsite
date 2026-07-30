@@ -19,6 +19,9 @@ function ResourceEditRow({ item }: { item: ResourceItemRecord }) {
         />
       </td>
       <td>
+        <input form={formId} type="text" name="category" class="admin-table-input" value={item.category} />
+      </td>
+      <td>
         <input form={formId} type="text" name="label" class="admin-table-input" value={item.label} required />
       </td>
       <td>
@@ -66,6 +69,10 @@ export function AdminContentResourcesPage({
         addForm={
           <form class="form" method="post" action="/admin/content/resources">
             <div class="form-field">
+              <label for="category">Category</label>
+              <input type="text" name="category" id="category" placeholder="e.g. Local Utilities" />
+            </div>
+            <div class="form-field">
               <label for="label">Label</label>
               <input type="text" name="label" id="label" required />
             </div>
@@ -85,6 +92,7 @@ export function AdminContentResourcesPage({
             <thead>
               <tr>
                 <th>Order</th>
+                <th>Category</th>
                 <th>Label</th>
                 <th>URL</th>
                 <th>Status</th>
