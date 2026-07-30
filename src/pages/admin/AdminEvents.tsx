@@ -1,5 +1,6 @@
 import type { EventRecord } from '../../lib/events'
-import { toDatetimeLocalValue } from '../../lib/datetime'
+import { repeatRuleLabel } from '../../lib/event-repeat'
+import { toDateInputValue, toDatetimeLocalValue } from '../../lib/datetime'
 import { formatArchiveDate } from '../../lib/format'
 import { AdminShell } from '../../views/AdminShell'
 import { AdminCrudSections } from '../../views/admin/AdminCrudSections'
@@ -16,10 +17,56 @@ function eventSearchText(event: EventRecord): string {
     event.description,
     event.published ? 'published' : 'draft',
     formatArchiveDate(event.starts_at),
+    repeatRuleLabel(event.repeat_rule),
   ]
     .filter(Boolean)
     .join(' ')
     .toLowerCase()
+}
+
+function EventRepeatFields({
+  formId,
+  repeatRule,
+  repeatUntil,
+}: {
+  formId?: string
+  repeatRule?: string | null
+  repeatUntil?: string | null
+}) {
+  const idPrefix = formId ? `${formId}-` : ''
+  const selectedRule = repeatRule ?? ''
+
+  return (
+    <div class="form-row">
+      <div class="form-field">
+        <label for={`${idPrefix}repeat_rule`}>Repeats</label>
+        <select name="repeat_rule" id={`${idPrefix}repeat_rule`}>
+          <option value="" selected={!selectedRule}>
+            Does not repeat
+          </option>
+          <option value="weekly" selected={selectedRule === 'weekly'}>
+            Weekly
+          </option>
+          <option value="monthly" selected={selectedRule === 'monthly'}>
+            Monthly
+          </option>
+          <option value="yearly" selected={selectedRule === 'yearly'}>
+            Yearly
+          </option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label for={`${idPrefix}repeat_until`}>Repeat until (optional)</label>
+        <input
+          type="date"
+          name="repeat_until"
+          id={`${idPrefix}repeat_until`}
+          value={toDateInputValue(repeatUntil)}
+        />
+        <p class="form-hint">Leave blank to repeat for two years from the first date.</p>
+      </div>
+    </div>
+  )
 }
 
 function EventListRow({ event }: { event: EventRecord }) {
@@ -29,6 +76,7 @@ function EventListRow({ event }: { event: EventRecord }) {
     <tr data-admin-list-row data-search={eventSearchText(event)}>
       <td><strong>{event.title}</strong></td>
       <td>{formatArchiveDate(event.starts_at)}</td>
+      <td>{repeatRuleLabel(event.repeat_rule)}</td>
       <td>{event.location ?? '—'}</td>
       <td>
         {event.published === 1 ? (
@@ -87,6 +135,11 @@ function EventEditModal({ event }: { event: EventRecord }) {
           />
         </div>
       </div>
+      <EventRepeatFields
+        formId={formId}
+        repeatRule={event.repeat_rule}
+        repeatUntil={event.repeat_until}
+      />
       <div class="form-field">
         <label for={`${formId}-location`}>Location</label>
         <input type="text" name="location" id={`${formId}-location`} value={event.location ?? ''} />
@@ -152,6 +205,7 @@ export function AdminEventsPage({
                 <input type="datetime-local" name="ends_at" id="ends_at" />
               </div>
             </div>
+            <EventRepeatFields />
             <div class="form-field">
               <label for="location">Location</label>
               <input type="text" name="location" id="location" />
@@ -174,6 +228,7 @@ export function AdminEventsPage({
           <tr>
             <th>Title</th>
             <th>Starts</th>
+            <th>Repeats</th>
             <th>Location</th>
             <th>Status</th>
             <th></th>

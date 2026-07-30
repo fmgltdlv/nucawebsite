@@ -5,6 +5,7 @@ import { MEMBER_TYPES, type MemberType } from '../data/demo'
 import type { Env } from '../env'
 import { assignChairCommittees, approveMemberLink, createUser, listUsersWithMemberInfo, rejectMemberLink, requestMemberLink, verifyUserLogin } from '../lib/auth'
 import { canAccessRole, resolveAdminContext } from '../lib/admin-context'
+import { parseRepeatRule, parseRepeatUntil } from '../lib/event-repeat'
 import { createEvent, deleteEvent, listAllEventsForAdmin, updateEvent } from '../lib/events'
 import { parseDatetimeLocal } from '../lib/datetime'
 import { registerAdminContentRoutes } from './admin-content'
@@ -311,6 +312,8 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const description = typeof body.description === 'string' ? body.description.trim() : ''
     const registration_url =
       typeof body.registration_url === 'string' ? body.registration_url.trim() : ''
+    const repeat_rule = parseRepeatRule(typeof body.repeat_rule === 'string' ? body.repeat_rule : '')
+    const repeat_until = parseRepeatUntil(typeof body.repeat_until === 'string' ? body.repeat_until : '')
 
     await createEvent(c.env.DB, {
       title,
@@ -319,6 +322,8 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       location: location || undefined,
       description: description || undefined,
       registration_url: registration_url || undefined,
+      repeat_rule,
+      repeat_until,
     })
 
     return c.redirect('/admin/events?created=1', 303)
@@ -342,6 +347,8 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const description = typeof body.description === 'string' ? body.description.trim() : ''
     const registration_url =
       typeof body.registration_url === 'string' ? body.registration_url.trim() : ''
+    const repeat_rule = parseRepeatRule(typeof body.repeat_rule === 'string' ? body.repeat_rule : '')
+    const repeat_until = parseRepeatUntil(typeof body.repeat_until === 'string' ? body.repeat_until : '')
 
     await updateEvent(c.env.DB, id, {
       title,
@@ -351,6 +358,8 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       description: description || null,
       registration_url: registration_url || null,
       published: body.published === '1',
+      repeat_rule,
+      repeat_until,
     })
 
     return c.redirect('/admin/events?ok=1', 303)

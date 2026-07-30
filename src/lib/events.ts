@@ -1,3 +1,5 @@
+import { expandEventOccurrences, type ExpandedEventRecord } from './event-repeat'
+
 export type EventRecord = {
   id: string
   title: string
@@ -7,59 +9,48 @@ export type EventRecord = {
   description: string | null
   registration_url: string | null
   published: number
+  repeat_rule: string | null
+  repeat_until: string | null
 }
 
 export const EVENTS_LIST_PAGE_SIZE = 5
 
-const EVENT_COLUMNS = `id, title, starts_at, ends_at, location, description, registration_url, published`
+const EVENT_COLUMNS = `id, title, starts_at, ends_at, location, description, registration_url, published, repeat_rule, repeat_until`
 
-const UPCOMING_WHERE = `published = 1 AND starts_at >= datetime('now')`
+async function listPublishedMasterEvents(db: D1Database): Promise<EventRecord[]> {
+  const { results } = await db
+    .prepare(`SELECT ${EVENT_COLUMNS} FROM events WHERE published = 1 ORDER BY starts_at ASC LIMIT 500`)
+    .all<EventRecord>()
+  return results ?? []
+}
+
+function upcomingOccurrences(events: EventRecord[]): ExpandedEventRecord[] {
+  return expandEventOccurrences(events, { upcomingOnly: true })
+}
 
 export async function countUpcomingEvents(db: D1Database): Promise<number> {
-  const row = await db
-    .prepare(`SELECT COUNT(*) as c FROM events WHERE ${UPCOMING_WHERE}`)
-    .first<{ c: number }>()
-  return row?.c ?? 0
+  const events = await listPublishedMasterEvents(db)
+  return upcomingOccurrences(events).length
 }
 
 export async function listUpcomingEventsPage(
   db: D1Database,
   page: number,
   pageSize = EVENTS_LIST_PAGE_SIZE,
-): Promise<EventRecord[]> {
+): Promise<ExpandedEventRecord[]> {
+  const events = await listPublishedMasterEvents(db)
   const offset = Math.max(0, (Math.max(1, page) - 1) * pageSize)
-  const { results } = await db
-    .prepare(
-      `SELECT ${EVENT_COLUMNS}
-       FROM events WHERE ${UPCOMING_WHERE}
-       ORDER BY starts_at ASC LIMIT ? OFFSET ?`,
-    )
-    .bind(pageSize, offset)
-    .all<EventRecord>()
-  return results ?? []
+  return upcomingOccurrences(events).slice(offset, offset + pageSize)
 }
 
-export async function listPublishedEventsForCalendar(db: D1Database): Promise<EventRecord[]> {
-  const { results } = await db
-    .prepare(
-      `SELECT ${EVENT_COLUMNS}
-       FROM events WHERE published = 1
-       ORDER BY starts_at ASC LIMIT 500`,
-    )
-    .all<EventRecord>()
-  return results ?? []
+export async function listPublishedEventsForCalendar(db: D1Database): Promise<ExpandedEventRecord[]> {
+  const events = await listPublishedMasterEvents(db)
+  return expandEventOccurrences(events)
 }
 
-export async function listUpcomingEvents(db: D1Database, limit = 50): Promise<EventRecord[]> {
-  const { results } = await db
-    .prepare(
-      `SELECT ${EVENT_COLUMNS}
-       FROM events WHERE ${UPCOMING_WHERE}
-       ORDER BY starts_at ASC LIMIT ?`,
-    )
-    .bind(limit)
-    .all<EventRecord>()
-  return results ?? []
+export async function listUpcomingEvents(db: D1Database, limit = 50): Promise<ExpandedEventRecord[]> {
+  const events = await listPublishedMasterEvents(db)
+  return upcomingOccurrences(events).slice(0, limit)
 }
 
 export async function listAllEventsForAdmin(db: D1Database): Promise<EventRecord[]> {
@@ -87,13 +78,15 @@ export async function createEvent(
     location?: string
     description?: string
     registration_url?: string
+    repeat_rule?: string | null
+    repeat_until?: string | null
   },
 ): Promise<string> {
   const id = crypto.randomUUID()
   await db
     .prepare(
-      `INSERT INTO events (id, title, starts_at, ends_at, location, description, registration_url, published)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+      `INSERT INTO events (id, title, starts_at, ends_at, location, description, registration_url, published, repeat_rule, repeat_until)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
     )
     .bind(
       id,
@@ -103,6 +96,8 @@ export async function createEvent(
       data.location ?? null,
       data.description ?? null,
       data.registration_url ?? null,
+      data.repeat_rule ?? null,
+      data.repeat_until ?? null,
     )
     .run()
   return id
@@ -119,12 +114,14 @@ export async function updateEvent(
     description?: string | null
     registration_url?: string | null
     published: boolean
+    repeat_rule?: string | null
+    repeat_until?: string | null
   },
 ): Promise<void> {
   await db
     .prepare(
       `UPDATE events SET title = ?, starts_at = ?, ends_at = ?, location = ?, description = ?,
-       registration_url = ?, published = ?, updated_at = datetime('now') WHERE id = ?`,
+       registration_url = ?, published = ?, repeat_rule = ?, repeat_until = ?, updated_at = datetime('now') WHERE id = ?`,
     )
     .bind(
       data.title,
@@ -134,6 +131,8 @@ export async function updateEvent(
       data.description ?? null,
       data.registration_url ?? null,
       data.published ? 1 : 0,
+      data.repeat_rule ?? null,
+      data.repeat_until ?? null,
       id,
     )
     .run()
@@ -143,4 +142,4 @@ export async function deleteEvent(db: D1Database, id: string): Promise<void> {
   await db.prepare('DELETE FROM events WHERE id = ?').bind(id).run()
 }
 
-export { toDatetimeLocalValue } from './datetime'
+export { toDatetimeLocalValue, toDateInputValue } from './datetime'
