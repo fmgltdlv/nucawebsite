@@ -50,7 +50,6 @@ function LeaderBubble({
           <span class="leader-bubble-role">{person.role_title}</span>
           {person.chair_title && <span class="leader-bubble-chair">{person.chair_title}</span>}
           {person.company && <span class="leader-bubble-company">{person.company}</span>}
-          <span class="leader-bubble-hint">View profile</span>
         </div>
       </button>
     </li>

@@ -1646,13 +1646,6 @@ button.pill {
   line-height: 1.45;
 }
 
-.leader-bubble-hint {
-  margin-top: 0.15rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--color-primary);
-}
-
 .leader-bubble-photo {
   object-fit: cover;
   padding: 0;
@@ -1724,21 +1717,22 @@ button.pill {
   display: none !important;
 }
 
-.leader-dialog-photo,
-.leader-dialog-initial {
-  width: 11rem;
-  height: 11rem;
-  border-radius: 50%;
-}
-
 .leader-dialog-photo {
-  object-fit: cover;
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 16rem;
+  max-height: 12rem;
+  object-fit: contain;
 }
 
 .leader-dialog-initial {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 10rem;
+  height: 10rem;
+  border-radius: 50%;
   font-size: 3rem;
   font-weight: 700;
   color: var(--color-primary);
@@ -1796,13 +1790,9 @@ button.pill {
 
 @media (min-width: 640px) {
   .leader-dialog-layout {
-    grid-template-columns: 12rem 1fr;
+    grid-template-columns: auto 1fr;
     align-items: start;
     gap: 1.5rem;
-  }
-
-  .member-dialog .leader-dialog-layout {
-    grid-template-columns: auto 1fr;
   }
 
   .leader-dialog-media {
@@ -1810,12 +1800,7 @@ button.pill {
     place-items: start center;
   }
 
-  .leader-dialog-photo,
-  .leader-dialog-initial {
-    width: 12rem;
-    height: 12rem;
-  }
-
+  .leader-dialog-initial,
   .member-dialog-initial {
     width: 11rem;
     height: 11rem;
