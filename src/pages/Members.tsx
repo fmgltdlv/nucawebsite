@@ -1,4 +1,5 @@
 import { Layout, PageHeader } from '../views/Layout'
+import { JsonScript } from '../views/JsonScript'
 import {
   memberTypeLabel,
   type Member,
@@ -136,9 +137,7 @@ export function MembersPage({
             No members match your search.
           </p>
 
-          <script id="member-roster" type="application/json">
-            {rosterJson}
-          </script>
+          <JsonScript id="member-roster" json={rosterJson} />
           <MemberDialog />
         </div>
       </section>

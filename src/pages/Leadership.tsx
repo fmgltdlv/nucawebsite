@@ -1,4 +1,5 @@
 import { Layout, PageHeader } from '../views/Layout'
+import { JsonScript } from '../views/JsonScript'
 import { groupLeadership } from '../lib/leadership-groups'
 import {
   serializeLeadershipRoster,
@@ -156,9 +157,7 @@ export function LeadershipPage({
                 </div>
               )}
 
-              <script id="leadership-roster" type="application/json">
-                {rosterJson}
-              </script>
+              <JsonScript id="leadership-roster" json={rosterJson} />
               <LeaderDialog />
             </>
           )}
