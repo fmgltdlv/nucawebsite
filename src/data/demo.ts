@@ -9,6 +9,7 @@ export interface Member {
   website?: string
   phone?: string
   email?: string
+  logoUrl?: string
 }
 
 export interface Event {

@@ -5,6 +5,7 @@ import { parseThemeId, type ThemeId } from './config/themes'
 import type { Env } from './env'
 import { getDirtRelease } from './data/the-dirt'
 import { listActiveMembers } from './lib/members'
+import { getMemberLogoR2Key } from './lib/members-db'
 import { seedDemoMembersIfEmpty } from './lib/seed'
 import { THEME_COOKIE, themeFromRequest } from './lib/theme'
 import { registerAdminRoutes } from './routes/admin'
@@ -99,6 +100,22 @@ app.get('/resources', (c) =>
     />,
   ),
 )
+app.get('/files/members/:id/logo', async (c) => {
+  const id = c.req.param('id')
+  const logoKey = await getMemberLogoR2Key(c.env.DB, id)
+  if (!logoKey) return c.notFound()
+
+  const object = await c.env.R2.get(logoKey)
+  if (!object) return c.notFound()
+
+  const headers = new Headers()
+  const contentType = object.httpMetadata?.contentType
+  if (contentType) headers.set('Content-Type', contentType)
+  headers.set('Cache-Control', 'public, max-age=86400')
+
+  return new Response(object.body, { headers })
+})
+
 app.get('/members', async (c) => {
   await seedDemoMembersIfEmpty(c.env)
   const members = await listActiveMembers(c.env.DB)

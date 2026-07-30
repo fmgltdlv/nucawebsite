@@ -10,10 +10,13 @@ import { listActiveMembers } from '../lib/members'
 import {
   createMember,
   getMemberById,
+  getMemberLogoR2Key,
   listMembersForAdmin,
   updateMember,
+  updateMemberLogoKey,
   updateMemberProfile,
 } from '../lib/members-db'
+import { applyMemberLogoChange } from '../lib/member-logos'
 import { seedAdminIfNeeded } from '../lib/seed'
 import {
   clearSessionCookieHeader,
@@ -222,7 +225,25 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       )
     }
 
-    await createMember(c.env.DB, data)
+    const memberId = await createMember(c.env.DB, data)
+    const logoError = await applyMemberLogoChange(
+      c.env.R2,
+      (id, key) => updateMemberLogoKey(c.env.DB, id, key),
+      memberId,
+      body,
+    )
+    if (logoError) {
+      const members = await listMembersForAdmin(c.env.DB)
+      return c.html(
+        <AdminMembersPage
+          theme={c.get('theme')}
+          ctx={ctx}
+          members={members}
+          error={`Member added, but logo upload failed: ${logoError}`}
+        />,
+      )
+    }
+
     return c.redirect('/admin/members?created=1', 303)
   })
 
@@ -247,6 +268,26 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     }
 
     await updateMember(c.env.DB, id, data)
+    const previousKey = await getMemberLogoR2Key(c.env.DB, id)
+    const logoError = await applyMemberLogoChange(
+      c.env.R2,
+      (memberId, key) => updateMemberLogoKey(c.env.DB, memberId, key),
+      id,
+      body,
+      previousKey,
+    )
+    if (logoError) {
+      const members = await listMembersForAdmin(c.env.DB)
+      return c.html(
+        <AdminMembersPage
+          theme={c.get('theme')}
+          ctx={ctx}
+          members={members}
+          error={`Member saved, but logo upload failed: ${logoError}`}
+        />,
+      )
+    }
+
     return c.redirect('/admin/members?ok=1', 303)
   })
 

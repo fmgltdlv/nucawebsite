@@ -1,9 +1,10 @@
 import type { Member, MemberType } from '../data/demo'
+import { memberLogoUrl } from './member-logos'
 
 export async function listActiveMembers(db: D1Database): Promise<Member[]> {
   const { results } = await db
     .prepare(
-      `SELECT id, company_name, member_type, website, phone
+      `SELECT id, company_name, member_type, website, phone, logo_r2_key
        FROM members WHERE active = 1 ORDER BY company_name ASC`,
     )
     .all<{
@@ -12,6 +13,7 @@ export async function listActiveMembers(db: D1Database): Promise<Member[]> {
       member_type: MemberType
       website: string | null
       phone: string | null
+      logo_r2_key: string | null
     }>()
 
   return (results ?? []).map((r) => ({
@@ -20,5 +22,6 @@ export async function listActiveMembers(db: D1Database): Promise<Member[]> {
     type: r.member_type,
     website: r.website ?? undefined,
     phone: r.phone ?? undefined,
+    logoUrl: memberLogoUrl(r.id, r.logo_r2_key),
   }))
 }

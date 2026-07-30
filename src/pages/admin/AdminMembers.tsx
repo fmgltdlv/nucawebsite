@@ -9,6 +9,28 @@ function MemberEditRow({ member }: { member: AdminMember }) {
 
   return (
     <tr>
+      <td class="admin-member-logo-cell">
+        {member.logoUrl ? (
+          <img src={member.logoUrl} alt="" class="admin-member-logo-preview" />
+        ) : (
+          <span class="admin-member-logo-placeholder" aria-hidden="true">
+            {member.company.trim().charAt(0).toUpperCase() || '?'}
+          </span>
+        )}
+        <input
+          form={formId}
+          type="file"
+          name="logo"
+          class="admin-table-file"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+        />
+        {member.logoUrl && (
+          <label class="admin-check-inline">
+            <input form={formId} type="checkbox" name="remove_logo" value="1" />
+            Remove
+          </label>
+        )}
+      </td>
       <td>
         <input
           form={formId}
@@ -76,7 +98,12 @@ function MemberEditRow({ member }: { member: AdminMember }) {
         <code class="admin-id">{member.id}</code>
       </td>
       <td>
-        <form id={formId} method="post" action={`/admin/members/${member.id}`}>
+        <form
+          id={formId}
+          method="post"
+          action={`/admin/members/${member.id}`}
+          enctype="multipart/form-data"
+        >
           <button type="submit" class="btn btn-secondary btn-sm">
             Save
           </button>
@@ -110,12 +137,12 @@ export function AdminMembersPage({
       {error && <p class="form-hint-warn">{error}</p>}
       <p class="section-lead">
         Public directory at <a href="/members">/members</a>. Only members marked <strong>Listed</strong>{' '}
-        appear on the public site. Copy the ID when linking a user account.
+        appear on the public site. Upload a company logo (PNG, JPEG, WebP, or SVG, max 2 MB) for the member grid.
       </p>
 
       <section class="admin-form-section">
         <h2>Add member</h2>
-        <form class="form" method="post" action="/admin/members">
+        <form class="form" method="post" action="/admin/members" enctype="multipart/form-data">
           <div class="form-row">
             <div class="form-field">
               <label for="company_name">Company</label>
@@ -152,6 +179,16 @@ export function AdminMembersPage({
               <input type="number" name="display_order" id="display_order" min={0} value={0} />
             </div>
           </div>
+          <div class="form-field">
+            <label for="logo">Company logo</label>
+            <input
+              type="file"
+              name="logo"
+              id="logo"
+              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            />
+            <p class="form-hint">Optional. Shown on the public member grid.</p>
+          </div>
           <label class="admin-check">
             <input type="checkbox" name="active" value="1" />
             Listed on public member directory
@@ -169,6 +206,7 @@ export function AdminMembersPage({
             <table class="data-table admin-members-table">
               <thead>
                 <tr>
+                  <th>Logo</th>
                   <th>Company</th>
                   <th>Type</th>
                   <th>Website</th>

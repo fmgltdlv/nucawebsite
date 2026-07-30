@@ -11,7 +11,11 @@ function MemberBubble({ member }: { member: Member }) {
   return (
     <li class="member-bubble">
       <div class="member-bubble-avatar" aria-hidden="true">
-        {initial}
+        {member.logoUrl ? (
+          <img src={member.logoUrl} alt="" class="member-bubble-logo" />
+        ) : (
+          initial
+        )}
       </div>
       <div class="member-bubble-body">
         <span class="member-bubble-company">{member.company}</span>
