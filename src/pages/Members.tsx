@@ -1,13 +1,12 @@
 import { Layout, PageHeader } from '../views/Layout'
-import { JsonScript } from '../views/JsonScript'
 import {
   memberTypeLabel,
-  type Member,
+  type MemberSummary,
   type MemberType,
 } from '../data/demo'
 import type { PageProps } from '../types/page'
 
-function MemberBubble({ member }: { member: Member }) {
+function MemberBubble({ member }: { member: MemberSummary }) {
   const initial = member.company.trim().charAt(0).toUpperCase() || '?'
 
   return (
@@ -41,7 +40,11 @@ function MemberDialog() {
         <button type="button" class="leader-dialog-close" aria-label="Close" data-modal-close>
           ×
         </button>
-        <div class="leader-dialog-layout">
+        <p id="member-dialog-loading" class="member-dialog-loading" hidden>Loading member details…</p>
+        <p id="member-dialog-error" class="member-dialog-error" hidden>
+          Could not load member details. Please try again.
+        </p>
+        <div id="member-dialog-body" class="leader-dialog-layout">
           <div class="leader-dialog-media">
             <img id="member-dialog-logo" class="member-dialog-logo" alt="" hidden />
             <div id="member-dialog-initial" class="member-dialog-initial" hidden />
@@ -69,23 +72,10 @@ export function MembersPage({
   breakingNews,
   filter,
   members,
-}: PageProps & { filter?: MemberType; members: Member[] }) {
+}: PageProps & { filter?: MemberType; members: MemberSummary[] }) {
   const sorted = [...members].sort((a, b) =>
     a.company.localeCompare(b.company, undefined, { sensitivity: 'base' }),
   )
-
-  const rosterJson = JSON.stringify(
-    sorted.map((member) => ({
-      id: member.id,
-      company: member.company,
-      typeLabel: memberTypeLabel[member.type],
-      description: member.description ?? null,
-      website: member.website ?? null,
-      phone: member.phone ?? null,
-      logoUrl: member.logoUrl ?? null,
-      contacts: member.contacts ?? [],
-    })),
-  ).replace(/</g, '\\u003c')
 
   const filters: { id: MemberType | 'all'; label: string }[] = [
     { id: 'all', label: 'All' },
@@ -137,7 +127,21 @@ export function MembersPage({
             No members match your search.
           </p>
 
-          <JsonScript id="member-roster" json={rosterJson} />
+          <nav
+            class="member-pagination"
+            id="member-pagination"
+            hidden
+            aria-label="Members pagination"
+          >
+            <button type="button" class="btn btn-secondary btn-sm" id="member-page-prev" disabled>
+              Previous
+            </button>
+            <span class="member-page-info" id="member-page-info" />
+            <button type="button" class="btn btn-secondary btn-sm" id="member-page-next" disabled>
+              Next
+            </button>
+          </nav>
+
           <MemberDialog />
         </div>
       </section>

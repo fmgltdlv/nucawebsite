@@ -14,6 +14,8 @@ export interface Member {
   contacts?: MemberContact[]
 }
 
+export type MemberSummary = Pick<Member, 'id' | 'company' | 'type' | 'logoUrl'>
+
 export interface MemberContact {
   name: string
   email: string

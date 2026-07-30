@@ -968,6 +968,37 @@ button.pill {
   list-style: none;
 }
 
+.member-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.member-page-info {
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+@media (min-width: 700px) {
+  .member-pagination {
+    display: none;
+  }
+}
+
+.member-dialog-loading,
+.member-dialog-error {
+  margin: 0;
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--color-muted);
+}
+
+.member-dialog-error {
+  color: #b42318;
+}
+
 .member-bubble[hidden] {
   display: none;
 }

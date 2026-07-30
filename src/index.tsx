@@ -8,7 +8,10 @@ import { getDirtRelease, listDirtReleases } from './lib/dirt-db'
 import { sendContactMessage, notifyStaffOfApplication } from './lib/email'
 import { listUpcomingEvents } from './lib/events'
 import { listLeadership } from './lib/leadership-db'
-import { listActiveMembers } from './lib/members'
+import {
+  getActiveMemberPublicProfile,
+  listActiveMemberSummaries,
+} from './lib/members'
 import { committeePageSlug } from './lib/chair-pages'
 import { parseCommitteeKey } from './lib/committee-pages'
 import { getPageBySlug } from './lib/pages-db'
@@ -173,10 +176,16 @@ app.get('/resources', async (c) => {
   return c.html(<ResourcesPage {...site} page={page} items={items} />)
 })
 
+app.get('/api/members/:id', async (c) => {
+  const profile = await getActiveMemberPublicProfile(c.env.DB, c.req.param('id'))
+  if (!profile) return c.json({ error: 'Not found' }, 404)
+  return c.json(profile)
+})
+
 app.get('/members', async (c) => {
   await seedDemoMembersIfEmpty(c.env)
   const site = await siteProps(c)
-  const members = await listActiveMembers(c.env.DB)
+  const members = await listActiveMemberSummaries(c.env.DB)
   const type = c.req.query('type')
   const valid: MemberType[] = ['contractor', 'associate', 'institutional']
   const filter = valid.includes(type as MemberType) ? (type as MemberType) : undefined

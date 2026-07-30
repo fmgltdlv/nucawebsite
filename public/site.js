@@ -23,10 +23,17 @@
   const grid = document.getElementById('member-grid')
   const empty = document.getElementById('member-search-empty')
   const filterBar = document.getElementById('member-type-filters')
+  const memberPagination = document.getElementById('member-pagination')
+  const memberPagePrev = document.getElementById('member-page-prev')
+  const memberPageNext = document.getElementById('member-page-next')
+  const memberPageInfo = document.getElementById('member-page-info')
 
   if (grid && empty) {
-    const items = grid.querySelectorAll('.member-bubble')
+    const items = Array.from(grid.querySelectorAll('.member-bubble'))
     const validTypes = new Set(['contractor', 'associate', 'institutional'])
+    const MEMBER_PAGE_SIZE = 15
+    const mobileMemberMq = window.matchMedia('(max-width: 699px)')
+    let currentMemberPage = 0
 
     function readTypeFromUrl() {
       const type = new URLSearchParams(window.location.search).get('type')
@@ -35,25 +42,73 @@
 
     let activeType = readTypeFromUrl()
 
-    function applyMemberFilters() {
-      const q = search?.value.trim().toLowerCase() ?? ''
-      let visible = 0
+    function memberUsesPagination() {
+      return mobileMemberMq.matches
+    }
 
-      items.forEach((item) => {
+    function getFilteredMemberItems() {
+      const q = search?.value.trim().toLowerCase() ?? ''
+      return items.filter((item) => {
         const memberType = item.getAttribute('data-member-type') ?? ''
         const typeMatch = activeType === 'all' || memberType === activeType
         const text = item.textContent?.toLowerCase() ?? ''
         const searchMatch = !q || text.includes(q)
-        const show = typeMatch && searchMatch
-        item.hidden = !show
-        if (show) visible += 1
+        return typeMatch && searchMatch
+      })
+    }
+
+    function updateMemberPagination(filteredCount, totalPages) {
+      const usePagination = memberUsesPagination() && filteredCount > MEMBER_PAGE_SIZE
+
+      if (memberPagination instanceof HTMLElement) {
+        memberPagination.hidden = !usePagination
+      }
+
+      if (memberPageInfo instanceof HTMLElement) {
+        memberPageInfo.textContent =
+          filteredCount === 0
+            ? 'No matches'
+            : `Page ${currentMemberPage + 1} of ${totalPages} (${filteredCount} members)`
+      }
+
+      if (memberPagePrev instanceof HTMLButtonElement) {
+        memberPagePrev.disabled = currentMemberPage <= 0
+      }
+      if (memberPageNext instanceof HTMLButtonElement) {
+        memberPageNext.disabled = currentMemberPage >= totalPages - 1
+      }
+    }
+
+    function applyMemberFilters() {
+      const filtered = getFilteredMemberItems()
+      const usePagination = memberUsesPagination()
+      const totalPages = usePagination
+        ? Math.max(1, Math.ceil(filtered.length / MEMBER_PAGE_SIZE))
+        : 1
+
+      if (currentMemberPage >= totalPages) currentMemberPage = totalPages - 1
+
+      items.forEach((item) => {
+        item.hidden = true
       })
 
-      empty.hidden = visible > 0
+      let visibleItems = filtered
+      if (usePagination) {
+        const start = currentMemberPage * MEMBER_PAGE_SIZE
+        visibleItems = filtered.slice(start, start + MEMBER_PAGE_SIZE)
+      }
+
+      visibleItems.forEach((item) => {
+        item.hidden = false
+      })
+
+      empty.hidden = filtered.length > 0
+      updateMemberPagination(filtered.length, totalPages)
     }
 
     function setActiveType(type) {
       activeType = type
+      currentMemberPage = 0
       filterBar?.querySelectorAll('[data-filter]').forEach((pill) => {
         const pillType = pill.getAttribute('data-filter') ?? 'all'
         const isActive = pillType === type
@@ -66,12 +121,36 @@
       applyMemberFilters()
     }
 
-    search?.addEventListener('input', applyMemberFilters)
+    search?.addEventListener('input', () => {
+      currentMemberPage = 0
+      applyMemberFilters()
+    })
 
     filterBar?.querySelectorAll('[data-filter]').forEach((pill) => {
       pill.addEventListener('click', () => {
         setActiveType(pill.getAttribute('data-filter') ?? 'all')
       })
+    })
+
+    memberPagePrev?.addEventListener('click', () => {
+      if (currentMemberPage > 0) {
+        currentMemberPage -= 1
+        applyMemberFilters()
+      }
+    })
+
+    memberPageNext?.addEventListener('click', () => {
+      const filtered = getFilteredMemberItems()
+      const totalPages = Math.max(1, Math.ceil(filtered.length / MEMBER_PAGE_SIZE))
+      if (currentMemberPage < totalPages - 1) {
+        currentMemberPage += 1
+        applyMemberFilters()
+      }
+    })
+
+    mobileMemberMq.addEventListener('change', () => {
+      currentMemberPage = 0
+      applyMemberFilters()
     })
 
     if (activeType !== 'all') {
@@ -626,26 +705,11 @@
   }
 
   const memberDialog = document.getElementById('member-dialog')
-  const memberRosterEl = document.getElementById('member-roster')
+  const memberDialogLoading = document.getElementById('member-dialog-loading')
+  const memberDialogError = document.getElementById('member-dialog-error')
+  const memberDialogBody = document.getElementById('member-dialog-body')
 
-  if (memberDialog instanceof HTMLDialogElement && memberRosterEl?.textContent) {
-    /** @type {Record<string, {
-      company: string
-      typeLabel: string
-      description: string | null
-      website: string | null
-      phone: string | null
-      logoUrl: string | null
-      contacts: Array<{ name: string; email: string }>
-    }>} */
-    const membersById = {}
-    const roster = parseJsonScript(memberRosterEl)
-    if (Array.isArray(roster)) {
-      roster.forEach((member) => {
-        if (member?.id) membersById[member.id] = member
-      })
-    }
-
+  if (memberDialog instanceof HTMLDialogElement) {
     const logoEl = document.getElementById('member-dialog-logo')
     const initialEl = document.getElementById('member-dialog-initial')
     const companyEl = document.getElementById('member-dialog-company')
@@ -655,6 +719,18 @@
     const contactsEl = document.getElementById('member-dialog-contacts')
     const contactsListEl = document.getElementById('member-dialog-contacts-list')
 
+    /** @type {Record<string, {
+      company: string
+      typeLabel: string
+      description: string | null
+      website: string | null
+      phone: string | null
+      logoUrl: string | null
+      contacts: Array<{ name: string; email: string }>
+    }>} */
+    const memberProfileCache = {}
+    let memberFetchToken = 0
+
     function setText(el, value, hiddenWhenEmpty = true) {
       if (!(el instanceof HTMLElement)) return
       const text = value?.trim() ?? ''
@@ -662,7 +738,19 @@
       if (hiddenWhenEmpty) el.hidden = !text
     }
 
-    function openMemberProfile(member) {
+    function setMemberDialogState(state) {
+      if (memberDialogLoading instanceof HTMLElement) {
+        memberDialogLoading.hidden = state !== 'loading'
+      }
+      if (memberDialogError instanceof HTMLElement) {
+        memberDialogError.hidden = state !== 'error'
+      }
+      if (memberDialogBody instanceof HTMLElement) {
+        memberDialogBody.hidden = state !== 'ready'
+      }
+    }
+
+    function renderMemberProfile(member) {
       if (!(companyEl instanceof HTMLElement) || !(typeEl instanceof HTMLElement)) return
 
       companyEl.textContent = member.company
@@ -726,14 +814,38 @@
         contactsEl.hidden = contacts.length === 0
       }
 
+      setMemberDialogState('ready')
+    }
+
+    async function openMemberProfile(id) {
+      if (!id) return
+
       memberDialog.showModal()
+      setMemberDialogState('loading')
+
+      if (memberProfileCache[id]) {
+        renderMemberProfile(memberProfileCache[id])
+        return
+      }
+
+      const token = ++memberFetchToken
+      try {
+        const response = await fetch(`/api/members/${encodeURIComponent(id)}`)
+        if (!response.ok) throw new Error('fetch failed')
+        const member = await response.json()
+        if (!member?.id) throw new Error('invalid member')
+        memberProfileCache[id] = member
+        if (token !== memberFetchToken) return
+        renderMemberProfile(member)
+      } catch {
+        if (token !== memberFetchToken) return
+        setMemberDialogState('error')
+      }
     }
 
     document.querySelectorAll('[data-member-id]').forEach((button) => {
       button.addEventListener('click', () => {
-        const id = button.getAttribute('data-member-id')
-        if (!id || !membersById[id]) return
-        openMemberProfile(membersById[id])
+        openMemberProfile(button.getAttribute('data-member-id'))
       })
     })
 
