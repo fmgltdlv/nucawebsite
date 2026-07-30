@@ -142,6 +142,26 @@
 (function () {
   const MEMBER_LOGO_MAX_BYTES = 2 * 1024 * 1024
 
+  /** Parse JSON embedded in application/json script tags (handles legacy HTML escaping). */
+  function parseJsonScript(el) {
+    const text = el?.textContent?.trim()
+    if (!text) return null
+
+    try {
+      return JSON.parse(text)
+    } catch {
+      if (!/[&][a-z]+;|&#\d+;/.test(text)) return null
+
+      const textarea = document.createElement('textarea')
+      textarea.innerHTML = text
+      try {
+        return JSON.parse(textarea.value)
+      } catch {
+        return null
+      }
+    }
+  }
+
   function extForMime(mime) {
     if (mime === 'image/png') return 'png'
     if (mime === 'image/webp') return 'webp'
@@ -508,15 +528,11 @@
       photoUrl: string | null
     }>} */
     const leadersById = {}
-    try {
-      const roster = JSON.parse(leaderRosterEl.textContent)
-      if (Array.isArray(roster)) {
-        roster.forEach((leader) => {
-          if (leader?.id) leadersById[leader.id] = leader
-        })
-      }
-    } catch {
-      // Ignore malformed roster JSON.
+    const roster = parseJsonScript(leaderRosterEl)
+    if (Array.isArray(roster)) {
+      roster.forEach((leader) => {
+        if (leader?.id) leadersById[leader.id] = leader
+      })
     }
 
     const photoEl = document.getElementById('leader-dialog-photo')
@@ -623,15 +639,11 @@
       contacts: Array<{ name: string; email: string }>
     }>} */
     const membersById = {}
-    try {
-      const roster = JSON.parse(memberRosterEl.textContent)
-      if (Array.isArray(roster)) {
-        roster.forEach((member) => {
-          if (member?.id) membersById[member.id] = member
-        })
-      }
-    } catch {
-      // Ignore malformed roster JSON.
+    const roster = parseJsonScript(memberRosterEl)
+    if (Array.isArray(roster)) {
+      roster.forEach((member) => {
+        if (member?.id) membersById[member.id] = member
+      })
     }
 
     const logoEl = document.getElementById('member-dialog-logo')
