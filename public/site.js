@@ -274,64 +274,120 @@
     })
   })
 
-  const addMemberDialog = document.getElementById('add-member-dialog')
-  const addMemberOpen = document.getElementById('add-member-open')
+  function wireAdminModal(dialog) {
+    if (!(dialog instanceof HTMLDialogElement)) return
 
-  if (addMemberDialog instanceof HTMLDialogElement && addMemberOpen) {
-    addMemberOpen.addEventListener('click', () => addMemberDialog.showModal())
-
-    addMemberDialog.querySelectorAll('[data-modal-close]').forEach((button) => {
-      button.addEventListener('click', () => addMemberDialog.close())
+    dialog.querySelectorAll('[data-modal-close]').forEach((button) => {
+      button.addEventListener('click', () => dialog.close())
     })
 
-    addMemberDialog.addEventListener('click', (event) => {
-      const rect = addMemberDialog.getBoundingClientRect()
+    dialog.addEventListener('click', (event) => {
+      const rect = dialog.getBoundingClientRect()
       const inDialog =
         rect.top <= event.clientY &&
         event.clientY <= rect.top + rect.height &&
         rect.left <= event.clientX &&
         event.clientX <= rect.left + rect.width
-      if (!inDialog) addMemberDialog.close()
+      if (!inDialog) dialog.close()
     })
 
-    addMemberDialog.addEventListener('close', () => {
-      const form = addMemberDialog.querySelector('form[data-member-logo-form]')
+    dialog.addEventListener('close', () => {
+      const form = dialog.querySelector('form')
       if (!(form instanceof HTMLFormElement)) return
       form.reset()
       delete form.dataset.logoProcessed
-      const submitBtn = form.querySelector('button[type="submit"]')
-      if (submitBtn) {
-        submitBtn.disabled = false
-        submitBtn.textContent = 'Add member'
+      form.querySelectorAll('button[type="submit"]').forEach((btn) => {
+        btn.disabled = false
+      })
+    })
+  }
+
+  document.querySelectorAll('[data-admin-modal-open]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const id = button.getAttribute('data-admin-modal-open')
+      if (!id) return
+      const dialog = document.getElementById(id)
+      if (dialog instanceof HTMLDialogElement) dialog.showModal()
+    })
+  })
+
+  document.querySelectorAll('.admin-modal').forEach((dialog) => {
+    wireAdminModal(dialog)
+  })
+
+  document.querySelectorAll('[data-admin-list]').forEach((listRoot) => {
+    const pageSize = parseInt(listRoot.getAttribute('data-page-size') || '15', 10)
+    const rows = Array.from(listRoot.querySelectorAll('[data-admin-list-row]'))
+    const searchInput = listRoot.querySelector('[data-admin-search]')
+    const pagination = listRoot.querySelector('[data-admin-pagination]')
+    const prevBtn = listRoot.querySelector('[data-admin-page-prev]')
+    const nextBtn = listRoot.querySelector('[data-admin-page-next]')
+    const pageInfo = listRoot.querySelector('[data-admin-page-info]')
+
+    let filteredRows = rows
+    let currentPage = 0
+
+    function updateVisibility() {
+      const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize))
+      if (currentPage >= totalPages) currentPage = totalPages - 1
+
+      rows.forEach((row) => {
+        row.hidden = true
+      })
+
+      const start = currentPage * pageSize
+      filteredRows.slice(start, start + pageSize).forEach((row) => {
+        row.hidden = false
+      })
+
+      if (pagination instanceof HTMLElement) {
+        pagination.hidden = filteredRows.length <= pageSize
+      }
+
+      if (pageInfo instanceof HTMLElement) {
+        pageInfo.textContent =
+          filteredRows.length === 0
+            ? 'No matches'
+            : `Page ${currentPage + 1} of ${totalPages} (${filteredRows.length} items)`
+      }
+
+      if (prevBtn instanceof HTMLButtonElement) {
+        prevBtn.disabled = currentPage <= 0
+      }
+      if (nextBtn instanceof HTMLButtonElement) {
+        nextBtn.disabled = currentPage >= totalPages - 1
+      }
+    }
+
+    function applyFilter() {
+      const q = searchInput instanceof HTMLInputElement ? searchInput.value.trim().toLowerCase() : ''
+      filteredRows = q
+        ? rows.filter((row) => {
+            const text = row.getAttribute('data-search') || row.textContent?.toLowerCase() || ''
+            return text.includes(q)
+          })
+        : rows
+      currentPage = 0
+      updateVisibility()
+    }
+
+    searchInput?.addEventListener('input', applyFilter)
+    prevBtn?.addEventListener('click', () => {
+      if (currentPage > 0) {
+        currentPage -= 1
+        updateVisibility()
       }
     })
-  }
-
-  const addEventDialog = document.getElementById('add-event-dialog')
-  const addEventOpen = document.getElementById('add-event-open')
-
-  if (addEventDialog instanceof HTMLDialogElement && addEventOpen) {
-    addEventOpen.addEventListener('click', () => addEventDialog.showModal())
-
-    addEventDialog.querySelectorAll('[data-modal-close]').forEach((button) => {
-      button.addEventListener('click', () => addEventDialog.close())
+    nextBtn?.addEventListener('click', () => {
+      const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize))
+      if (currentPage < totalPages - 1) {
+        currentPage += 1
+        updateVisibility()
+      }
     })
 
-    addEventDialog.addEventListener('click', (event) => {
-      const rect = addEventDialog.getBoundingClientRect()
-      const inDialog =
-        rect.top <= event.clientY &&
-        event.clientY <= rect.top + rect.height &&
-        rect.left <= event.clientX &&
-        event.clientX <= rect.left + rect.width
-      if (!inDialog) addEventDialog.close()
-    })
-
-    addEventDialog.addEventListener('close', () => {
-      const form = addEventDialog.querySelector('#add-event-form')
-      if (form instanceof HTMLFormElement) form.reset()
-    })
-  }
+    updateVisibility()
+  })
 
   const leaderDialog = document.getElementById('leader-dialog')
   const leaderRosterEl = document.getElementById('leadership-roster')
@@ -446,6 +502,114 @@
         rect.left <= event.clientX &&
         event.clientX <= rect.left + rect.width
       if (!inDialog) leaderDialog.close()
+    })
+  }
+
+  const memberDialog = document.getElementById('member-dialog')
+  const memberRosterEl = document.getElementById('member-roster')
+
+  if (memberDialog instanceof HTMLDialogElement && memberRosterEl?.textContent) {
+    /** @type {Record<string, {
+      company: string
+      typeLabel: string
+      description: string | null
+      website: string | null
+      phone: string | null
+      logoUrl: string | null
+    }>} */
+    const membersById = {}
+    try {
+      const roster = JSON.parse(memberRosterEl.textContent)
+      if (Array.isArray(roster)) {
+        roster.forEach((member) => {
+          if (member?.id) membersById[member.id] = member
+        })
+      }
+    } catch {
+      // Ignore malformed roster JSON.
+    }
+
+    const logoEl = document.getElementById('member-dialog-logo')
+    const initialEl = document.getElementById('member-dialog-initial')
+    const companyEl = document.getElementById('member-dialog-company')
+    const typeEl = document.getElementById('member-dialog-type')
+    const linksEl = document.getElementById('member-dialog-links')
+    const descriptionEl = document.getElementById('member-dialog-description')
+
+    function setText(el, value, hiddenWhenEmpty = true) {
+      if (!(el instanceof HTMLElement)) return
+      const text = value?.trim() ?? ''
+      el.textContent = text
+      if (hiddenWhenEmpty) el.hidden = !text
+    }
+
+    function openMemberProfile(member) {
+      if (!(companyEl instanceof HTMLElement) || !(typeEl instanceof HTMLElement)) return
+
+      companyEl.textContent = member.company
+      typeEl.textContent = member.typeLabel
+
+      if (logoEl instanceof HTMLImageElement && initialEl instanceof HTMLElement) {
+        if (member.logoUrl) {
+          logoEl.src = member.logoUrl
+          logoEl.alt = member.company
+          logoEl.hidden = false
+          initialEl.hidden = true
+          initialEl.textContent = ''
+        } else {
+          logoEl.removeAttribute('src')
+          logoEl.alt = ''
+          logoEl.hidden = true
+          initialEl.textContent = member.company.trim().charAt(0).toUpperCase() || '?'
+          initialEl.hidden = false
+        }
+      }
+
+      if (linksEl instanceof HTMLElement) {
+        linksEl.replaceChildren()
+        const links = []
+        if (member.website) {
+          const website = document.createElement('a')
+          website.href = member.website
+          website.rel = 'noopener noreferrer'
+          website.target = '_blank'
+          website.textContent = 'Website'
+          links.push(website)
+        }
+        if (member.phone) {
+          const phone = document.createElement('a')
+          phone.href = `tel:${member.phone.replace(/\D/g, '')}`
+          phone.textContent = member.phone
+          links.push(phone)
+        }
+        links.forEach((link) => linksEl.append(link))
+        linksEl.hidden = links.length === 0
+      }
+
+      setText(descriptionEl, member.description)
+      memberDialog.showModal()
+    }
+
+    document.querySelectorAll('[data-member-id]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const id = button.getAttribute('data-member-id')
+        if (!id || !membersById[id]) return
+        openMemberProfile(membersById[id])
+      })
+    })
+
+    memberDialog.querySelectorAll('[data-modal-close]').forEach((button) => {
+      button.addEventListener('click', () => memberDialog.close())
+    })
+
+    memberDialog.addEventListener('click', (event) => {
+      const rect = memberDialog.getBoundingClientRect()
+      const inDialog =
+        rect.top <= event.clientY &&
+        event.clientY <= rect.top + rect.height &&
+        rect.left <= event.clientX &&
+        event.clientX <= rect.left + rect.width
+      if (!inDialog) memberDialog.close()
     })
   }
 })();

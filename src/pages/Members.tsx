@@ -4,6 +4,7 @@ import {
   type Member,
   type MemberType,
 } from '../data/demo'
+import type { PageProps } from '../types/page'
 
 function MemberBubble({ member }: { member: Member }) {
   const initial = member.company.trim().charAt(0).toUpperCase() || '?'
@@ -18,27 +19,43 @@ function MemberBubble({ member }: { member: Member }) {
         )}
       </div>
       <div class="member-bubble-body">
-        <span class="member-bubble-company">{member.company}</span>
-        {member.description && <p class="member-bubble-desc">{member.description}</p>}
+        <button
+          type="button"
+          class="member-bubble-company-btn"
+          data-member-id={member.id}
+          aria-label={`View details for ${member.company}`}
+        >
+          {member.company}
+        </button>
         <span class={`badge badge-${member.type}`}>{memberTypeLabel[member.type]}</span>
-        {(member.website || member.phone) && (
-          <div class="member-bubble-links">
-            {member.website && (
-              <a href={member.website} rel="noopener noreferrer" target="_blank">
-                Website
-              </a>
-            )}
-            {member.phone && (
-              <a href={`tel:${member.phone.replace(/\D/g, '')}`}>{member.phone}</a>
-            )}
-          </div>
-        )}
       </div>
     </li>
   )
 }
 
-import type { PageProps } from '../types/page'
+function MemberDialog() {
+  return (
+    <dialog id="member-dialog" class="leader-dialog">
+      <article class="leader-dialog-card">
+        <button type="button" class="leader-dialog-close" aria-label="Close" data-modal-close>
+          ×
+        </button>
+        <div class="leader-dialog-layout">
+          <div class="leader-dialog-media">
+            <img id="member-dialog-logo" class="leader-dialog-photo member-dialog-logo" alt="" hidden />
+            <div id="member-dialog-initial" class="leader-dialog-initial" hidden />
+          </div>
+          <div class="leader-dialog-content">
+            <h2 id="member-dialog-company" class="leader-dialog-name" />
+            <p id="member-dialog-type" class="leader-dialog-role" />
+            <div id="member-dialog-links" class="leader-dialog-links" hidden />
+            <div id="member-dialog-description" class="leader-dialog-bio" hidden />
+          </div>
+        </div>
+      </article>
+    </dialog>
+  )
+}
 
 export function MembersPage({
   theme,
@@ -51,6 +68,18 @@ export function MembersPage({
   const sorted = [...members].sort((a, b) =>
     a.company.localeCompare(b.company, undefined, { sensitivity: 'base' }),
   )
+
+  const rosterJson = JSON.stringify(
+    sorted.map((member) => ({
+      id: member.id,
+      company: member.company,
+      typeLabel: memberTypeLabel[member.type],
+      description: member.description ?? null,
+      website: member.website ?? null,
+      phone: member.phone ?? null,
+      logoUrl: member.logoUrl ?? null,
+    })),
+  ).replace(/</g, '\\u003c')
 
   const filters: { id: MemberType | 'all'; label: string }[] = [
     { id: 'all', label: 'All' },
@@ -101,6 +130,11 @@ export function MembersPage({
           <p class="table-note" id="member-search-empty" hidden>
             No members match your search.
           </p>
+
+          <script id="member-roster" type="application/json">
+            {rosterJson}
+          </script>
+          <MemberDialog />
         </div>
       </section>
     </Layout>
