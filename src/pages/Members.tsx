@@ -59,11 +59,8 @@ export function MembersPage({
   ]
 
   return (
-    <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title="Member List">
-      <PageHeader
-        title="Member list"
-        lead="Directory of current chapter members."
-      />
+    <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title="Members">
+      <PageHeader title="Members" />
       <section class="section">
         <div class="container">
           <div class="members-toolbar">
