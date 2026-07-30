@@ -1682,6 +1682,7 @@ button.pill {
   display: grid;
   grid-template-columns: minmax(200px, 240px) 1fr;
   gap: 0;
+  width: 100%;
   min-height: calc(100vh - 120px);
   margin: 0 calc(-1 * var(--container-padding, 1rem));
 }
@@ -1749,8 +1750,9 @@ button.pill {
 
 .admin-main {
   padding: 1.25rem 1.5rem 2rem;
-  max-width: min(100%, 72rem);
   min-width: 0;
+  width: 100%;
+  max-width: none;
 }
 
 .admin-main-header h1 {
@@ -1886,12 +1888,13 @@ button.pill {
 }
 
 .admin-member-list-table {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+  table-layout: auto;
 }
 
 .admin-member-list-table .admin-member-company-col {
   min-width: 18rem;
+  width: 30%;
 }
 
 .admin-member-list-table .admin-member-company-col .admin-table-input {
