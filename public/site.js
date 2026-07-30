@@ -32,7 +32,7 @@
     const items = Array.from(grid.querySelectorAll('.member-bubble'))
     const validTypes = new Set(['contractor', 'associate', 'institutional'])
     const desktopMemberMq = window.matchMedia('(min-width: 700px)')
-    const MEMBER_PAGE_SIZE_MOBILE = 15
+    const MEMBER_PAGE_SIZE_MOBILE = 10
     const MEMBER_PAGE_SIZE_DESKTOP = 16
     let currentMemberPage = 0
 
