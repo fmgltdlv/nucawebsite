@@ -26,9 +26,9 @@ Worker URL: **https://nucawebsite.thefieldmappinggroup.workers.dev**
 | **Chair** | Events + committee pages assigned in **Users & roles** |
 | **Member** | **My listing** — website, phone, email on linked `members` row |
 
-Admins create Chair/Member accounts at **/admin/users**. Link Member users with a `member_id` (UUID from **/admin/members**).
+Admins create Chair/Member accounts at **/admin/users**. Member users request a company link at **/admin/profile**; admins approve requests on **/admin/users** (pending queue at top).
 
-Apply migration `0002_users_roles.sql` before using roles (creates `users`, migrates legacy `admin_users`).
+Apply migrations before using roles (`0002_users_roles.sql`) and member link approval (`0003_member_link_approval.sql`).
 
 Default email (Wrangler var): `info@nucalasvegas.com` — change in `wrangler.jsonc` `vars.ADMIN_EMAIL` if needed.
 

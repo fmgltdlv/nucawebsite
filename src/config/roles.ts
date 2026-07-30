@@ -1,12 +1,22 @@
 export const USER_ROLES = ['admin', 'chair', 'member'] as const
 export type UserRole = (typeof USER_ROLES)[number]
 
+export const MEMBER_LINK_STATUSES = ['none', 'pending', 'approved', 'rejected'] as const
+export type MemberLinkStatus = (typeof MEMBER_LINK_STATUSES)[number]
+
 export type User = {
   id: string
   email: string
   role: UserRole
   member_id: string | null
+  pending_member_id: string | null
+  member_link_status: MemberLinkStatus
   display_name: string | null
+}
+
+export type UserWithMemberInfo = User & {
+  member_company: string | null
+  pending_company: string | null
 }
 
 import { CHAPTER_COMMITTEES, type ChapterCommitteeKey } from '../data/committees'

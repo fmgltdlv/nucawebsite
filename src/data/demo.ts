@@ -1,5 +1,7 @@
 export type MemberType = 'contractor' | 'associate' | 'institutional'
 
+export const MEMBER_TYPES: MemberType[] = ['contractor', 'associate', 'institutional']
+
 export interface Member {
   id: string
   company: string

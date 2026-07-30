@@ -1,12 +1,19 @@
 import { Hono } from 'hono'
 import type { ThemeId } from '../config/themes'
 import { COMMITTEE_KEYS, USER_ROLES, type UserRole } from '../config/roles'
+import { MEMBER_TYPES, type MemberType } from '../data/demo'
 import type { Env } from '../env'
-import { assignChairCommittees, createUser, listUsers, verifyUserLogin } from '../lib/auth'
+import { assignChairCommittees, approveMemberLink, createUser, listUsersWithMemberInfo, rejectMemberLink, requestMemberLink, verifyUserLogin } from '../lib/auth'
 import { canAccessRole, resolveAdminContext } from '../lib/admin-context'
 import { createEvent, listUpcomingEvents } from '../lib/events'
 import { listActiveMembers } from '../lib/members'
-import { getMemberById, updateMemberProfile } from '../lib/members-db'
+import {
+  createMember,
+  getMemberById,
+  listMembersForAdmin,
+  updateMember,
+  updateMemberProfile,
+} from '../lib/members-db'
 import { seedAdminIfNeeded } from '../lib/seed'
 import {
   clearSessionCookieHeader,
@@ -30,6 +37,39 @@ function parseDatetimeLocal(value: string): string | null {
   const d = new Date(trimmed)
   if (Number.isNaN(d.getTime())) return null
   return d.toISOString()
+}
+
+function parseMemberType(value: string): MemberType {
+  return MEMBER_TYPES.includes(value as MemberType) ? (value as MemberType) : 'contractor'
+}
+
+function parseDisplayOrder(value: string): number {
+  const n = Number.parseInt(value, 10)
+  return Number.isFinite(n) && n >= 0 ? n : 0
+}
+
+function parseMemberFormBody(body: Record<string, File | string>) {
+  const company_name = typeof body.company_name === 'string' ? body.company_name.trim() : ''
+  const member_type = parseMemberType(
+    typeof body.member_type === 'string' ? body.member_type : '',
+  )
+  const website = typeof body.website === 'string' ? body.website.trim() : ''
+  const phone = typeof body.phone === 'string' ? body.phone.trim() : ''
+  const email = typeof body.email === 'string' ? body.email.trim() : ''
+  const active = body.active === '1'
+  const display_order = parseDisplayOrder(
+    typeof body.display_order === 'string' ? body.display_order : '0',
+  )
+
+  return {
+    company_name,
+    member_type,
+    website: website || undefined,
+    phone: phone || undefined,
+    email: email || undefined,
+    active,
+    display_order,
+  }
 }
 
 export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminVariables }>) {
@@ -73,10 +113,19 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const ctx = await resolveAdminContext(c)
     if (!ctx) return c.redirect('/admin/login', 303)
     if (!canAccessRole(ctx.user, ['admin'])) return c.redirect('/admin', 303)
-    const users = await listUsers(c.env.DB)
-    const message = c.req.query('ok') === '1' ? 'User created.' : undefined
+    const users = await listUsersWithMemberInfo(c.env.DB)
+    const members = await listActiveMembers(c.env.DB)
+    const ok = c.req.query('ok')
+    const message =
+      ok === '1'
+        ? 'User created.'
+        : ok === 'approved'
+          ? 'Company link approved.'
+          : ok === 'rejected'
+            ? 'Company link rejected.'
+            : undefined
     return c.html(
-      <AdminUsersPage theme={c.get('theme')} ctx={ctx} users={users} message={message} />,
+      <AdminUsersPage theme={c.get('theme')} ctx={ctx} users={users} members={members} message={message} />,
     )
   })
 
@@ -94,12 +143,14 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const display_name = typeof body.display_name === 'string' ? body.display_name.trim() : ''
 
     if (!email || password.length < 10) {
-      const users = await listUsers(c.env.DB)
+      const users = await listUsersWithMemberInfo(c.env.DB)
+      const members = await listActiveMembers(c.env.DB)
       return c.html(
         <AdminUsersPage
           theme={c.get('theme')}
           ctx={ctx}
           users={users}
+          members={members}
           message="Email and password (10+ characters) are required."
         />,
       )
@@ -118,12 +169,85 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     return c.redirect('/admin/users?ok=1', 303)
   })
 
+  app.post('/admin/users/:userId/approve-link', async (c) => {
+    const ctx = await resolveAdminContext(c)
+    if (!ctx) return c.redirect('/admin/login', 303)
+    if (!canAccessRole(ctx.user, ['admin'])) return c.redirect('/admin', 303)
+
+    const result = await approveMemberLink(c.env.DB, c.req.param('userId'))
+    return c.redirect(result.ok ? '/admin/users?ok=approved' : '/admin/users', 303)
+  })
+
+  app.post('/admin/users/:userId/reject-link', async (c) => {
+    const ctx = await resolveAdminContext(c)
+    if (!ctx) return c.redirect('/admin/login', 303)
+    if (!canAccessRole(ctx.user, ['admin'])) return c.redirect('/admin', 303)
+
+    const result = await rejectMemberLink(c.env.DB, c.req.param('userId'))
+    return c.redirect(result.ok ? '/admin/users?ok=rejected' : '/admin/users', 303)
+  })
+
   app.get('/admin/members', async (c) => {
     const ctx = await resolveAdminContext(c)
     if (!ctx) return c.redirect('/admin/login', 303)
     if (!canAccessRole(ctx.user, ['admin'])) return c.redirect('/admin', 303)
-    const members = await listActiveMembers(c.env.DB)
-    return c.html(<AdminMembersPage theme={c.get('theme')} ctx={ctx} members={members} />)
+    const members = await listMembersForAdmin(c.env.DB)
+    const flash =
+      c.req.query('ok') === '1'
+        ? 'Member saved.'
+        : c.req.query('created') === '1'
+          ? 'Member added.'
+          : undefined
+    return c.html(
+      <AdminMembersPage theme={c.get('theme')} ctx={ctx} members={members} flash={flash} />,
+    )
+  })
+
+  app.post('/admin/members', async (c) => {
+    const ctx = await resolveAdminContext(c)
+    if (!ctx) return c.redirect('/admin/login', 303)
+    if (!canAccessRole(ctx.user, ['admin'])) return c.redirect('/admin', 303)
+
+    const body = await c.req.parseBody()
+    const data = parseMemberFormBody(body)
+    if (!data.company_name) {
+      const members = await listMembersForAdmin(c.env.DB)
+      return c.html(
+        <AdminMembersPage
+          theme={c.get('theme')}
+          ctx={ctx}
+          members={members}
+          error="Company name is required."
+        />,
+      )
+    }
+
+    await createMember(c.env.DB, data)
+    return c.redirect('/admin/members?created=1', 303)
+  })
+
+  app.post('/admin/members/:id', async (c) => {
+    const ctx = await resolveAdminContext(c)
+    if (!ctx) return c.redirect('/admin/login', 303)
+    if (!canAccessRole(ctx.user, ['admin'])) return c.redirect('/admin', 303)
+
+    const id = c.req.param('id')
+    const body = await c.req.parseBody()
+    const data = parseMemberFormBody(body)
+    if (!data.company_name) {
+      const members = await listMembersForAdmin(c.env.DB)
+      return c.html(
+        <AdminMembersPage
+          theme={c.get('theme')}
+          ctx={ctx}
+          members={members}
+          error="Company name is required."
+        />,
+      )
+    }
+
+    await updateMember(c.env.DB, id, data)
+    return c.redirect('/admin/members?ok=1', 303)
   })
 
   app.get('/admin/events', async (c) => {
@@ -186,20 +310,72 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     if (!ctx) return c.redirect('/admin/login', 303)
     if (!canAccessRole(ctx.user, ['member'])) return c.redirect('/admin', 303)
 
+    const companies = await listActiveMembers(c.env.DB)
     const member = ctx.user.member_id
       ? await getMemberById(c.env.DB, ctx.user.member_id)
       : null
-    const flash = c.req.query('ok') === '1' ? 'Profile updated.' : undefined
+    const pendingMember = ctx.user.pending_member_id
+      ? await getMemberById(c.env.DB, ctx.user.pending_member_id)
+      : null
+    const ok = c.req.query('ok')
+    const flash =
+      ok === '1'
+        ? 'Profile updated.'
+        : ok === 'link'
+          ? 'Company link request submitted for admin approval.'
+          : undefined
     return c.html(
-      <AdminProfilePage theme={c.get('theme')} ctx={ctx} member={member} flash={flash} />,
+      <AdminProfilePage
+        theme={c.get('theme')}
+        ctx={ctx}
+        member={member}
+        pendingMember={pendingMember}
+        companies={companies}
+        flash={flash}
+      />,
     )
+  })
+
+  app.post('/admin/profile/link', async (c) => {
+    const ctx = await resolveAdminContext(c)
+    if (!ctx) return c.redirect('/admin/login', 303)
+    if (!canAccessRole(ctx.user, ['member'])) return c.redirect('/admin', 303)
+
+    const body = await c.req.parseBody()
+    const member_id = typeof body.member_id === 'string' ? body.member_id.trim() : ''
+    if (!member_id) return c.redirect('/admin/profile', 303)
+
+    const result = await requestMemberLink(c.env.DB, ctx.user.id, member_id)
+    if (!result.ok) {
+      const companies = await listActiveMembers(c.env.DB)
+      const member = ctx.user.member_id
+        ? await getMemberById(c.env.DB, ctx.user.member_id)
+        : null
+      const pendingMember = ctx.user.pending_member_id
+        ? await getMemberById(c.env.DB, ctx.user.pending_member_id)
+        : null
+      return c.html(
+        <AdminProfilePage
+          theme={c.get('theme')}
+          ctx={ctx}
+          member={member}
+          pendingMember={pendingMember}
+          companies={companies}
+          error={result.error}
+        />,
+      )
+    }
+
+    return c.redirect('/admin/profile?ok=link', 303)
   })
 
   app.post('/admin/profile', async (c) => {
     const ctx = await resolveAdminContext(c)
     if (!ctx) return c.redirect('/admin/login', 303)
     if (!canAccessRole(ctx.user, ['member'])) return c.redirect('/admin', 303)
-    if (!ctx.user.member_id) return c.redirect('/admin/profile', 303)
+    if (!ctx.user.member_id || ctx.user.member_link_status === 'none') {
+      return c.redirect('/admin/profile', 303)
+    }
 
     const body = await c.req.parseBody()
     const website = typeof body.website === 'string' ? body.website.trim() : ''

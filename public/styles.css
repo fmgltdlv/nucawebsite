@@ -1763,8 +1763,105 @@ a:hover {
   font-size: 0.75rem;
 }
 
+.admin-table-input {
+  width: 100%;
+  min-width: 6rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-surface, #fff);
+}
+
+.admin-table-input-narrow {
+  min-width: 3.5rem;
+  max-width: 5rem;
+}
+
+.admin-table-check {
+  white-space: nowrap;
+}
+
+.admin-check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+}
+
+.admin-members-table td {
+  vertical-align: middle;
+}
+
 .muted {
   color: var(--color-muted);
+}
+
+.nav-status-pending {
+  background: #d4a017;
+  box-shadow: 0 0 0 2px rgb(212 160 23 / 0.25);
+}
+
+.nav-status-approved {
+  background: #2d6a4f;
+  box-shadow: 0 0 0 2px rgb(45 106 79 / 0.25);
+}
+
+.nav-status-rejected {
+  background: #9aa3b0;
+  box-shadow: 0 0 0 2px rgb(154 163 176 / 0.35);
+}
+
+.member-link-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.member-link-status-label {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.member-link-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.member-link-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.member-link-row-pending {
+  padding: 0.65rem 0.85rem;
+  background: #fff8e6;
+  border-radius: var(--radius-sm, 4px);
+}
+
+.admin-pending-queue {
+  background: #fffdf5;
+  border: 1px solid #f0e4b8;
+  border-radius: var(--radius-sm, 4px);
+  padding: 1rem 1.25rem;
+}
+
+.admin-table-sub {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.admin-actions-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.admin-inline-form {
+  display: inline;
 }
 
 @media (max-width: 720px) {
