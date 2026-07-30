@@ -29,6 +29,7 @@ export function AdminShell({
       { href: '/admin/events', label: 'Events' },
       { href: '/admin/users', label: 'Users & roles' },
       { href: '/admin/content', label: 'Content' },
+      { href: '/admin/assets', label: 'Assets' },
       { href: '/admin/applications', label: 'Applications' },
       { href: '/admin/newsletter', label: 'Newsletter' },
     )

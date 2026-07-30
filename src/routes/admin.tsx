@@ -29,6 +29,7 @@ import {
   updateMemberProfile,
 } from '../lib/members-db'
 import { applyMemberLogoChange } from '../lib/member-logos'
+import { countAssetsByType, listIndexedAssets, parseAssetType } from '../lib/assets-index'
 import { seedAdminIfNeeded } from '../lib/seed'
 import {
   clearSessionCookieHeader,
@@ -36,6 +37,7 @@ import {
   sessionCookieHeader,
 } from '../lib/session'
 import { AdminLoginPage } from '../pages/AdminAuth'
+import { AdminAssetsPage } from '../pages/admin/AdminAssets'
 import { AdminCommitteesPage } from '../pages/admin/AdminCommittees'
 import { AdminEventsPage } from '../pages/admin/AdminEvents'
 import { AdminHomePage } from '../pages/admin/AdminHome'
@@ -107,6 +109,28 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const ctx = await resolveAdminContext(c)
     if (!ctx) return c.redirect('/admin/login', 303)
     return c.html(<AdminHomePage theme={c.get('theme')} ctx={ctx} />)
+  })
+
+  app.get('/admin/assets', async (c) => {
+    const ctx = await resolveAdminContext(c)
+    if (!ctx) return c.redirect('/admin/login', 303)
+    if (!canAccessRole(ctx.user, ['admin'])) return c.redirect('/admin', 303)
+
+    const allAssets = await listIndexedAssets(c.env.DB)
+    const filterType = parseAssetType(c.req.query('type'))
+    const typeCounts = countAssetsByType(allAssets)
+    const assets = filterType ? allAssets.filter((asset) => asset.type === filterType) : allAssets
+
+    return c.html(
+      <AdminAssetsPage
+        theme={c.get('theme')}
+        ctx={ctx}
+        assets={assets}
+        typeCounts={typeCounts}
+        totalCount={allAssets.length}
+        filterType={filterType}
+      />,
+    )
   })
 
   app.get('/admin/users', async (c) => {
