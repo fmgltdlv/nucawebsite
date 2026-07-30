@@ -50,6 +50,10 @@ function MemberDialog() {
             <p id="member-dialog-type" class="leader-dialog-role" />
             <div id="member-dialog-links" class="leader-dialog-links" hidden />
             <div id="member-dialog-description" class="leader-dialog-bio" hidden />
+            <div id="member-dialog-contacts" class="member-dialog-contacts" hidden>
+              <h3 class="member-dialog-contacts-title">Points of Contact</h3>
+              <ul id="member-dialog-contacts-list" class="member-dialog-contacts-list" />
+            </div>
           </div>
         </div>
       </article>
@@ -78,6 +82,7 @@ export function MembersPage({
       website: member.website ?? null,
       phone: member.phone ?? null,
       logoUrl: member.logoUrl ?? null,
+      contacts: member.contacts ?? [],
     })),
   ).replace(/</g, '\\u003c')
 

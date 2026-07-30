@@ -1028,6 +1028,47 @@ button.pill {
   background: #fff;
 }
 
+.member-dialog-contacts {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.member-dialog-contacts-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
+.member-dialog-contacts-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.member-dialog-contacts-list li + li {
+  margin-top: 0.5rem;
+}
+
+.member-dialog-contact-name {
+  display: block;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.member-dialog-contact-email {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.member-dialog-contact-email:hover {
+  text-decoration: underline;
+}
+
 .member-bubble-desc {
   margin: 0;
   font-size: 0.8rem;

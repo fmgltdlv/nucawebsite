@@ -516,6 +516,7 @@
       website: string | null
       phone: string | null
       logoUrl: string | null
+      contacts: Array<{ name: string; email: string }>
     }>} */
     const membersById = {}
     try {
@@ -535,6 +536,8 @@
     const typeEl = document.getElementById('member-dialog-type')
     const linksEl = document.getElementById('member-dialog-links')
     const descriptionEl = document.getElementById('member-dialog-description')
+    const contactsEl = document.getElementById('member-dialog-contacts')
+    const contactsListEl = document.getElementById('member-dialog-contacts-list')
 
     function setText(el, value, hiddenWhenEmpty = true) {
       if (!(el instanceof HTMLElement)) return
@@ -587,6 +590,26 @@
       }
 
       setText(descriptionEl, member.description)
+
+      if (contactsEl instanceof HTMLElement && contactsListEl instanceof HTMLUListElement) {
+        contactsListEl.replaceChildren()
+        const contacts = Array.isArray(member.contacts) ? member.contacts : []
+        contacts.forEach((contact) => {
+          if (!contact?.email) return
+          const item = document.createElement('li')
+          const name = document.createElement('span')
+          name.className = 'member-dialog-contact-name'
+          name.textContent = contact.name?.trim() || contact.email
+          const email = document.createElement('a')
+          email.className = 'member-dialog-contact-email'
+          email.href = `mailto:${contact.email}`
+          email.textContent = contact.email
+          item.append(name, email)
+          contactsListEl.append(item)
+        })
+        contactsEl.hidden = contacts.length === 0
+      }
+
       memberDialog.showModal()
     }
 

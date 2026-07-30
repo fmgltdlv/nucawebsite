@@ -11,6 +11,12 @@ export interface Member {
   phone?: string
   email?: string
   logoUrl?: string
+  contacts?: MemberContact[]
+}
+
+export interface MemberContact {
+  name: string
+  email: string
 }
 
 export interface Event {
