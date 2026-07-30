@@ -34,7 +34,7 @@ function LeaderBubble({
     <li class={bubbleClass}>
       <button
         type="button"
-        class="leader-bubble-btn"
+        class="bubble-card-btn"
         data-leader-id={person.id}
         aria-label={`View profile for ${person.name}`}
       >

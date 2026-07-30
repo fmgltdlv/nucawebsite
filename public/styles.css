@@ -976,8 +976,7 @@ button.pill {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  padding: 1.25rem 1rem;
+  padding: 0;
   text-align: center;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -989,6 +988,30 @@ button.pill {
   border-color: var(--color-primary);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   transform: translateY(-2px);
+}
+
+.bubble-card-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  padding: 1.25rem 1rem;
+  margin: 0;
+  border: none;
+  border-radius: inherit;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.bubble-card-btn:hover,
+.bubble-card-btn:focus-visible {
+  outline: none;
 }
 
 .member-bubble-avatar {
@@ -1027,34 +1050,12 @@ button.pill {
   line-height: 1.3;
 }
 
-.member-bubble-company-btn {
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  font: inherit;
-  font-weight: 600;
-  font-size: 0.95rem;
-  line-height: 1.3;
-  color: inherit;
-  cursor: pointer;
-  text-align: center;
-}
-
-.member-bubble-company-btn:hover,
-.member-bubble-company-btn:focus-visible {
-  color: var(--color-primary);
-  text-decoration: underline;
-  outline: none;
-}
-
-
 .member-dialog-logo {
   display: block;
   width: auto;
   height: auto;
-  max-width: 10rem;
-  max-height: 6rem;
+  max-width: 16rem;
+  max-height: 10rem;
   object-fit: contain;
   background: #fff;
   padding: 0.25rem;
@@ -1064,10 +1065,10 @@ button.pill {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 8rem;
-  height: 8rem;
+  width: 10rem;
+  height: 10rem;
   border-radius: 50%;
-  font-size: 2.25rem;
+  font-size: 3rem;
   font-weight: 700;
   color: var(--color-primary);
   background: #eef4ff;
@@ -1562,31 +1563,12 @@ button.pill {
   padding: 0;
 }
 
-.leader-bubble-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.leader-bubble .bubble-card-btn {
   gap: 0.85rem;
-  width: 100%;
-  height: 100%;
-  min-height: 100%;
   padding: 1.5rem 1.25rem;
-  margin: 0;
-  border: none;
-  border-radius: inherit;
-  background: transparent;
-  font: inherit;
-  color: inherit;
-  text-align: center;
-  cursor: pointer;
 }
 
-.leader-bubble-btn:hover,
-.leader-bubble-btn:focus-visible {
-  outline: none;
-}
-
-.leader-bubble:hover .leader-bubble-btn,
+.leader-bubble:hover .bubble-card-btn,
 .leader-bubble:focus-within {
   outline: none;
 }
@@ -1623,7 +1605,7 @@ button.pill {
   gap: 1.5rem;
 }
 
-.leader-bubble-featured .leader-bubble-btn {
+.leader-bubble-featured .bubble-card-btn {
   padding: 2rem 1.5rem;
 }
 
@@ -1637,7 +1619,7 @@ button.pill {
   font-size: 1.1rem;
 }
 
-.leader-bubble-detailed .leader-bubble-btn {
+.leader-bubble-detailed .bubble-card-btn {
   padding: 1.75rem 1.35rem;
 }
 
@@ -1744,8 +1726,8 @@ button.pill {
 
 .leader-dialog-photo,
 .leader-dialog-initial {
-  width: 8rem;
-  height: 8rem;
+  width: 11rem;
+  height: 11rem;
   border-radius: 50%;
 }
 
@@ -1757,7 +1739,7 @@ button.pill {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.25rem;
+  font-size: 3rem;
   font-weight: 700;
   color: var(--color-primary);
   background: #eef4ff;
@@ -1814,7 +1796,7 @@ button.pill {
 
 @media (min-width: 640px) {
   .leader-dialog-layout {
-    grid-template-columns: 8.5rem 1fr;
+    grid-template-columns: 12rem 1fr;
     align-items: start;
     gap: 1.5rem;
   }
@@ -1830,13 +1812,13 @@ button.pill {
 
   .leader-dialog-photo,
   .leader-dialog-initial {
-    width: 8.5rem;
-    height: 8.5rem;
+    width: 12rem;
+    height: 12rem;
   }
 
   .member-dialog-initial {
-    width: 8.5rem;
-    height: 8.5rem;
+    width: 11rem;
+    height: 11rem;
   }
 }
 

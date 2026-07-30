@@ -12,24 +12,24 @@ function MemberBubble({ member }: { member: Member }) {
 
   return (
     <li class="member-bubble" data-member-type={member.type}>
-      <div class="member-bubble-avatar" aria-hidden="true">
-        {member.logoUrl ? (
-          <img src={member.logoUrl} alt="" class="member-bubble-logo" />
-        ) : (
-          initial
-        )}
-      </div>
-      <div class="member-bubble-body">
-        <button
-          type="button"
-          class="member-bubble-company-btn"
-          data-member-id={member.id}
-          aria-label={`View details for ${member.company}`}
-        >
-          {member.company}
-        </button>
-        <span class={`badge badge-${member.type}`}>{memberTypeLabel[member.type]}</span>
-      </div>
+      <button
+        type="button"
+        class="bubble-card-btn"
+        data-member-id={member.id}
+        aria-label={`View details for ${member.company}`}
+      >
+        <div class="member-bubble-avatar" aria-hidden="true">
+          {member.logoUrl ? (
+            <img src={member.logoUrl} alt="" class="member-bubble-logo" />
+          ) : (
+            initial
+          )}
+        </div>
+        <div class="member-bubble-body">
+          <span class="member-bubble-company">{member.company}</span>
+          <span class={`badge badge-${member.type}`}>{memberTypeLabel[member.type]}</span>
+        </div>
+      </button>
     </li>
   )
 }
