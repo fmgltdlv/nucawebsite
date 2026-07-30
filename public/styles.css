@@ -968,6 +968,12 @@ button.pill {
   list-style: none;
 }
 
+@media (min-width: 700px) {
+  .member-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 .member-pagination {
   display: flex;
   align-items: center;

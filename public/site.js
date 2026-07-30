@@ -31,8 +31,14 @@
   if (grid && empty) {
     const items = Array.from(grid.querySelectorAll('.member-bubble'))
     const validTypes = new Set(['contractor', 'associate', 'institutional'])
-    const MEMBER_PAGE_SIZE = 15
+    const desktopMemberMq = window.matchMedia('(min-width: 700px)')
+    const MEMBER_PAGE_SIZE_MOBILE = 15
+    const MEMBER_PAGE_SIZE_DESKTOP = 16
     let currentMemberPage = 0
+
+    function getMemberPageSize() {
+      return desktopMemberMq.matches ? MEMBER_PAGE_SIZE_DESKTOP : MEMBER_PAGE_SIZE_MOBILE
+    }
 
     function readTypeFromUrl() {
       const type = new URLSearchParams(window.location.search).get('type')
@@ -53,7 +59,8 @@
     }
 
     function updateMemberPagination(filteredCount, totalPages) {
-      const usePagination = filteredCount > MEMBER_PAGE_SIZE
+      const pageSize = getMemberPageSize()
+      const usePagination = filteredCount > pageSize
 
       if (memberPagination instanceof HTMLElement) {
         memberPagination.hidden = !usePagination
@@ -76,9 +83,10 @@
 
     function applyMemberFilters() {
       const filtered = getFilteredMemberItems()
-      const usePagination = filtered.length > MEMBER_PAGE_SIZE
+      const pageSize = getMemberPageSize()
+      const usePagination = filtered.length > pageSize
       const totalPages = usePagination
-        ? Math.max(1, Math.ceil(filtered.length / MEMBER_PAGE_SIZE))
+        ? Math.max(1, Math.ceil(filtered.length / pageSize))
         : 1
 
       if (currentMemberPage >= totalPages) currentMemberPage = totalPages - 1
@@ -89,8 +97,8 @@
 
       let visibleItems = filtered
       if (usePagination) {
-        const start = currentMemberPage * MEMBER_PAGE_SIZE
-        visibleItems = filtered.slice(start, start + MEMBER_PAGE_SIZE)
+        const start = currentMemberPage * pageSize
+        visibleItems = filtered.slice(start, start + pageSize)
       }
 
       visibleItems.forEach((item) => {
@@ -136,11 +144,17 @@
 
     memberPageNext?.addEventListener('click', () => {
       const filtered = getFilteredMemberItems()
-      const totalPages = Math.max(1, Math.ceil(filtered.length / MEMBER_PAGE_SIZE))
+      const pageSize = getMemberPageSize()
+      const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
       if (currentMemberPage < totalPages - 1) {
         currentMemberPage += 1
         applyMemberFilters()
       }
+    })
+
+    desktopMemberMq.addEventListener('change', () => {
+      currentMemberPage = 0
+      applyMemberFilters()
     })
 
     if (activeType !== 'all') {
