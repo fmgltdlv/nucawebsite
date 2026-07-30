@@ -104,8 +104,9 @@ Under **About** in the menu:
 - [Leadership](/about/leadership)
 - [Member List](/members)
 - [Events](/events)
+- [Resources](/resources)
 
-Other main menu items: [Committees](/about/committees), [Industry Updates](/industry-updates) ([THE DIRT](/about/the-dirt)), [Resources](/resources).`,
+Other main menu items: [Committees](/about/committees), [Industry Updates](/industry-updates) ([THE DIRT](/about/the-dirt)).`,
     meta_description:
       'The local chapter of the National Utility Contractors Association serves utility construction professionals across Southern Nevada.',
     published: true,

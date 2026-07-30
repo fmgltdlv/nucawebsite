@@ -65,6 +65,12 @@ export const siteNavigation: NavEntry[] = [
         status: 'demo',
         legacyUrl: 'https://nucalasvegas.com/events/',
       },
+      {
+        label: 'Resources',
+        href: '/resources',
+        status: 'todo',
+        legacyUrl: 'https://nucalasvegas.com/resources/',
+      },
     ],
   },
   {
@@ -101,12 +107,6 @@ export const siteNavigation: NavEntry[] = [
         indent: true,
       },
     ],
-  },
-  {
-    label: 'Resources',
-    href: '/resources',
-    status: 'todo',
-    legacyUrl: 'https://nucalasvegas.com/resources/',
   },
   {
     label: 'Join NUCA of Las Vegas Today!',

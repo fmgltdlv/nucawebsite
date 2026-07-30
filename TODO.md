@@ -7,10 +7,9 @@ Track rebuild work for the Cloudflare (Hono + D1) site. Nav structure below refl
 | Top level | Submenu |
 |-----------|---------|
 | Home | — |
-| About | Q & A, Leadership, Member List, Events |
+| About | Q & A, Leadership, Member List, Events, Resources |
 | Committees | → NUCA Las Vegas Scholarships |
 | Industry Updates | → THE DIRT (PDF archive) |
-| Resources | — |
 | Join NUCA of Las Vegas Today! | — |
 | Contact Us | — |
 
@@ -49,11 +48,11 @@ Status dots in the demo nav: **green** = demo, **orange** = stub, **gray** = not
 | Leadership | `/about/leadership` | Stub | Copy from live; photos optional |
 | Member List | `/members` | Demo | Real data from D1 + admin |
 | Events | `/events` | Demo | Under About in nav; **admin-managed** |
+| Resources | `/resources` | To copy | Under About in nav; **admin-editable** links & documents |
 | Committees | `/about/committees` | Stub | Former Advocacy content + committee info |
 | NUCA Las Vegas Scholarships | `/scholarships` | To copy | Under Committees in nav |
 | Industry Updates | `/industry-updates` | To copy | Blog/posts listing |
 | THE DIRT | `/about/the-dirt` | Demo | PDF archive; in-browser viewer at `/about/the-dirt/:id` |
-| Resources | `/resources` | To copy | **Admin-editable** links & documents |
 | Join | `/join` | Demo | Benefits, types, application |
 | Contact Us | `/contact` | Demo | Form + newsletter; **contact info from admin** |
 
