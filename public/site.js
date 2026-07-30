@@ -19,20 +19,20 @@
   })
 
   const search = document.getElementById('member-search')
-  const table = document.getElementById('member-table')
+  const grid = document.getElementById('member-grid')
   const empty = document.getElementById('member-search-empty')
 
-  if (search && table && empty) {
-    const rows = table.querySelectorAll('tbody tr')
+  if (search && grid && empty) {
+    const items = grid.querySelectorAll('.member-bubble')
 
     search.addEventListener('input', () => {
       const q = search.value.trim().toLowerCase()
       let visible = 0
 
-      rows.forEach((row) => {
-        const text = row.textContent?.toLowerCase() ?? ''
+      items.forEach((item) => {
+        const text = item.textContent?.toLowerCase() ?? ''
         const show = !q || text.includes(q)
-        row.hidden = !show
+        item.hidden = !show
         if (show) visible += 1
       })
 

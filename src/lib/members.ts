@@ -4,7 +4,7 @@ export async function listActiveMembers(db: D1Database): Promise<Member[]> {
   const { results } = await db
     .prepare(
       `SELECT id, company_name, member_type, website, phone
-       FROM members WHERE active = 1 ORDER BY display_order ASC, company_name ASC`,
+       FROM members WHERE active = 1 ORDER BY company_name ASC`,
     )
     .all<{
       id: string

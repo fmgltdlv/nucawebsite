@@ -5,30 +5,31 @@ import {
   type MemberType,
 } from '../data/demo'
 
-function MemberRow({ member }: { member: Member }) {
+function MemberBubble({ member }: { member: Member }) {
+  const initial = member.company.trim().charAt(0).toUpperCase() || '?'
+
   return (
-    <tr>
-      <td>
-        <span class="member-company">{member.company}</span>
-      </td>
-      <td>
+    <li class="member-bubble">
+      <div class="member-bubble-avatar" aria-hidden="true">
+        {initial}
+      </div>
+      <div class="member-bubble-body">
+        <span class="member-bubble-company">{member.company}</span>
         <span class={`badge badge-${member.type}`}>{memberTypeLabel[member.type]}</span>
-      </td>
-      <td>
-        {member.website ? (
-          <a href={member.website} rel="noopener noreferrer" target="_blank">Website</a>
-        ) : (
-          <span class="muted">—</span>
+        {(member.website || member.phone) && (
+          <div class="member-bubble-links">
+            {member.website && (
+              <a href={member.website} rel="noopener noreferrer" target="_blank">
+                Website
+              </a>
+            )}
+            {member.phone && (
+              <a href={`tel:${member.phone.replace(/\D/g, '')}`}>{member.phone}</a>
+            )}
+          </div>
         )}
-      </td>
-      <td>
-        {member.phone ? (
-          <a href={`tel:${member.phone.replace(/\D/g, '')}`}>{member.phone}</a>
-        ) : (
-          <span class="muted">—</span>
-        )}
-      </td>
-    </tr>
+      </div>
+    </li>
   )
 }
 
@@ -39,7 +40,9 @@ export function MembersPage({
   filter,
   members,
 }: PageProps & { filter?: MemberType; members: Member[] }) {
-  const filtered = filter ? members.filter((m) => m.type === filter) : members
+  const filtered = (filter ? members.filter((m) => m.type === filter) : members).sort((a, b) =>
+    a.company.localeCompare(b.company, undefined, { sensitivity: 'base' }),
+  )
 
   const filters: { id: MemberType | 'all'; label: string }[] = [
     { id: 'all', label: 'All' },
@@ -86,23 +89,11 @@ export function MembersPage({
             </div>
           </div>
 
-          <div class="table-wrap">
-            <table class="data-table" id="member-table">
-              <thead>
-                <tr>
-                  <th>Company</th>
-                  <th>Type</th>
-                  <th>Website</th>
-                  <th>Phone</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((member) => (
-                  <MemberRow key={member.id} member={member} />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ul class="member-grid" id="member-grid">
+            {filtered.map((member) => (
+              <MemberBubble key={member.id} member={member} />
+            ))}
+          </ul>
           <p class="table-note" id="member-search-empty" hidden>
             No members match your search.
           </p>
