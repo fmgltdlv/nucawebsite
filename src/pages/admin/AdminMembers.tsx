@@ -2,6 +2,7 @@ import { MEMBER_TYPES, memberTypeLabel } from '../../data/demo'
 import type { AdminMember } from '../../lib/members-db'
 import { AdminShell } from '../../views/AdminShell'
 import { AdminModal, AdminModalCancelButton } from '../../views/admin/AdminModal'
+import { AdminAssetPickerField } from '../../views/admin/AdminAssetPickerField'
 import { AdminCrudSections } from '../../views/admin/AdminCrudSections'
 import { AdminEditButton } from '../../views/admin/AdminListSection'
 import type { AdminContext } from '../../lib/admin-context'
@@ -125,31 +126,18 @@ function MemberEditModal({ member }: { member: AdminMember }) {
         <label for={`${formId}-email`}>Email</label>
         <input type="email" name="email" id={`${formId}-email`} value={member.email ?? ''} />
       </div>
-      <div class="form-field">
-        <label for={`${formId}-logo`}>Company logo</label>
-        {member.logoUrl && (
-          <img
-            src={member.logoUrl}
-            alt=""
-            class="admin-modal-logo-preview"
-            loading="lazy"
-            decoding="async"
-          />
-        )}
-        <input
-          type="file"
-          name="logo"
-          id={`${formId}-logo`}
-          accept="image/png,image/jpeg,image/webp,image/svg+xml"
-        />
-        {member.logoUrl && (
-          <label class="admin-check">
-            <input type="checkbox" name="remove_logo" value="1" />
-            Remove current logo
-          </label>
-        )}
-        <p class="form-hint">PNG, JPEG, WebP, or SVG, max 2 MB. Large images are compressed before upload.</p>
-      </div>
+      <AdminAssetPickerField
+        label="Company logo"
+        kind="image"
+        hiddenInputName="existing_logo_key"
+        fileInputName="logo"
+        fileInputId={`${formId}-logo`}
+        fileAccept="image/png,image/jpeg,image/webp,image/svg+xml"
+        currentKey={member.logo_r2_key}
+        currentUrl={member.logoUrl}
+        removeCheckboxName="remove_logo"
+        hint="PNG, JPEG, WebP, or SVG, max 2 MB. Large images are compressed before upload."
+      />
       <label class="admin-check">
         <input type="checkbox" name="active" value="1" checked={member.active} />
         Listed on public member directory
@@ -229,16 +217,15 @@ export function AdminMembersPage({
               <label for="email">Email</label>
               <input type="email" name="email" id="email" />
             </div>
-            <div class="form-field">
-              <label for="logo">Company logo</label>
-              <input
-                type="file"
-                name="logo"
-                id="logo"
-                accept="image/png,image/jpeg,image/webp,image/svg+xml"
-              />
-              <p class="form-hint">Optional. Shown on the public member grid.</p>
-            </div>
+            <AdminAssetPickerField
+              label="Company logo"
+              kind="image"
+              hiddenInputName="existing_logo_key"
+              fileInputName="logo"
+              fileInputId="logo"
+              fileAccept="image/png,image/jpeg,image/webp,image/svg+xml"
+              hint="Optional. Upload a new file or choose an existing image from the library."
+            />
             <label class="admin-check">
               <input type="checkbox" name="active" value="1" />
               Listed on public member directory

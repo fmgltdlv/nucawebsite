@@ -29,7 +29,8 @@ import {
   updateMemberProfile,
 } from '../lib/members-db'
 import { applyMemberLogoChange } from '../lib/member-logos'
-import { countAssetsByType, listIndexedAssets, parseAssetType } from '../lib/assets-index'
+import { countAssetsByType, dedupeAssetsByKey, filterAssetsByKind, listIndexedAssets, parseAssetType } from '../lib/assets-index'
+import { getAssetUrl } from '../lib/r2-assets'
 import { seedAdminIfNeeded } from '../lib/seed'
 import {
   clearSessionCookieHeader,
@@ -131,6 +132,27 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
         filterType={filterType}
       />,
     )
+  })
+
+  app.get('/admin/api/assets', async (c) => {
+    const ctx = await resolveAdminContext(c)
+    if (!ctx) return c.json({ error: 'Unauthorized' }, 401)
+    if (!canAccessRole(ctx.user, ['admin', 'chair'])) return c.json({ error: 'Forbidden' }, 403)
+
+    const kind = c.req.query('kind') === 'pdf' ? 'pdf' : 'image'
+    if (kind === 'pdf' && !canAccessRole(ctx.user, ['admin'])) {
+      return c.json({ error: 'Forbidden' }, 403)
+    }
+
+    const allAssets = await listIndexedAssets(c.env.DB)
+    const assets = dedupeAssetsByKey(filterAssetsByKind(allAssets, kind)).map((asset) => ({
+      key: asset.key,
+      label: asset.label,
+      type: asset.type,
+      url: getAssetUrl(asset.key),
+    }))
+
+    return c.json({ assets })
   })
 
   app.get('/admin/users', async (c) => {
@@ -363,6 +385,9 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     })
 
     const images = await applyEventImageUploads(c.env.R2, id, body)
+    if (images.error) {
+      return c.redirect(`/admin/events?error=${encodeURIComponent(images.error)}`, 303)
+    }
     if (images.thumbnail_r2_key || images.flyer_r2_key) {
       await updateEvent(c.env.DB, id, {
         title,
@@ -409,6 +434,9 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const repeat_until = parseRepeatUntil(typeof body.repeat_until === 'string' ? body.repeat_until : '')
     const coords = await resolveEventCoordinates(location || null, existing)
     const images = await applyEventImageUploads(c.env.R2, id, body, existing)
+    if (images.error) {
+      return c.redirect(`/admin/events?error=${encodeURIComponent(images.error)}`, 303)
+    }
 
     await updateEvent(c.env.DB, id, {
       title,

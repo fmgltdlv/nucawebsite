@@ -1,5 +1,6 @@
 import { expandEventOccurrences, type ExpandedEventRecord } from './event-repeat'
 import { geocodeClarkCountyAddress } from './geocode'
+import { resolveExistingImageKey } from './asset-select'
 import {
   deleteAsset,
   eventFlyerKey,
@@ -148,7 +149,7 @@ export async function applyEventImageUploads(
   eventId: string,
   body: Record<string, File | string>,
   existing?: EventRecord | null,
-): Promise<{ thumbnail_r2_key: string | null; flyer_r2_key: string | null }> {
+): Promise<{ thumbnail_r2_key: string | null; flyer_r2_key: string | null; error?: string }> {
   let thumbnail_r2_key = existing?.thumbnail_r2_key ?? null
   let flyer_r2_key = existing?.flyer_r2_key ?? null
 
@@ -164,6 +165,15 @@ export async function applyEventImageUploads(
         if (thumbnail_r2_key && thumbnail_r2_key !== key) await deleteAsset(r2, thumbnail_r2_key)
         thumbnail_r2_key = key
       }
+    } else {
+      const existingKey = await resolveExistingImageKey(r2, body, 'existing_thumbnail_key')
+      if (existingKey && typeof existingKey === 'object') {
+        return { thumbnail_r2_key, flyer_r2_key, error: existingKey.error }
+      }
+      if (typeof existingKey === 'string') {
+        if (thumbnail_r2_key && thumbnail_r2_key !== existingKey) await deleteAsset(r2, thumbnail_r2_key)
+        thumbnail_r2_key = existingKey
+      }
     }
   }
 
@@ -178,6 +188,15 @@ export async function applyEventImageUploads(
       if (upload.ok) {
         if (flyer_r2_key && flyer_r2_key !== key) await deleteAsset(r2, flyer_r2_key)
         flyer_r2_key = key
+      }
+    } else {
+      const existingKey = await resolveExistingImageKey(r2, body, 'existing_flyer_key')
+      if (existingKey && typeof existingKey === 'object') {
+        return { thumbnail_r2_key, flyer_r2_key, error: existingKey.error }
+      }
+      if (typeof existingKey === 'string') {
+        if (flyer_r2_key && flyer_r2_key !== existingKey) await deleteAsset(r2, flyer_r2_key)
+        flyer_r2_key = existingKey
       }
     }
   }

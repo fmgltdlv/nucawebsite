@@ -2,6 +2,7 @@ import type { DirtReleaseRecord } from '../../../lib/dirt-db'
 import { getAssetUrl } from '../../../lib/r2-assets'
 import { formatArchiveDate } from '../../../lib/format'
 import { AdminShell } from '../../../views/AdminShell'
+import { AdminAssetPickerField } from '../../../views/admin/AdminAssetPickerField'
 import { AdminCrudSections } from '../../../views/admin/AdminCrudSections'
 import { AdminEditModalFooter } from '../../../views/admin/AdminEditActions'
 import { AdminEditButton } from '../../../views/admin/AdminListSection'
@@ -80,16 +81,17 @@ function DirtEditModal({ release }: { release: DirtReleaseRecord }) {
           {release.summary ?? ''}
         </textarea>
       </div>
-      <div class="form-field">
-        <label>Current PDF</label>
-        <p>
-          <a href={getAssetUrl(release.pdf_r2_key)} target="_blank" rel="noopener noreferrer">
-            View current PDF
-          </a>
-        </p>
-        <label for={`${formId}-pdf`}>Replace PDF (optional)</label>
-        <input type="file" name="pdf" id={`${formId}-pdf`} accept="application/pdf" />
-      </div>
+      <AdminAssetPickerField
+        label="PDF"
+        kind="pdf"
+        hiddenInputName="existing_pdf_key"
+        fileInputName="pdf"
+        fileInputId={`${formId}-pdf`}
+        fileAccept="application/pdf"
+        currentKey={release.pdf_r2_key}
+        currentUrl={getAssetUrl(release.pdf_r2_key)}
+        hint="Upload a replacement PDF or choose an existing PDF from the library."
+      />
       <label class="admin-check">
         <input type="checkbox" name="published" value="1" checked={release.published === 1} />
         Published in THE DIRT archive
@@ -146,10 +148,15 @@ export function AdminContentDirtPage({
               <label for="summary">Summary (optional)</label>
               <input type="text" name="summary" id="summary" />
             </div>
-            <div class="form-field">
-              <label for="pdf">PDF file</label>
-              <input type="file" name="pdf" id="pdf" accept="application/pdf" required />
-            </div>
+            <AdminAssetPickerField
+              label="PDF file"
+              kind="pdf"
+              hiddenInputName="existing_pdf_key"
+              fileInputName="pdf"
+              fileInputId="pdf"
+              fileAccept="application/pdf"
+              hint="Upload a new PDF or choose an existing PDF from the library."
+            />
           </>
         }
         listTitle="Releases"

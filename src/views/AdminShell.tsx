@@ -2,6 +2,7 @@ import type { User } from '../config/roles'
 import { ROLE_LABELS } from '../config/roles'
 import type { ThemeId } from '../config/themes'
 import { Layout } from './Layout'
+import { AdminAssetLibraryDialog } from './admin/AdminAssetLibraryDialog'
 
 type NavItem = { href: string; label: string }
 
@@ -79,6 +80,7 @@ export function AdminShell({
           {children}
         </div>
       </div>
+      {(user.role === 'admin' || user.role === 'chair') && <AdminAssetLibraryDialog />}
     </Layout>
   )
 }

@@ -1,4 +1,5 @@
 import { getAssetUrl } from './r2-assets'
+import { resolveExistingImageKey } from './asset-select'
 
 export const MEMBER_LOGO_MAX_BYTES = 2 * 1024 * 1024
 
@@ -19,7 +20,6 @@ const MIME_TO_EXT: Record<string, string> = {
 export function memberLogoUrl(logoR2Key?: string | null): string | undefined {
   return logoR2Key ? getAssetUrl(logoR2Key) : undefined
 }
-
 export function parseLogoFile(body: Record<string, File | string>): File | null {
   const logo = body.logo
   if (logo instanceof File && logo.size > 0) return logo
@@ -95,14 +95,25 @@ export async function applyMemberLogoChange(
   }
 
   const logoFile = parseLogoFile(body)
-  if (!logoFile) return undefined
+  if (logoFile) {
+    const uploaded = await uploadMemberLogo(r2, memberId, logoFile)
+    if (!uploaded.ok) return uploaded.error
 
-  const uploaded = await uploadMemberLogo(r2, memberId, logoFile)
-  if (!uploaded.ok) return uploaded.error
-
-  await updateLogoKey(memberId, uploaded.key)
-  if (previousKey && previousKey !== uploaded.key) {
-    await deleteR2Object(r2, previousKey)
+    await updateLogoKey(memberId, uploaded.key)
+    if (previousKey && previousKey !== uploaded.key) {
+      await deleteR2Object(r2, previousKey)
+    }
+    return undefined
   }
+
+  const existingKey = await resolveExistingImageKey(r2, body, 'existing_logo_key')
+  if (existingKey && typeof existingKey === 'object') return existingKey.error
+  if (typeof existingKey === 'string') {
+    await updateLogoKey(memberId, existingKey)
+    if (previousKey && previousKey !== existingKey) {
+      await deleteR2Object(r2, previousKey)
+    }
+  }
+
   return undefined
 }

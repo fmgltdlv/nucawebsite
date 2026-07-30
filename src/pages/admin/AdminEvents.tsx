@@ -4,6 +4,7 @@ import { repeatRuleLabel } from '../../lib/event-repeat'
 import { toDateInputValue, toDatetimeLocalValue } from '../../lib/datetime'
 import { formatArchiveDate } from '../../lib/format'
 import { AdminShell } from '../../views/AdminShell'
+import { AdminAssetPickerField } from '../../views/admin/AdminAssetPickerField'
 import { AdminCrudSections } from '../../views/admin/AdminCrudSections'
 import { AdminEditModalFooter } from '../../views/admin/AdminEditActions'
 import { AdminEditButton } from '../../views/admin/AdminListSection'
@@ -37,36 +38,34 @@ function EventImageFields({
   const flyerUrl = event ? eventFlyerUrl(event) : undefined
 
   return (
-    <div class="form-row">
-      <div class="form-field">
-        <label for={`${idPrefix}thumbnail`}>Thumbnail (list view)</label>
-        {thumbnailUrl && (
-          <img src={thumbnailUrl} alt="" class="admin-event-image-preview" loading="lazy" decoding="async" />
-        )}
-        <input type="file" name="thumbnail" id={`${idPrefix}thumbnail`} accept="image/*" />
-        {thumbnailUrl && (
-          <label class="admin-check">
-            <input type="checkbox" name="remove_thumbnail" value="1" />
-            Remove thumbnail
-          </label>
-        )}
-        <p class="form-hint">Shown on the events list and home page. PNG or JPEG recommended.</p>
+    <>
+      <div class="form-row">
+        <AdminAssetPickerField
+          label="Thumbnail (list view)"
+          kind="image"
+          hiddenInputName="existing_thumbnail_key"
+          fileInputName="thumbnail"
+          fileInputId={`${idPrefix}thumbnail`}
+          fileAccept="image/*"
+          currentKey={event?.thumbnail_r2_key}
+          currentUrl={thumbnailUrl}
+          removeCheckboxName="remove_thumbnail"
+          hint="Shown on the events list and home page. PNG or JPEG recommended."
+        />
+        <AdminAssetPickerField
+          label="Flyer (event page)"
+          kind="image"
+          hiddenInputName="existing_flyer_key"
+          fileInputName="flyer"
+          fileInputId={`${idPrefix}flyer`}
+          fileAccept="image/*"
+          currentKey={event?.flyer_r2_key}
+          currentUrl={flyerUrl}
+          removeCheckboxName="remove_flyer"
+          hint="Hero image on the public event page."
+        />
       </div>
-      <div class="form-field">
-        <label for={`${idPrefix}flyer`}>Flyer (event page)</label>
-        {flyerUrl && (
-          <img src={flyerUrl} alt="" class="admin-event-image-preview admin-event-flyer-preview" loading="lazy" decoding="async" />
-        )}
-        <input type="file" name="flyer" id={`${idPrefix}flyer`} accept="image/*" />
-        {flyerUrl && (
-          <label class="admin-check">
-            <input type="checkbox" name="remove_flyer" value="1" />
-            Remove flyer
-          </label>
-        )}
-        <p class="form-hint">Hero image on the public event page.</p>
-      </div>
-    </div>
+    </>
   )
 }
 

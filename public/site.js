@@ -511,6 +511,185 @@
     wireAdminModal(dialog)
   })
 
+  const assetLibraryDialog = document.getElementById('asset-library-dialog')
+  if (assetLibraryDialog instanceof HTMLDialogElement) {
+    const grid = assetLibraryDialog.querySelector('[data-asset-library-grid]')
+    const searchInput = assetLibraryDialog.querySelector('[data-asset-library-search]')
+    const loadingEl = assetLibraryDialog.querySelector('[data-asset-library-loading]')
+    const emptyEl = assetLibraryDialog.querySelector('[data-asset-library-empty]')
+    /** @type {HTMLElement | null} */
+    let activePickerField = null
+    /** @type {Record<string, Array<{ key: string, label: string, type: string, url: string }>>} */
+    const assetsCache = { image: null, pdf: null }
+    /** @type {Array<{ key: string, label: string, type: string, url: string }>} */
+    let libraryAssets = []
+
+    async function loadAssets(kind) {
+      if (assetsCache[kind]) return assetsCache[kind]
+      const response = await fetch(`/admin/api/assets?kind=${kind}`)
+      if (!response.ok) throw new Error('Could not load assets.')
+      const data = await response.json()
+      assetsCache[kind] = data.assets ?? []
+      return assetsCache[kind]
+    }
+
+    function setPickerPreview(field, asset) {
+      const preview = field.querySelector('[data-asset-picker-preview]')
+      const hiddenInput = field.querySelector('[data-asset-picker-value]')
+      const clearBtn = field.querySelector('[data-asset-picker-clear]')
+      const removeCheckbox = field.querySelector('[data-asset-picker-remove]')
+      const kind = field.getAttribute('data-asset-kind') || 'image'
+
+      if (hiddenInput instanceof HTMLInputElement) hiddenInput.value = asset.key
+      if (clearBtn instanceof HTMLButtonElement) clearBtn.hidden = false
+      if (removeCheckbox instanceof HTMLInputElement) removeCheckbox.checked = false
+
+      if (!(preview instanceof HTMLElement)) return
+      preview.hidden = false
+
+      const previewImage = preview.querySelector('[data-asset-picker-preview-image]')
+      const previewLink = preview.querySelector('[data-asset-picker-preview-link]')
+
+      if (kind === 'pdf') {
+        if (previewImage instanceof HTMLElement) previewImage.hidden = true
+        if (previewLink instanceof HTMLAnchorElement) {
+          previewLink.hidden = false
+          previewLink.href = asset.url
+          previewLink.textContent = asset.label
+        } else {
+          preview.innerHTML = `<a href="${asset.url}" target="_blank" rel="noopener noreferrer" data-asset-picker-preview-link>${asset.label}</a>`
+        }
+        return
+      }
+
+      if (previewLink instanceof HTMLElement) previewLink.hidden = true
+      if (previewImage instanceof HTMLImageElement) {
+        previewImage.hidden = false
+        previewImage.src = asset.url
+        previewImage.alt = ''
+      } else {
+        preview.innerHTML = `<img src="${asset.url}" alt="" class="admin-modal-logo-preview" data-asset-picker-preview-image loading="lazy" decoding="async" />`
+      }
+    }
+
+    function clearPickerSelection(field) {
+      const preview = field.querySelector('[data-asset-picker-preview]')
+      const hiddenInput = field.querySelector('[data-asset-picker-value]')
+      const fileInput = field.querySelector('[data-asset-picker-file]')
+      const clearBtn = field.querySelector('[data-asset-picker-clear]')
+
+      if (hiddenInput instanceof HTMLInputElement) hiddenInput.value = ''
+      if (fileInput instanceof HTMLInputElement) fileInput.value = ''
+      if (clearBtn instanceof HTMLButtonElement) clearBtn.hidden = true
+      if (preview instanceof HTMLElement) preview.hidden = true
+    }
+
+    function renderAssetGrid() {
+      if (!(grid instanceof HTMLElement)) return
+      const query =
+        searchInput instanceof HTMLInputElement ? searchInput.value.trim().toLowerCase() : ''
+      const filteredAssets = query
+        ? libraryAssets.filter((asset) => {
+            const haystack = `${asset.label} ${asset.key} ${asset.type}`.toLowerCase()
+            return haystack.includes(query)
+          })
+        : libraryAssets
+
+      grid.innerHTML = ''
+      if (filteredAssets.length === 0) {
+        grid.hidden = true
+        if (emptyEl instanceof HTMLElement) emptyEl.hidden = false
+        return
+      }
+
+      grid.hidden = false
+      if (emptyEl instanceof HTMLElement) emptyEl.hidden = true
+
+      filteredAssets.forEach((asset) => {
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.className = 'admin-asset-library-item'
+        button.dataset.assetKey = asset.key
+        button.title = asset.label
+
+        if (asset.url.toLowerCase().endsWith('.pdf')) {
+          button.innerHTML = `<span class="admin-asset-pdf-icon" aria-hidden="true">PDF</span><span class="admin-asset-library-label">${asset.label}</span>`
+        } else {
+          button.innerHTML = `<img src="${asset.url}" alt="" loading="lazy" decoding="async" /><span class="admin-asset-library-label">${asset.label}</span>`
+        }
+
+        button.addEventListener('click', () => {
+          if (!(activePickerField instanceof HTMLElement)) return
+          const fileInput = activePickerField.querySelector('[data-asset-picker-file]')
+          if (fileInput instanceof HTMLInputElement) fileInput.value = ''
+          setPickerPreview(activePickerField, asset)
+          assetLibraryDialog.close()
+        })
+
+        grid.appendChild(button)
+      })
+    }
+
+    async function openAssetLibrary(field) {
+      activePickerField = field
+      const kind = field.getAttribute('data-asset-kind') || 'image'
+
+      if (loadingEl instanceof HTMLElement) loadingEl.hidden = false
+      if (emptyEl instanceof HTMLElement) emptyEl.hidden = true
+      if (grid instanceof HTMLElement) {
+        grid.hidden = true
+        grid.innerHTML = ''
+      }
+      if (searchInput instanceof HTMLInputElement) searchInput.value = ''
+
+      assetLibraryDialog.showModal()
+
+      try {
+        libraryAssets = await loadAssets(kind)
+        if (loadingEl instanceof HTMLElement) loadingEl.hidden = true
+        renderAssetGrid()
+      } catch (error) {
+        if (loadingEl instanceof HTMLElement) loadingEl.hidden = true
+        if (emptyEl instanceof HTMLElement) {
+          emptyEl.hidden = false
+          emptyEl.textContent =
+            error instanceof Error ? error.message : 'Could not load assets.'
+        }
+      }
+    }
+
+    document.querySelectorAll('[data-asset-picker-open]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const field = button.closest('[data-asset-picker]')
+        if (field instanceof HTMLElement) openAssetLibrary(field)
+      })
+    })
+
+    document.querySelectorAll('[data-asset-picker-clear]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const field = button.closest('[data-asset-picker]')
+        if (field instanceof HTMLElement) clearPickerSelection(field)
+      })
+    })
+
+    document.querySelectorAll('[data-asset-picker-file]').forEach((input) => {
+      input.addEventListener('change', () => {
+        const field = input.closest('[data-asset-picker]')
+        if (!(field instanceof HTMLElement)) return
+        const hiddenInput = field.querySelector('[data-asset-picker-value]')
+        const clearBtn = field.querySelector('[data-asset-picker-clear]')
+        if (hiddenInput instanceof HTMLInputElement) hiddenInput.value = ''
+        if (input instanceof HTMLInputElement && input.files?.length) {
+          if (clearBtn instanceof HTMLButtonElement) clearBtn.hidden = false
+        }
+      })
+    })
+
+    searchInput?.addEventListener('input', () => {
+      renderAssetGrid()
+    })
+  }
+
   document.querySelectorAll('[data-admin-list]').forEach((listRoot) => {
     const pageSize = parseInt(listRoot.getAttribute('data-page-size') || '15', 10)
     const rows = Array.from(listRoot.querySelectorAll('[data-admin-list-row]'))

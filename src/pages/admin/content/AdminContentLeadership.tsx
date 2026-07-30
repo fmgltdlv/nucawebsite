@@ -1,6 +1,7 @@
 import type { LeadershipRecord } from '../../../lib/leadership-db'
 import { getAssetUrl } from '../../../lib/r2-assets'
 import { AdminShell } from '../../../views/AdminShell'
+import { AdminAssetPickerField } from '../../../views/admin/AdminAssetPickerField'
 import { AdminCrudSections } from '../../../views/admin/AdminCrudSections'
 import { AdminEditModalFooter } from '../../../views/admin/AdminEditActions'
 import { AdminEditButton } from '../../../views/admin/AdminListSection'
@@ -148,19 +149,17 @@ function LeaderEditModal({ person }: { person: LeadershipRecord }) {
           value={String(person.sort_order)}
         />
       </div>
-      <div class="form-field">
-        <label for={`${formId}-photo`}>Photo</label>
-        {photoUrl && (
-          <img
-            src={photoUrl}
-            alt=""
-            class="admin-modal-logo-preview"
-            loading="lazy"
-            decoding="async"
-          />
-        )}
-        <input type="file" name="photo" id={`${formId}-photo`} accept="image/*" />
-      </div>
+      <AdminAssetPickerField
+        label="Photo"
+        kind="image"
+        hiddenInputName="existing_photo_key"
+        fileInputName="photo"
+        fileInputId={`${formId}-photo`}
+        fileAccept="image/*"
+        currentKey={person.photo_r2_key}
+        currentUrl={photoUrl}
+        hint="Upload a new photo or choose an existing image from the library."
+      />
       <label class="admin-check">
         <input type="checkbox" name="published" value="1" checked={person.published === 1} />
         Published on leadership page
@@ -226,10 +225,15 @@ export function AdminContentLeadershipPage({
               <label for="bio">Bio (optional)</label>
               <textarea name="bio" id="bio" rows={4} placeholder="Short biography shown in the profile popup" />
             </div>
-            <div class="form-field">
-              <label for="photo">Photo (optional)</label>
-              <input type="file" name="photo" id="photo" accept="image/*" />
-            </div>
+            <AdminAssetPickerField
+              label="Photo (optional)"
+              kind="image"
+              hiddenInputName="existing_photo_key"
+              fileInputName="photo"
+              fileInputId="photo"
+              fileAccept="image/*"
+              hint="Upload a new photo or choose an existing image from the library."
+            />
           </>
         }
         listTitle="Roster"
