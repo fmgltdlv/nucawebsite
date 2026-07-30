@@ -11,6 +11,7 @@ const contentSections = [
   { href: '/admin/content/leadership', title: 'Leadership', desc: 'Chapter officer roster' },
   { href: '/admin/content/resources', title: 'Resource links', desc: 'Structured links on Resources page' },
   { href: '/admin/applications', title: 'Join applications', desc: 'Membership application queue' },
+  { href: '/admin/newsletter', title: 'Newsletter subscribers', desc: 'THE DIRT mailing list signups' },
 ]
 
 export function AdminContentPage({ theme, ctx }: PageProps & { ctx: AdminContext }) {

@@ -47,8 +47,10 @@ import {
   type BreakingNews,
 } from '../lib/site-settings'
 import { listApplications, updateApplicationStatus } from '../lib/applications-db'
+import { listNewsletterSubscribers } from '../lib/newsletter-db'
 import { parseDatetimeLocal } from '../lib/datetime'
 import { AdminApplicationsPage } from '../pages/admin/AdminApplications'
+import { AdminNewsletterSubscribersPage } from '../pages/admin/AdminNewsletterSubscribers'
 import { AdminContentPage } from '../pages/admin/AdminContent'
 import { AdminContentDirtPage } from '../pages/admin/content/AdminContentDirt'
 import { AdminContentLeadershipPage } from '../pages/admin/content/AdminContentLeadership'
@@ -497,6 +499,15 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
     await deleteResourceItem(c.env.DB, c.req.param('id'))
     return c.redirect('/admin/content/resources?ok=1', 303)
+  })
+
+  app.get('/admin/newsletter', async (c) => {
+    const auth = await requireAdmin(c)
+    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const subscribers = await listNewsletterSubscribers(c.env.DB)
+    return c.html(
+      <AdminNewsletterSubscribersPage theme={c.get('theme')} ctx={auth.ctx} subscribers={subscribers} />,
+    )
   })
 
   app.get('/admin/applications', async (c) => {

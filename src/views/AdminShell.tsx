@@ -30,6 +30,7 @@ export function AdminShell({
       { href: '/admin/users', label: 'Users & roles' },
       { href: '/admin/content', label: 'Content' },
       { href: '/admin/applications', label: 'Applications' },
+      { href: '/admin/newsletter', label: 'Newsletter' },
     )
   } else if (user.role === 'chair') {
     nav.push({ href: '/admin', label: 'Dashboard' }, { href: '/admin/events', label: 'Events' })
