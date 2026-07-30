@@ -1,4 +1,5 @@
 (function () {
+  // NUCA public site interactions
   const toggle = document.getElementById('nav-toggle')
   const nav = document.getElementById('site-nav')
 
@@ -329,6 +330,122 @@
     addEventDialog.addEventListener('close', () => {
       const form = addEventDialog.querySelector('#add-event-form')
       if (form instanceof HTMLFormElement) form.reset()
+    })
+  }
+
+  const leaderDialog = document.getElementById('leader-dialog')
+  const leaderRosterEl = document.getElementById('leadership-roster')
+
+  if (leaderDialog instanceof HTMLDialogElement && leaderRosterEl?.textContent) {
+    /** @type {Record<string, {
+      name: string
+      role_title: string
+      chair_title: string | null
+      company: string | null
+      website: string | null
+      linkedin_url: string | null
+      bio: string | null
+      photoUrl: string | null
+    }>} */
+    const leadersById = {}
+    try {
+      const roster = JSON.parse(leaderRosterEl.textContent)
+      if (Array.isArray(roster)) {
+        roster.forEach((leader) => {
+          if (leader?.id) leadersById[leader.id] = leader
+        })
+      }
+    } catch {
+      // Ignore malformed roster JSON.
+    }
+
+    const photoEl = document.getElementById('leader-dialog-photo')
+    const initialEl = document.getElementById('leader-dialog-initial')
+    const nameEl = document.getElementById('leader-dialog-name')
+    const roleEl = document.getElementById('leader-dialog-role')
+    const chairEl = document.getElementById('leader-dialog-chair')
+    const companyEl = document.getElementById('leader-dialog-company')
+    const linksEl = document.getElementById('leader-dialog-links')
+    const bioEl = document.getElementById('leader-dialog-bio')
+
+    function setText(el, value, hiddenWhenEmpty = true) {
+      if (!(el instanceof HTMLElement)) return
+      const text = value?.trim() ?? ''
+      el.textContent = text
+      if (hiddenWhenEmpty) el.hidden = !text
+    }
+
+    function openLeaderProfile(leader) {
+      if (!(nameEl instanceof HTMLElement) || !(roleEl instanceof HTMLElement)) return
+
+      nameEl.textContent = leader.name
+      roleEl.textContent = leader.role_title
+      setText(chairEl, leader.chair_title)
+      setText(companyEl, leader.company)
+
+      if (photoEl instanceof HTMLImageElement && initialEl instanceof HTMLElement) {
+        if (leader.photoUrl) {
+          photoEl.src = leader.photoUrl
+          photoEl.alt = leader.name
+          photoEl.hidden = false
+          initialEl.hidden = true
+          initialEl.textContent = ''
+        } else {
+          photoEl.removeAttribute('src')
+          photoEl.alt = ''
+          photoEl.hidden = true
+          initialEl.textContent = leader.name.trim().charAt(0).toUpperCase() || '?'
+          initialEl.hidden = false
+        }
+      }
+
+      if (linksEl instanceof HTMLElement) {
+        linksEl.replaceChildren()
+        const links = []
+        if (leader.website) {
+          const website = document.createElement('a')
+          website.href = leader.website
+          website.rel = 'noopener noreferrer'
+          website.target = '_blank'
+          website.textContent = 'Company website'
+          links.push(website)
+        }
+        if (leader.linkedin_url) {
+          const linkedin = document.createElement('a')
+          linkedin.href = leader.linkedin_url
+          linkedin.rel = 'noopener noreferrer'
+          linkedin.target = '_blank'
+          linkedin.textContent = 'LinkedIn'
+          links.push(linkedin)
+        }
+        links.forEach((link) => linksEl.append(link))
+        linksEl.hidden = links.length === 0
+      }
+
+      setText(bioEl, leader.bio)
+      leaderDialog.showModal()
+    }
+
+    document.querySelectorAll('[data-leader-id]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const id = button.getAttribute('data-leader-id')
+        if (!id || !leadersById[id]) return
+        openLeaderProfile(leadersById[id])
+      })
+    })
+
+    leaderDialog.querySelectorAll('[data-modal-close]').forEach((button) => {
+      button.addEventListener('click', () => leaderDialog.close())
+    })
+
+    leaderDialog.addEventListener('click', (event) => {
+      const rect = leaderDialog.getBoundingClientRect()
+      const inDialog =
+        rect.top <= event.clientY &&
+        event.clientY <= rect.top + rect.height &&
+        rect.left <= event.clientX &&
+        event.clientX <= rect.left + rect.width
+      if (!inDialog) leaderDialog.close()
     })
   }
 })();

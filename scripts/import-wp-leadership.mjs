@@ -223,12 +223,13 @@ function buildSql(leaders) {
       person.company ? `'${sqlEscape(person.company)}'` : 'NULL',
       person.website ? `'${sqlEscape(person.website)}'` : 'NULL',
       person.linkedin_url ? `'${sqlEscape(person.linkedin_url)}'` : 'NULL',
+      'NULL',
       String(person.sort_order),
       person.photo_r2_key ? `'${sqlEscape(person.photo_r2_key)}'` : 'NULL',
       '1',
     ]
     lines.push(
-      `INSERT INTO leadership (id, name, role_title, chair_title, company, website, linkedin_url, sort_order, photo_r2_key, published) VALUES (${values.join(', ')});`,
+      `INSERT INTO leadership (id, name, role_title, chair_title, company, website, linkedin_url, bio, sort_order, photo_r2_key, published) VALUES (${values.join(', ')});`,
     )
   }
 

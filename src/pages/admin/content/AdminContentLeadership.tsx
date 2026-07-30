@@ -72,6 +72,17 @@ function LeaderEditRow({ person }: { person: LeadershipRecord }) {
         />
       </td>
       <td>
+        <textarea
+          form={formId}
+          name="bio"
+          class="admin-table-input admin-table-textarea"
+          rows={3}
+          placeholder="Short biography"
+        >
+          {person.bio ?? ''}
+        </textarea>
+      </td>
+      <td>
         <input
           form={formId}
           type="number"
@@ -147,6 +158,10 @@ export function AdminContentLeadershipPage({
               <input type="url" name="linkedin_url" id="linkedin_url" placeholder="https://linkedin.com/in/…" />
             </div>
             <div class="form-field">
+              <label for="bio">Bio (optional)</label>
+              <textarea name="bio" id="bio" rows={4} placeholder="Short biography shown in the profile popup" />
+            </div>
+            <div class="form-field">
               <label for="photo">Photo (optional)</label>
               <input type="file" name="photo" id="photo" accept="image/*" />
             </div>
@@ -168,6 +183,7 @@ export function AdminContentLeadershipPage({
                 <th>Company</th>
                 <th>Website</th>
                 <th>LinkedIn</th>
+                <th>Bio</th>
                 <th>Order</th>
                 <th>Status</th>
                 <th></th>

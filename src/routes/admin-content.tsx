@@ -80,6 +80,7 @@ function leadershipFromBody(body: Record<string, unknown>) {
     company: optionalText(body, 'company'),
     website: optionalText(body, 'website'),
     linkedin_url: optionalText(body, 'linkedin_url'),
+    bio: optionalText(body, 'bio'),
   }
 }
 

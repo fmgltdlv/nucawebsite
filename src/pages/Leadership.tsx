@@ -1,5 +1,9 @@
 import { Layout, PageHeader } from '../views/Layout'
 import { groupLeadership } from '../lib/leadership-groups'
+import {
+  serializeLeadershipRoster,
+  toLeadershipPublicProfile,
+} from '../lib/leadership-public'
 import { getAssetUrl } from '../lib/r2-assets'
 import type { LeadershipRecord } from '../lib/leadership-db'
 import type { ContactInfo } from '../lib/site-settings'
@@ -27,33 +31,27 @@ function LeaderBubble({
 
   return (
     <li class={bubbleClass}>
-      <div class="member-bubble-avatar" aria-hidden="true">
-        {photoUrl ? (
-          <img src={photoUrl} alt="" class="member-bubble-logo leader-bubble-photo" />
-        ) : (
-          initial
-        )}
-      </div>
-      <div class="member-bubble-body">
-        <span class="member-bubble-company">{person.name}</span>
-        <span class="leader-bubble-role">{person.role_title}</span>
-        {person.chair_title && <span class="leader-bubble-chair">{person.chair_title}</span>}
-        {person.company && <span class="leader-bubble-company">{person.company}</span>}
-        {(person.website || person.linkedin_url) && (
-          <div class="member-bubble-links">
-            {person.website && (
-              <a href={person.website} rel="noopener noreferrer" target="_blank">
-                Website
-              </a>
-            )}
-            {person.linkedin_url && (
-              <a href={person.linkedin_url} rel="noopener noreferrer" target="_blank">
-                LinkedIn
-              </a>
-            )}
-          </div>
-        )}
-      </div>
+      <button
+        type="button"
+        class="leader-bubble-btn"
+        data-leader-id={person.id}
+        aria-label={`View profile for ${person.name}`}
+      >
+        <div class="member-bubble-avatar" aria-hidden="true">
+          {photoUrl ? (
+            <img src={photoUrl} alt="" class="member-bubble-logo leader-bubble-photo" />
+          ) : (
+            initial
+          )}
+        </div>
+        <div class="member-bubble-body">
+          <span class="member-bubble-company">{person.name}</span>
+          <span class="leader-bubble-role">{person.role_title}</span>
+          {person.chair_title && <span class="leader-bubble-chair">{person.chair_title}</span>}
+          {person.company && <span class="leader-bubble-company">{person.company}</span>}
+          <span class="leader-bubble-hint">View profile</span>
+        </div>
+      </button>
     </li>
   )
 }
@@ -78,6 +76,32 @@ function LeaderGrid({
   )
 }
 
+function LeaderDialog() {
+  return (
+    <dialog id="leader-dialog" class="leader-dialog">
+      <article class="leader-dialog-card">
+        <button type="button" class="leader-dialog-close" aria-label="Close" data-modal-close>
+          ×
+        </button>
+        <div class="leader-dialog-layout">
+          <div class="leader-dialog-media">
+            <img id="leader-dialog-photo" class="leader-dialog-photo" alt="" hidden />
+            <div id="leader-dialog-initial" class="leader-dialog-initial" hidden />
+          </div>
+          <div class="leader-dialog-content">
+            <h2 id="leader-dialog-name" class="leader-dialog-name" />
+            <p id="leader-dialog-role" class="leader-dialog-role" />
+            <p id="leader-dialog-chair" class="leader-dialog-chair" hidden />
+            <p id="leader-dialog-company" class="leader-dialog-company" hidden />
+            <div id="leader-dialog-links" class="leader-dialog-links" hidden />
+            <div id="leader-dialog-bio" class="leader-dialog-bio" hidden />
+          </div>
+        </div>
+      </article>
+    </dialog>
+  )
+}
+
 export function LeadershipPage({
   theme,
   contact,
@@ -87,6 +111,7 @@ export function LeadershipPage({
 }: PageProps & { contact: ContactInfo; leaders: LeadershipRecord[] }) {
   const groups = groupLeadership(leaders)
   const officerRoster = [...groups.officers, ...groups.other]
+  const rosterJson = serializeLeadershipRoster(leaders.map(toLeadershipPublicProfile))
 
   return (
     <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title="Leadership">
@@ -130,6 +155,11 @@ export function LeadershipPage({
                   />
                 </div>
               )}
+
+              <script id="leadership-roster" type="application/json">
+                {rosterJson}
+              </script>
+              <LeaderDialog />
             </>
           )}
 

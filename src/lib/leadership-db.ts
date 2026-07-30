@@ -6,13 +6,14 @@ export type LeadershipRecord = {
   company: string | null
   website: string | null
   linkedin_url: string | null
+  bio: string | null
   sort_order: number
   photo_r2_key: string | null
   published: number
 }
 
 const LEADERSHIP_COLUMNS =
-  'id, name, role_title, chair_title, company, website, linkedin_url, sort_order, photo_r2_key, published'
+  'id, name, role_title, chair_title, company, website, linkedin_url, bio, sort_order, photo_r2_key, published'
 
 export type LeadershipInput = {
   name: string
@@ -21,6 +22,7 @@ export type LeadershipInput = {
   company?: string | null
   website?: string | null
   linkedin_url?: string | null
+  bio?: string | null
   sort_order?: number
   photo_r2_key?: string | null
   published?: boolean
@@ -60,10 +62,10 @@ export async function createLeadership(db: D1Database, data: LeadershipInput): P
   await db
     .prepare(
       `INSERT INTO leadership (
-         id, name, role_title, chair_title, company, website, linkedin_url,
+         id, name, role_title, chair_title, company, website, linkedin_url, bio,
          sort_order, photo_r2_key, published, updated_at
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
     )
     .bind(
       id,
@@ -73,6 +75,7 @@ export async function createLeadership(db: D1Database, data: LeadershipInput): P
       data.company ?? null,
       data.website ?? null,
       data.linkedin_url ?? null,
+      data.bio ?? null,
       sort_order,
       data.photo_r2_key ?? null,
       data.published === false ? 0 : 1,
@@ -90,7 +93,7 @@ export async function updateLeadership(
     .prepare(
       `UPDATE leadership
        SET name = ?, role_title = ?, chair_title = ?, company = ?, website = ?, linkedin_url = ?,
-           sort_order = ?, photo_r2_key = ?, published = ?, updated_at = datetime('now')
+           bio = ?, sort_order = ?, photo_r2_key = ?, published = ?, updated_at = datetime('now')
        WHERE id = ?`,
     )
     .bind(
@@ -100,6 +103,7 @@ export async function updateLeadership(
       data.company ?? null,
       data.website ?? null,
       data.linkedin_url ?? null,
+      data.bio ?? null,
       data.sort_order,
       data.photo_r2_key ?? null,
       data.published ? 1 : 0,
