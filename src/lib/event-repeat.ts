@@ -1,12 +1,12 @@
 import type { EventRecord } from './events'
 
-export type EventRepeatRule = 'weekly' | 'monthly' | 'yearly'
+export type EventRepeatRule = 'weekly' | 'biweekly' | 'monthly' | 'yearly'
 
 export type ExpandedEventRecord = EventRecord & {
   series_id: string
 }
 
-const REPEAT_RULES = new Set<EventRepeatRule>(['weekly', 'monthly', 'yearly'])
+const REPEAT_RULES = new Set<EventRepeatRule>(['weekly', 'biweekly', 'monthly', 'yearly'])
 
 export function parseRepeatRule(value: unknown): EventRepeatRule | null {
   if (typeof value === 'string' && REPEAT_RULES.has(value as EventRepeatRule)) {
@@ -26,6 +26,8 @@ export function repeatRuleLabel(rule: string | null | undefined): string {
   switch (rule) {
     case 'weekly':
       return 'Weekly'
+    case 'biweekly':
+      return 'Biweekly'
     case 'monthly':
       return 'Monthly'
     case 'yearly':
@@ -67,6 +69,8 @@ function nextOccurrence(current: Date, rule: EventRepeatRule): Date {
   switch (rule) {
     case 'weekly':
       return addDays(current, 7)
+    case 'biweekly':
+      return addDays(current, 14)
     case 'monthly':
       return addMonthsClamped(current, 1)
     case 'yearly':

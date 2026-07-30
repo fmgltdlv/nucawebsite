@@ -93,6 +93,9 @@ function EventRepeatFields({
           <option value="weekly" selected={selectedRule === 'weekly'}>
             Weekly
           </option>
+          <option value="biweekly" selected={selectedRule === 'biweekly'}>
+            Biweekly
+          </option>
           <option value="monthly" selected={selectedRule === 'monthly'}>
             Monthly
           </option>
