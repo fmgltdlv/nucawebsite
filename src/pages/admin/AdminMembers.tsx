@@ -31,7 +31,7 @@ function MemberEditRow({ member }: { member: AdminMember }) {
           </label>
         )}
       </td>
-      <td>
+      <td class="admin-member-company-col">
         <input
           form={formId}
           type="text"
@@ -87,7 +87,7 @@ function MemberEditRow({ member }: { member: AdminMember }) {
       <td>
         <code class="admin-id">{member.id}</code>
       </td>
-      <td>
+      <td class="admin-member-actions-col">
         <form
           id={formId}
           method="post"
@@ -187,18 +187,18 @@ export function AdminMembersPage({
           <p class="muted">No members yet. Add one above.</p>
         ) : (
           <div class="table-wrap">
-            <table class="data-table admin-members-table">
+            <table class="data-table admin-members-table admin-member-list-table">
               <thead>
                 <tr>
                   <th>Logo</th>
-                  <th>Company</th>
+                  <th class="admin-member-company-col">Company</th>
                   <th>Type</th>
                   <th>Website</th>
                   <th>Phone</th>
                   <th>Email</th>
                   <th>Status</th>
                   <th>ID</th>
-                  <th></th>
+                  <th class="admin-member-actions-col"></th>
                 </tr>
               </thead>
               <tbody>

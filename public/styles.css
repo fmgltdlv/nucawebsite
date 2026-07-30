@@ -1749,7 +1749,8 @@ button.pill {
 
 .admin-main {
   padding: 1.25rem 1.5rem 2rem;
-  max-width: 960px;
+  max-width: min(100%, 72rem);
+  min-width: 0;
 }
 
 .admin-main-header h1 {
@@ -1882,6 +1883,24 @@ button.pill {
 
 .admin-members-table td {
   vertical-align: middle;
+}
+
+.admin-member-list-table {
+  width: max-content;
+  min-width: 100%;
+}
+
+.admin-member-list-table .admin-member-company-col {
+  min-width: 18rem;
+}
+
+.admin-member-list-table .admin-member-company-col .admin-table-input {
+  min-width: 16rem;
+}
+
+.admin-member-list-table .admin-member-actions-col {
+  white-space: nowrap;
+  width: 1%;
 }
 
 .admin-member-logo-cell {
