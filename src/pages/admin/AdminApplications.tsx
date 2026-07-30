@@ -1,52 +1,88 @@
 import { parseApplicationPayload, type ApplicationRecord } from '../../lib/applications-db'
 import { AdminShell } from '../../views/AdminShell'
+import { AdminEditButton, AdminListSection, AdminListSearch } from '../../views/admin/AdminListSection'
+import { AdminModal, AdminModalCancelButton } from '../../views/admin/AdminModal'
 import type { AdminContext } from '../../lib/admin-context'
 import type { PageProps } from '../../types/page'
 
 const STATUSES = ['new', 'reviewed', 'approved', 'rejected'] as const
 
-function ApplicationRow({ app }: { app: ApplicationRecord }) {
+function applicationSearchText(app: ApplicationRecord): string {
+  const payload = parseApplicationPayload(app.payload_json)
+  return [
+    payload.company_name,
+    payload.name,
+    app.member_type,
+    app.status,
+    app.submitted_at,
+    ...Object.values(payload),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
+function ApplicationListRow({ app }: { app: ApplicationRecord }) {
   const payload = parseApplicationPayload(app.payload_json)
   const summary = payload.company_name || payload.name || app.member_type || 'Application'
-  const formId = `app-${app.id}`
+  const editModalId = `edit-app-${app.id}`
 
   return (
-    <tr>
+    <tr data-admin-list-row data-search={applicationSearchText(app)}>
       <td>
         <time dateTime={app.submitted_at}>
           {new Date(app.submitted_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
         </time>
       </td>
-      <td>{summary}</td>
+      <td><strong>{summary}</strong></td>
       <td>{app.member_type ?? '—'}</td>
       <td>
-        <select form={formId} name="status" class="admin-table-input">
+        <span class={`admin-status-badge admin-status-app-${app.status}`}>{app.status}</span>
+      </td>
+      <td class="admin-list-actions">
+        <AdminEditButton modalId={editModalId} label="Review" />
+      </td>
+    </tr>
+  )
+}
+
+function ApplicationEditModal({ app }: { app: ApplicationRecord }) {
+  const payload = parseApplicationPayload(app.payload_json)
+  const formId = `form-app-${app.id}`
+  const summary = payload.company_name || payload.name || app.member_type || 'Application'
+
+  return (
+    <AdminModal
+      id={`edit-app-${app.id}`}
+      title={`Review: ${summary}`}
+      formAction={`/admin/applications/${app.id}`}
+      formId={formId}
+      footer={
+        <>
+          <AdminModalCancelButton />
+          <button type="submit" class="btn btn-primary" form={formId}>Update status</button>
+        </>
+      }
+    >
+      <dl class="admin-detail-list admin-detail-list-modal">
+        {Object.entries(payload).map(([key, value]) => (
+          <div key={key}>
+            <dt>{key}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <div class="form-field">
+        <label for={`${formId}-status`}>Status</label>
+        <select name="status" id={`${formId}-status`} class="admin-table-input">
           {STATUSES.map((s) => (
             <option value={s} selected={app.status === s}>
               {s}
             </option>
           ))}
         </select>
-      </td>
-      <td>
-        <details>
-          <summary>Details</summary>
-          <dl class="admin-detail-list">
-            {Object.entries(payload).map(([key, value]) => (
-              <div key={key}>
-                <dt>{key}</dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </details>
-      </td>
-      <td>
-        <form id={formId} method="post" action={`/admin/applications/${app.id}`}>
-          <button type="submit" class="btn btn-secondary btn-sm">Update</button>
-        </form>
-      </td>
-    </tr>
+      </div>
+    </AdminModal>
   )
 }
 
@@ -68,30 +104,25 @@ export function AdminApplicationsPage({
         <a href="/admin/content">← Content</a>
       </p>
       {flash && <p class="admin-flash">{flash}</p>}
-      <section class="section">
-        <h2>Queue ({applications.length})</h2>
-        {applications.length > 0 ? (
-          <table class="admin-members-table">
-            <thead>
-              <tr>
-                <th>Submitted</th>
-                <th>Summary</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Payload</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {applications.map((app) => (
-                <ApplicationRow app={app} key={app.id} />
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p class="muted">No applications yet.</p>
-        )}
-      </section>
+
+      <AdminListSection
+        title="Queue"
+        count={applications.length}
+        emptyMessage="No applications yet."
+        hasItems={applications.length > 0}
+        toolbar={<AdminListSearch />}
+        tableHead={
+          <tr>
+            <th>Submitted</th>
+            <th>Summary</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        }
+        tableBody={applications.map((app) => <ApplicationListRow app={app} key={app.id} />)}
+        afterTable={applications.map((app) => <ApplicationEditModal app={app} key={app.id} />)}
+      />
     </AdminShell>
   )
 }

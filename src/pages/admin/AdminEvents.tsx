@@ -1,67 +1,116 @@
 import type { EventRecord } from '../../lib/events'
 import { toDatetimeLocalValue } from '../../lib/datetime'
+import { formatArchiveDate } from '../../lib/format'
 import { AdminShell } from '../../views/AdminShell'
-import { AdminEditActions } from '../../views/admin/AdminEditActions'
+import { AdminCrudSections } from '../../views/admin/AdminCrudSections'
+import { AdminEditModalFooter } from '../../views/admin/AdminEditActions'
+import { AdminEditButton } from '../../views/admin/AdminListSection'
+import { AdminModal } from '../../views/admin/AdminModal'
 import type { AdminContext } from '../../lib/admin-context'
 import type { PageProps } from '../../types/page'
 
-function EventEditRow({ event }: { event: EventRecord }) {
-  const formId = `event-${event.id}`
+function eventSearchText(event: EventRecord): string {
+  return [
+    event.title,
+    event.location,
+    event.description,
+    event.published ? 'published' : 'draft',
+    formatArchiveDate(event.starts_at),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
+function EventListRow({ event }: { event: EventRecord }) {
+  const editModalId = `edit-event-${event.id}`
+
   return (
-    <tr>
+    <tr data-admin-list-row data-search={eventSearchText(event)}>
+      <td><strong>{event.title}</strong></td>
+      <td>{formatArchiveDate(event.starts_at)}</td>
+      <td>{event.location ?? '—'}</td>
       <td>
-        <input form={formId} type="text" name="title" class="admin-table-input" value={event.title} required />
+        {event.published === 1 ? (
+          <span class="admin-status-badge admin-status-listed">Published</span>
+        ) : (
+          <span class="admin-status-badge admin-status-hidden">Draft</span>
+        )}
       </td>
-      <td>
-        <input
-          form={formId}
-          type="datetime-local"
-          name="starts_at"
-          class="admin-table-input"
-          value={toDatetimeLocalValue(event.starts_at)}
-          required
-        />
+      <td class="admin-list-actions">
+        <AdminEditButton modalId={editModalId} />
       </td>
-      <td>
-        <input
-          form={formId}
-          type="datetime-local"
-          name="ends_at"
-          class="admin-table-input"
-          value={event.ends_at ? toDatetimeLocalValue(event.ends_at) : ''}
-        />
-      </td>
-      <td>
-        <input form={formId} type="text" name="location" class="admin-table-input" value={event.location ?? ''} />
-      </td>
-      <td>
-        <textarea form={formId} name="description" class="admin-table-input" rows={2}>
-          {event.description ?? ''}
-        </textarea>
-      </td>
-      <td>
-        <input
-          form={formId}
-          type="url"
-          name="registration_url"
-          class="admin-table-input"
-          value={event.registration_url ?? ''}
-        />
-      </td>
-      <td>
-        <label class="admin-check-inline">
-          <input form={formId} type="checkbox" name="published" value="1" checked={event.published === 1} />
-          Published
-        </label>
-      </td>
-      <td>
-        <AdminEditActions
+    </tr>
+  )
+}
+
+function EventEditModal({ event }: { event: EventRecord }) {
+  const modalId = `edit-event-${event.id}`
+  const formId = `form-event-${event.id}`
+
+  return (
+    <AdminModal
+      id={modalId}
+      title={`Edit ${event.title}`}
+      formAction={`/admin/events/${event.id}`}
+      formId={formId}
+      footer={
+        <AdminEditModalFooter
           formId={formId}
           saveAction={`/admin/events/${event.id}`}
           deleteAction={`/admin/events/${event.id}/delete`}
         />
-      </td>
-    </tr>
+      }
+    >
+      <div class="form-field">
+        <label for={`${formId}-title`}>Title</label>
+        <input type="text" name="title" id={`${formId}-title`} value={event.title} required />
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label for={`${formId}-starts`}>Starts (local date/time)</label>
+          <input
+            type="datetime-local"
+            name="starts_at"
+            id={`${formId}-starts`}
+            value={toDatetimeLocalValue(event.starts_at)}
+            required
+          />
+        </div>
+        <div class="form-field">
+          <label for={`${formId}-ends`}>Ends (optional)</label>
+          <input
+            type="datetime-local"
+            name="ends_at"
+            id={`${formId}-ends`}
+            value={event.ends_at ? toDatetimeLocalValue(event.ends_at) : ''}
+          />
+        </div>
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-location`}>Location</label>
+        <input type="text" name="location" id={`${formId}-location`} value={event.location ?? ''} />
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-description`}>Description</label>
+        <textarea name="description" id={`${formId}-description`} rows={4}>
+          {event.description ?? ''}
+        </textarea>
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-registration`}>Registration URL</label>
+        <input
+          type="url"
+          name="registration_url"
+          id={`${formId}-registration`}
+          value={event.registration_url ?? ''}
+        />
+      </div>
+      <label class="admin-check">
+        <input type="checkbox" name="published" value="1" checked={event.published === 1} />
+        Published on public events page
+      </label>
+    </AdminModal>
   )
 }
 
@@ -79,23 +128,16 @@ export function AdminEventsPage({
       title="Events"
       activePath="/admin/events"
     >
-      {flash && <p class="admin-flash">{flash}</p>}
-
-      <div class="admin-members-toolbar">
-        <button type="button" class="btn btn-primary" id="add-event-open">
-          Add event
-        </button>
-      </div>
-
-      <dialog id="add-event-dialog" class="admin-modal">
-        <form class="form admin-modal-form" method="post" action="/admin/events" id="add-event-form">
-          <header class="admin-modal-header">
-            <h2>Add event</h2>
-            <button type="button" class="admin-modal-close" aria-label="Close" data-modal-close>
-              ×
-            </button>
-          </header>
-          <div class="admin-modal-body">
+      <AdminCrudSections
+        flash={flash}
+        addButtonLabel="Add event"
+        addModalId="add-event-dialog"
+        addModalTitle="Add event"
+        addFormAction="/admin/events"
+        addFormId="add-event-form"
+        addSubmitLabel="Publish event"
+        addFormBody={
+          <>
             <div class="form-field">
               <label for="title">Title</label>
               <input type="text" name="title" id="title" required />
@@ -122,44 +164,24 @@ export function AdminEventsPage({
               <label for="registration_url">Registration URL</label>
               <input type="url" name="registration_url" id="registration_url" />
             </div>
-          </div>
-          <footer class="admin-modal-footer">
-            <button type="button" class="btn btn-secondary" data-modal-close>
-              Cancel
-            </button>
-            <button type="submit" class="btn btn-primary">Publish event</button>
-          </footer>
-        </form>
-      </dialog>
-
-      <section class="section">
-        <h2>Events ({events.length})</h2>
-        {events.length === 0 ? (
-          <p class="muted">No events in the database yet. Click Add event to create one.</p>
-        ) : (
-          <div class="table-wrap">
-            <table class="admin-members-table">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Starts</th>
-                  <th>Ends</th>
-                  <th>Location</th>
-                  <th>Description</th>
-                  <th>Registration</th>
-                  <th>Status</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((event) => (
-                  <EventEditRow event={event} key={event.id} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+          </>
+        }
+        listTitle="Events"
+        listCount={events.length}
+        emptyMessage="No events in the database yet. Click Add event to create one."
+        hasItems={events.length > 0}
+        tableHead={
+          <tr>
+            <th>Title</th>
+            <th>Starts</th>
+            <th>Location</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        }
+        tableBody={events.map((event) => <EventListRow event={event} key={event.id} />)}
+        afterTable={events.map((event) => <EventEditModal event={event} key={event.id} />)}
+      />
     </AdminShell>
   )
 }

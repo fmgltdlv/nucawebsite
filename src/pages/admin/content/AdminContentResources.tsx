@@ -1,46 +1,90 @@
 import type { ResourceItemRecord } from '../../../lib/resource-items-db'
 import { AdminShell } from '../../../views/AdminShell'
 import { AdminCrudSections } from '../../../views/admin/AdminCrudSections'
-import { AdminEditActions } from '../../../views/admin/AdminEditActions'
+import { AdminEditModalFooter } from '../../../views/admin/AdminEditActions'
+import { AdminEditButton } from '../../../views/admin/AdminListSection'
+import { AdminModal } from '../../../views/admin/AdminModal'
 import type { AdminContext } from '../../../lib/admin-context'
 import type { PageProps } from '../../../types/page'
 
-function ResourceEditRow({ item }: { item: ResourceItemRecord }) {
-  const formId = `resource-${item.id}`
+function resourceSearchText(item: ResourceItemRecord): string {
+  return [
+    item.category,
+    item.label,
+    item.url,
+    item.published ? 'published' : 'draft',
+    String(item.sort_order),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
+function ResourceListRow({ item }: { item: ResourceItemRecord }) {
+  const editModalId = `edit-resource-${item.id}`
+
   return (
-    <tr>
+    <tr data-admin-list-row data-search={resourceSearchText(item)}>
+      <td>{item.sort_order}</td>
+      <td>{item.category || '—'}</td>
+      <td><strong>{item.label}</strong></td>
       <td>
-        <input
-          form={formId}
-          type="number"
-          name="sort_order"
-          class="admin-table-input admin-table-input-narrow"
-          value={String(item.sort_order)}
-        />
+        {item.published === 1 ? (
+          <span class="admin-status-badge admin-status-listed">Published</span>
+        ) : (
+          <span class="admin-status-badge admin-status-hidden">Draft</span>
+        )}
       </td>
-      <td>
-        <input form={formId} type="text" name="category" class="admin-table-input" value={item.category} />
+      <td class="admin-list-actions">
+        <AdminEditButton modalId={editModalId} />
       </td>
-      <td>
-        <input form={formId} type="text" name="label" class="admin-table-input" value={item.label} required />
-      </td>
-      <td>
-        <input form={formId} type="url" name="url" class="admin-table-input" value={item.url} required />
-      </td>
-      <td>
-        <label class="admin-check-inline">
-          <input form={formId} type="checkbox" name="published" value="1" checked={item.published === 1} />
-          Published
-        </label>
-      </td>
-      <td>
-        <AdminEditActions
+    </tr>
+  )
+}
+
+function ResourceEditModal({ item }: { item: ResourceItemRecord }) {
+  const formId = `form-resource-${item.id}`
+
+  return (
+    <AdminModal
+      id={`edit-resource-${item.id}`}
+      title={`Edit ${item.label}`}
+      formAction={`/admin/content/resources/${item.id}`}
+      formId={formId}
+      footer={
+        <AdminEditModalFooter
           formId={formId}
           saveAction={`/admin/content/resources/${item.id}`}
           deleteAction={`/admin/content/resources/${item.id}/delete`}
         />
-      </td>
-    </tr>
+      }
+    >
+      <div class="form-field">
+        <label for={`${formId}-order`}>Sort order</label>
+        <input
+          type="number"
+          name="sort_order"
+          id={`${formId}-order`}
+          value={String(item.sort_order)}
+        />
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-category`}>Category</label>
+        <input type="text" name="category" id={`${formId}-category`} value={item.category} />
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-label`}>Label</label>
+        <input type="text" name="label" id={`${formId}-label`} value={item.label} required />
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-url`}>URL</label>
+        <input type="url" name="url" id={`${formId}-url`} value={item.url} required />
+      </div>
+      <label class="admin-check">
+        <input type="checkbox" name="published" value="1" checked={item.published === 1} />
+        Published on Resources page
+      </label>
+    </AdminModal>
   )
 }
 
@@ -65,9 +109,13 @@ export function AdminContentResourcesPage({
           </p>
         }
         flash={flash}
-        addTitle="Add link"
-        addForm={
-          <form class="form" method="post" action="/admin/content/resources">
+        addButtonLabel="Add link"
+        addModalId="add-resource-dialog"
+        addModalTitle="Add link"
+        addFormAction="/admin/content/resources"
+        addSubmitLabel="Add link"
+        addFormBody={
+          <>
             <div class="form-field">
               <label for="category">Category</label>
               <input type="text" name="category" id="category" placeholder="e.g. Local Utilities" />
@@ -80,32 +128,23 @@ export function AdminContentResourcesPage({
               <label for="url">URL</label>
               <input type="url" name="url" id="url" required />
             </div>
-            <button type="submit" class="btn btn-primary">Add link</button>
-          </form>
+          </>
         }
         listTitle="Links"
         listCount={items.length}
         emptyMessage="No resource links yet."
         hasItems={items.length > 0}
-        table={
-          <table class="admin-members-table">
-            <thead>
-              <tr>
-                <th>Order</th>
-                <th>Category</th>
-                <th>Label</th>
-                <th>URL</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <ResourceEditRow item={item} key={item.id} />
-              ))}
-            </tbody>
-          </table>
+        tableHead={
+          <tr>
+            <th>Order</th>
+            <th>Category</th>
+            <th>Label</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
         }
+        tableBody={items.map((item) => <ResourceListRow item={item} key={item.id} />)}
+        afterTable={items.map((item) => <ResourceEditModal item={item} key={item.id} />)}
       />
     </AdminShell>
   )

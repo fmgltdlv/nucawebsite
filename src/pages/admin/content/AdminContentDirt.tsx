@@ -1,58 +1,100 @@
 import type { DirtReleaseRecord } from '../../../lib/dirt-db'
 import { getAssetUrl } from '../../../lib/r2-assets'
+import { formatArchiveDate } from '../../../lib/format'
 import { AdminShell } from '../../../views/AdminShell'
 import { AdminCrudSections } from '../../../views/admin/AdminCrudSections'
-import { AdminEditActions } from '../../../views/admin/AdminEditActions'
+import { AdminEditModalFooter } from '../../../views/admin/AdminEditActions'
+import { AdminEditButton } from '../../../views/admin/AdminListSection'
+import { AdminModal } from '../../../views/admin/AdminModal'
 import type { AdminContext } from '../../../lib/admin-context'
 import type { PageProps } from '../../../types/page'
 
-function DirtEditRow({ release }: { release: DirtReleaseRecord }) {
-  const formId = `dirt-${release.id}`
+function dirtSearchText(release: DirtReleaseRecord): string {
+  return [
+    release.title,
+    release.summary,
+    release.published ? 'published' : 'draft',
+    formatArchiveDate(release.published_at),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
+function DirtListRow({ release }: { release: DirtReleaseRecord }) {
+  const editModalId = `edit-dirt-${release.id}`
+
   return (
-    <tr>
+    <tr data-admin-list-row data-search={dirtSearchText(release)}>
+      <td><strong>{release.title}</strong></td>
+      <td>{formatArchiveDate(release.published_at)}</td>
       <td>
-        <input form={formId} type="text" name="title" class="admin-table-input" value={release.title} required />
+        {release.published === 1 ? (
+          <span class="admin-status-badge admin-status-listed">Published</span>
+        ) : (
+          <span class="admin-status-badge admin-status-hidden">Draft</span>
+        )}
       </td>
-      <td>
-        <input
-          form={formId}
-          type="date"
-          name="published_at"
-          class="admin-table-input"
-          value={release.published_at.slice(0, 10)}
-          required
-        />
+      <td class="admin-list-actions">
+        <AdminEditButton modalId={editModalId} />
       </td>
-      <td>
-        <input
-          form={formId}
-          type="text"
-          name="summary"
-          class="admin-table-input"
-          value={release.summary ?? ''}
-        />
-      </td>
-      <td>
-        <a href={getAssetUrl(release.pdf_r2_key)} target="_blank" rel="noopener noreferrer">
-          PDF
-        </a>
-        <input form={formId} type="file" name="pdf" accept="application/pdf" class="admin-table-file" />
-      </td>
-      <td>
-        <label class="admin-check-inline">
-          <input form={formId} type="checkbox" name="published" value="1" checked={release.published === 1} />
-          Published
-        </label>
-      </td>
-      <td>
-        <AdminEditActions
+    </tr>
+  )
+}
+
+function DirtEditModal({ release }: { release: DirtReleaseRecord }) {
+  const formId = `form-dirt-${release.id}`
+
+  return (
+    <AdminModal
+      id={`edit-dirt-${release.id}`}
+      title={`Edit ${release.title}`}
+      formAction={`/admin/content/the-dirt/${release.id}`}
+      formEncType="multipart/form-data"
+      formId={formId}
+      footer={
+        <AdminEditModalFooter
           formId={formId}
           saveAction={`/admin/content/the-dirt/${release.id}`}
           deleteAction={`/admin/content/the-dirt/${release.id}/delete`}
-          encType="multipart/form-data"
         />
-      </td>
-    </tr>
+      }
+    >
+      <div class="form-field">
+        <label for={`${formId}-title`}>Title</label>
+        <input type="text" name="title" id={`${formId}-title`} value={release.title} required />
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-date`}>Published date</label>
+        <input
+          type="date"
+          name="published_at"
+          id={`${formId}-date`}
+          value={release.published_at.slice(0, 10)}
+          required
+        />
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-summary`}>Summary</label>
+        <textarea name="summary" id={`${formId}-summary`} rows={3}>
+          {release.summary ?? ''}
+        </textarea>
+      </div>
+      <div class="form-field">
+        <label>Current PDF</label>
+        <p>
+          <a href={getAssetUrl(release.pdf_r2_key)} target="_blank" rel="noopener noreferrer">
+            View current PDF
+          </a>
+        </p>
+        <label for={`${formId}-pdf`}>Replace PDF (optional)</label>
+        <input type="file" name="pdf" id={`${formId}-pdf`} accept="application/pdf" />
+      </div>
+      <label class="admin-check">
+        <input type="checkbox" name="published" value="1" checked={release.published === 1} />
+        Published in THE DIRT archive
+      </label>
+    </AdminModal>
   )
 }
 
@@ -84,9 +126,14 @@ export function AdminContentDirtPage({
         }
         flash={flash}
         error={error}
-        addTitle="Upload release"
-        addForm={
-          <form class="form" method="post" action="/admin/content/the-dirt" encType="multipart/form-data">
+        addButtonLabel="Upload release"
+        addModalId="add-dirt-dialog"
+        addModalTitle="Upload release"
+        addFormAction="/admin/content/the-dirt"
+        addFormEncType="multipart/form-data"
+        addSubmitLabel="Upload & publish"
+        addFormBody={
+          <>
             <div class="form-field">
               <label for="title">Title</label>
               <input type="text" name="title" id="title" required />
@@ -103,32 +150,22 @@ export function AdminContentDirtPage({
               <label for="pdf">PDF file</label>
               <input type="file" name="pdf" id="pdf" accept="application/pdf" required />
             </div>
-            <button type="submit" class="btn btn-primary">Upload & publish</button>
-          </form>
+          </>
         }
         listTitle="Releases"
         listCount={releases.length}
         emptyMessage="No releases yet."
         hasItems={releases.length > 0}
-        table={
-          <table class="admin-members-table">
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Date</th>
-                <th>Summary</th>
-                <th>PDF</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {releases.map((release) => (
-                <DirtEditRow release={release} key={release.id} />
-              ))}
-            </tbody>
-          </table>
+        tableHead={
+          <tr>
+            <th>Title</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
         }
+        tableBody={releases.map((release) => <DirtListRow release={release} key={release.id} />)}
+        afterTable={releases.map((release) => <DirtEditModal release={release} key={release.id} />)}
       />
     </AdminShell>
   )

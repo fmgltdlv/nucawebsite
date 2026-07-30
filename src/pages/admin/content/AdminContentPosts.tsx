@@ -1,54 +1,100 @@
 import type { PostRecord } from '../../../lib/posts-db'
 import { toDatetimeLocalValue } from '../../../lib/datetime'
+import { formatArchiveDate } from '../../../lib/format'
 import { AdminShell } from '../../../views/AdminShell'
 import { AdminCrudSections } from '../../../views/admin/AdminCrudSections'
-import { AdminEditActions } from '../../../views/admin/AdminEditActions'
+import { AdminEditModalFooter } from '../../../views/admin/AdminEditActions'
+import { AdminEditButton } from '../../../views/admin/AdminListSection'
+import { AdminModal } from '../../../views/admin/AdminModal'
 import type { AdminContext } from '../../../lib/admin-context'
 import type { PageProps } from '../../../types/page'
 
-function PostEditRow({ post }: { post: PostRecord }) {
-  const formId = `post-${post.id}`
+function postSearchText(post: PostRecord): string {
+  return [
+    post.title,
+    post.slug,
+    post.excerpt,
+    post.published ? 'published' : 'draft',
+    post.published_at ? formatArchiveDate(post.published_at) : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
+function PostListRow({ post }: { post: PostRecord }) {
+  const editModalId = `edit-post-${post.id}`
+
   return (
-    <tr>
+    <tr data-admin-list-row data-search={postSearchText(post)}>
+      <td><strong>{post.title}</strong></td>
+      <td><code class="admin-id">{post.slug}</code></td>
+      <td>{post.published_at ? formatArchiveDate(post.published_at) : '—'}</td>
       <td>
-        <input form={formId} type="text" name="title" class="admin-table-input" value={post.title} required />
+        {post.published === 1 ? (
+          <span class="admin-status-badge admin-status-listed">Published</span>
+        ) : (
+          <span class="admin-status-badge admin-status-hidden">Draft</span>
+        )}
       </td>
-      <td>
-        <input form={formId} type="text" name="slug" class="admin-table-input" value={post.slug} required />
+      <td class="admin-list-actions">
+        <AdminEditButton modalId={editModalId} />
       </td>
-      <td>
-        <input
-          form={formId}
-          type="datetime-local"
-          name="published_at"
-          class="admin-table-input"
-          value={post.published_at ? toDatetimeLocalValue(post.published_at) : ''}
-        />
-      </td>
-      <td>
-        <label class="admin-check-inline">
-          <input form={formId} type="checkbox" name="published" value="1" checked={post.published === 1} />
-          Published
-        </label>
-      </td>
-      <td>
-        <textarea form={formId} name="excerpt" class="admin-table-input" rows={2}>
-          {post.excerpt ?? ''}
-        </textarea>
-      </td>
-      <td>
-        <textarea form={formId} name="body_md" class="admin-table-input" rows={4} required>
-          {post.body_md}
-        </textarea>
-      </td>
-      <td>
-        <AdminEditActions
+    </tr>
+  )
+}
+
+function PostEditModal({ post }: { post: PostRecord }) {
+  const formId = `form-post-${post.id}`
+
+  return (
+    <AdminModal
+      id={`edit-post-${post.id}`}
+      title={`Edit ${post.title}`}
+      formAction={`/admin/content/posts/${post.id}`}
+      formId={formId}
+      footer={
+        <AdminEditModalFooter
           formId={formId}
           saveAction={`/admin/content/posts/${post.id}`}
           deleteAction={`/admin/content/posts/${post.id}/delete`}
         />
-      </td>
-    </tr>
+      }
+    >
+      <div class="form-field">
+        <label for={`${formId}-title`}>Title</label>
+        <input type="text" name="title" id={`${formId}-title`} value={post.title} required />
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-slug`}>Slug</label>
+        <input type="text" name="slug" id={`${formId}-slug`} value={post.slug} required />
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-date`}>Published date</label>
+        <input
+          type="datetime-local"
+          name="published_at"
+          id={`${formId}-date`}
+          value={post.published_at ? toDatetimeLocalValue(post.published_at) : ''}
+        />
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-excerpt`}>Excerpt</label>
+        <textarea name="excerpt" id={`${formId}-excerpt`} rows={3}>
+          {post.excerpt ?? ''}
+        </textarea>
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-body`}>Body (markdown)</label>
+        <textarea name="body_md" id={`${formId}-body`} rows={10} required>
+          {post.body_md}
+        </textarea>
+      </div>
+      <label class="admin-check">
+        <input type="checkbox" name="published" value="1" checked={post.published === 1} />
+        Published on industry updates
+      </label>
+    </AdminModal>
   )
 }
 
@@ -73,9 +119,13 @@ export function AdminContentPostsPage({
           </p>
         }
         flash={flash}
-        addTitle="New post"
-        addForm={
-          <form class="form" method="post" action="/admin/content/posts">
+        addButtonLabel="New post"
+        addModalId="add-post-dialog"
+        addModalTitle="New post"
+        addFormAction="/admin/content/posts"
+        addSubmitLabel="Create post"
+        addFormBody={
+          <>
             <div class="form-field">
               <label for="title">Title</label>
               <input type="text" name="title" id="title" required />
@@ -96,33 +146,23 @@ export function AdminContentPostsPage({
               <input type="checkbox" name="published" value="1" />
               Publish immediately
             </label>
-            <button type="submit" class="btn btn-primary">Create post</button>
-          </form>
+          </>
         }
         listTitle="Posts"
         listCount={posts.length}
         emptyMessage="No posts yet."
         hasItems={posts.length > 0}
-        table={
-          <table class="admin-members-table">
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Slug</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Excerpt</th>
-                <th>Body</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {posts.map((post) => (
-                <PostEditRow post={post} key={post.id} />
-              ))}
-            </tbody>
-          </table>
+        tableHead={
+          <tr>
+            <th>Title</th>
+            <th>Slug</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
         }
+        tableBody={posts.map((post) => <PostListRow post={post} key={post.id} />)}
+        afterTable={posts.map((post) => <PostEditModal post={post} key={post.id} />)}
       />
     </AdminShell>
   )

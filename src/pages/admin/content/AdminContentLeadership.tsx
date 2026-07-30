@@ -2,110 +2,170 @@ import type { LeadershipRecord } from '../../../lib/leadership-db'
 import { getAssetUrl } from '../../../lib/r2-assets'
 import { AdminShell } from '../../../views/AdminShell'
 import { AdminCrudSections } from '../../../views/admin/AdminCrudSections'
-import { AdminEditActions } from '../../../views/admin/AdminEditActions'
+import { AdminEditModalFooter } from '../../../views/admin/AdminEditActions'
+import { AdminEditButton } from '../../../views/admin/AdminListSection'
+import { AdminModal } from '../../../views/admin/AdminModal'
 import type { AdminContext } from '../../../lib/admin-context'
 import type { PageProps } from '../../../types/page'
 
-function LeaderEditRow({ person }: { person: LeadershipRecord }) {
-  const formId = `leader-${person.id}`
+function leaderSearchText(person: LeadershipRecord): string {
+  return [
+    person.name,
+    person.role_title,
+    person.chair_title,
+    person.company,
+    person.published ? 'published' : 'draft',
+    String(person.sort_order),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
+function LeaderListRow({ person }: { person: LeadershipRecord }) {
+  const editModalId = `edit-leader-${person.id}`
+  const photoUrl = person.photo_r2_key ? getAssetUrl(person.photo_r2_key) : null
+
   return (
-    <tr>
-      <td>
-        {person.photo_r2_key ? (
-          <img src={getAssetUrl(person.photo_r2_key)} alt="" class="admin-member-logo-preview" />
+    <tr data-admin-list-row data-search={leaderSearchText(person)}>
+      <td class="admin-list-logo-cell">
+        {photoUrl ? (
+          <img
+            src={photoUrl}
+            alt=""
+            class="admin-member-logo-preview"
+            loading="lazy"
+            decoding="async"
+          />
         ) : (
           <span class="admin-member-logo-placeholder" aria-hidden="true">
             {person.name.charAt(0)}
           </span>
         )}
-        <input form={formId} type="file" name="photo" accept="image/*" class="admin-table-file" />
       </td>
+      <td><strong>{person.name}</strong></td>
+      <td>{person.role_title}</td>
+      <td>{person.company ?? '—'}</td>
+      <td>{person.sort_order}</td>
       <td>
-        <input form={formId} type="text" name="name" class="admin-table-input" value={person.name} required />
+        {person.published === 1 ? (
+          <span class="admin-status-badge admin-status-listed">Published</span>
+        ) : (
+          <span class="admin-status-badge admin-status-hidden">Draft</span>
+        )}
       </td>
-      <td>
-        <input
-          form={formId}
-          type="text"
-          name="role_title"
-          class="admin-table-input"
-          value={person.role_title}
-          required
-        />
+      <td class="admin-list-actions">
+        <AdminEditButton modalId={editModalId} />
       </td>
-      <td>
-        <input
-          form={formId}
-          type="text"
-          name="chair_title"
-          class="admin-table-input"
-          value={person.chair_title ?? ''}
-        />
-      </td>
-      <td>
-        <input
-          form={formId}
-          type="text"
-          name="company"
-          class="admin-table-input"
-          value={person.company ?? ''}
-        />
-      </td>
-      <td>
-        <input
-          form={formId}
-          type="url"
-          name="website"
-          class="admin-table-input"
-          value={person.website ?? ''}
-          placeholder="https://"
-        />
-      </td>
-      <td>
-        <input
-          form={formId}
-          type="url"
-          name="linkedin_url"
-          class="admin-table-input"
-          value={person.linkedin_url ?? ''}
-          placeholder="https://linkedin.com/in/…"
-        />
-      </td>
-      <td>
-        <textarea
-          form={formId}
-          name="bio"
-          class="admin-table-input admin-table-textarea"
-          rows={3}
-          placeholder="Short biography"
-        >
-          {person.bio ?? ''}
-        </textarea>
-      </td>
-      <td>
-        <input
-          form={formId}
-          type="number"
-          name="sort_order"
-          class="admin-table-input admin-table-input-narrow"
-          value={String(person.sort_order)}
-        />
-      </td>
-      <td>
-        <label class="admin-check-inline">
-          <input form={formId} type="checkbox" name="published" value="1" checked={person.published === 1} />
-          Published
-        </label>
-      </td>
-      <td>
-        <AdminEditActions
+    </tr>
+  )
+}
+
+function LeaderEditModal({ person }: { person: LeadershipRecord }) {
+  const formId = `form-leader-${person.id}`
+  const photoUrl = person.photo_r2_key ? getAssetUrl(person.photo_r2_key) : null
+
+  return (
+    <AdminModal
+      id={`edit-leader-${person.id}`}
+      title={`Edit ${person.name}`}
+      formAction={`/admin/content/leadership/${person.id}`}
+      formEncType="multipart/form-data"
+      formId={formId}
+      footer={
+        <AdminEditModalFooter
           formId={formId}
           saveAction={`/admin/content/leadership/${person.id}`}
           deleteAction={`/admin/content/leadership/${person.id}/delete`}
-          encType="multipart/form-data"
         />
-      </td>
-    </tr>
+      }
+    >
+      <div class="form-row">
+        <div class="form-field">
+          <label for={`${formId}-name`}>Name</label>
+          <input type="text" name="name" id={`${formId}-name`} value={person.name} required />
+        </div>
+        <div class="form-field">
+          <label for={`${formId}-role`}>Role</label>
+          <input
+            type="text"
+            name="role_title"
+            id={`${formId}-role`}
+            value={person.role_title}
+            required
+          />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label for={`${formId}-chair`}>Chair / committee title</label>
+          <input
+            type="text"
+            name="chair_title"
+            id={`${formId}-chair`}
+            value={person.chair_title ?? ''}
+          />
+        </div>
+        <div class="form-field">
+          <label for={`${formId}-company`}>Company</label>
+          <input type="text" name="company" id={`${formId}-company`} value={person.company ?? ''} />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label for={`${formId}-website`}>Website</label>
+          <input
+            type="url"
+            name="website"
+            id={`${formId}-website`}
+            value={person.website ?? ''}
+            placeholder="https://"
+          />
+        </div>
+        <div class="form-field">
+          <label for={`${formId}-linkedin`}>LinkedIn</label>
+          <input
+            type="url"
+            name="linkedin_url"
+            id={`${formId}-linkedin`}
+            value={person.linkedin_url ?? ''}
+            placeholder="https://linkedin.com/in/…"
+          />
+        </div>
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-bio`}>Bio</label>
+        <textarea name="bio" id={`${formId}-bio`} rows={4} placeholder="Short biography">
+          {person.bio ?? ''}
+        </textarea>
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-order`}>Sort order</label>
+        <input
+          type="number"
+          name="sort_order"
+          id={`${formId}-order`}
+          value={String(person.sort_order)}
+        />
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-photo`}>Photo</label>
+        {photoUrl && (
+          <img
+            src={photoUrl}
+            alt=""
+            class="admin-modal-logo-preview"
+            loading="lazy"
+            decoding="async"
+          />
+        )}
+        <input type="file" name="photo" id={`${formId}-photo`} accept="image/*" />
+      </div>
+      <label class="admin-check">
+        <input type="checkbox" name="published" value="1" checked={person.published === 1} />
+        Published on leadership page
+      </label>
+    </AdminModal>
   )
 }
 
@@ -130,9 +190,14 @@ export function AdminContentLeadershipPage({
           </p>
         }
         flash={flash}
-        addTitle="Add leader"
-        addForm={
-          <form class="form" method="post" action="/admin/content/leadership" encType="multipart/form-data">
+        addButtonLabel="Add leader"
+        addModalId="add-leader-dialog"
+        addModalTitle="Add leader"
+        addFormAction="/admin/content/leadership"
+        addFormEncType="multipart/form-data"
+        addSubmitLabel="Add leader"
+        addFormBody={
+          <>
             <div class="form-field">
               <label for="name">Name</label>
               <input type="text" name="name" id="name" required />
@@ -165,37 +230,25 @@ export function AdminContentLeadershipPage({
               <label for="photo">Photo (optional)</label>
               <input type="file" name="photo" id="photo" accept="image/*" />
             </div>
-            <button type="submit" class="btn btn-primary">Add leader</button>
-          </form>
+          </>
         }
         listTitle="Roster"
         listCount={leaders.length}
         emptyMessage="No leaders yet."
         hasItems={leaders.length > 0}
-        table={
-          <table class="admin-members-table admin-leadership-table">
-            <thead>
-              <tr>
-                <th>Photo</th>
-                <th>Name</th>
-                <th>Role</th>
-                <th>Chair</th>
-                <th>Company</th>
-                <th>Website</th>
-                <th>LinkedIn</th>
-                <th>Bio</th>
-                <th>Order</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {leaders.map((person) => (
-                <LeaderEditRow person={person} key={person.id} />
-              ))}
-            </tbody>
-          </table>
+        tableHead={
+          <tr>
+            <th>Photo</th>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Company</th>
+            <th>Order</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
         }
+        tableBody={leaders.map((person) => <LeaderListRow person={person} key={person.id} />)}
+        afterTable={leaders.map((person) => <LeaderEditModal person={person} key={person.id} />)}
       />
     </AdminShell>
   )
