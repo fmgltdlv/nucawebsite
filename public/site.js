@@ -894,7 +894,6 @@
   const weekNext = document.getElementById('events-week-next')
   const monthPrev = document.getElementById('events-month-prev')
   const monthNext = document.getElementById('events-month-next')
-  const eventDialog = document.getElementById('event-dialog')
 
   const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -1027,58 +1026,17 @@
     if (monthView) monthView.hidden = activeView !== 'month'
   }
 
-  function openEventDialog(event) {
-    if (!(eventDialog instanceof HTMLDialogElement)) return
-
-    const meta = document.getElementById('event-dialog-meta')
-    const title = document.getElementById('event-dialog-title')
-    const location = document.getElementById('event-dialog-location')
-    const description = document.getElementById('event-dialog-description')
-    const registration = document.getElementById('event-dialog-registration')
-
-    if (meta) meta.textContent = formatEventDateTime(event.starts_at)
-    if (title) title.textContent = event.title
-
-    if (location instanceof HTMLElement) {
-      if (event.location) {
-        location.textContent = event.location
-        location.hidden = false
-      } else {
-        location.textContent = ''
-        location.hidden = true
-      }
-    }
-
-    if (description instanceof HTMLElement) {
-      if (event.description) {
-        description.textContent = event.description
-        description.hidden = false
-      } else {
-        description.textContent = ''
-        description.hidden = true
-      }
-    }
-
-    if (registration instanceof HTMLAnchorElement) {
-      if (event.registration_url) {
-        registration.href = event.registration_url
-        registration.hidden = false
-      } else {
-        registration.removeAttribute('href')
-        registration.hidden = true
-      }
-    }
-
-    eventDialog.showModal()
+  function eventDetailHref(event) {
+    const seriesId = event.series_id || String(event.id).split(':')[0]
+    return `/events/${seriesId}?at=${encodeURIComponent(event.starts_at)}`
   }
 
-  function createEventButton(event, compact) {
-    const btn = document.createElement('button')
-    btn.type = 'button'
-    btn.className = compact ? 'events-cal-event events-cal-event-compact' : 'events-cal-event'
-    btn.textContent = compact ? event.title : `${formatEventTime(event.starts_at)} · ${event.title}`
-    btn.addEventListener('click', () => openEventDialog(event))
-    return btn
+  function createEventLink(event, compact) {
+    const link = document.createElement('a')
+    link.className = compact ? 'events-cal-event events-cal-event-compact' : 'events-cal-event'
+    link.href = eventDetailHref(event)
+    link.textContent = compact ? event.title : `${formatEventTime(event.starts_at)} · ${event.title}`
+    return link
   }
 
   function renderWeek() {
@@ -1109,7 +1067,7 @@
         empty.textContent = 'No events'
         list.appendChild(empty)
       } else {
-        dayEvents.forEach((event) => list.appendChild(createEventButton(event, false)))
+        dayEvents.forEach((event) => list.appendChild(createEventLink(event, false)))
       }
       col.appendChild(list)
       weekGrid.appendChild(col)
@@ -1140,7 +1098,7 @@
       const dayEvents = eventsForDay(day)
       const maxShown = 3
       dayEvents.slice(0, maxShown).forEach((event) => {
-        cell.appendChild(createEventButton(event, true))
+        cell.appendChild(createEventLink(event, true))
       })
       if (dayEvents.length > maxShown) {
         const more = document.createElement('span')
@@ -1183,21 +1141,6 @@
     activeView = 'month'
     renderActiveCalendarView()
   })
-
-  if (eventDialog instanceof HTMLDialogElement) {
-    eventDialog.querySelectorAll('[data-modal-close]').forEach((button) => {
-      button.addEventListener('click', () => eventDialog.close())
-    })
-    eventDialog.addEventListener('click', (event) => {
-      const rect = eventDialog.getBoundingClientRect()
-      const inDialog =
-        rect.top <= event.clientY &&
-        event.clientY <= rect.top + rect.height &&
-        rect.left <= event.clientX &&
-        event.clientX <= rect.left + rect.width
-      if (!inDialog) eventDialog.close()
-    })
-  }
 
   if (activeView === 'week' || activeView === 'month') {
     renderActiveCalendarView()

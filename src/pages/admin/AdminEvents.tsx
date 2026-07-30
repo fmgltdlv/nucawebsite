@@ -1,4 +1,5 @@
 import type { EventRecord } from '../../lib/events'
+import { eventFlyerUrl, eventThumbnailUrl } from '../../lib/events'
 import { repeatRuleLabel } from '../../lib/event-repeat'
 import { toDateInputValue, toDatetimeLocalValue } from '../../lib/datetime'
 import { formatArchiveDate } from '../../lib/format'
@@ -22,6 +23,51 @@ function eventSearchText(event: EventRecord): string {
     .filter(Boolean)
     .join(' ')
     .toLowerCase()
+}
+
+function EventImageFields({
+  formId,
+  event,
+}: {
+  formId?: string
+  event?: EventRecord
+}) {
+  const idPrefix = formId ? `${formId}-` : ''
+  const thumbnailUrl = event ? eventThumbnailUrl(event) : undefined
+  const flyerUrl = event ? eventFlyerUrl(event) : undefined
+
+  return (
+    <div class="form-row">
+      <div class="form-field">
+        <label for={`${idPrefix}thumbnail`}>Thumbnail (list view)</label>
+        {thumbnailUrl && (
+          <img src={thumbnailUrl} alt="" class="admin-event-image-preview" loading="lazy" decoding="async" />
+        )}
+        <input type="file" name="thumbnail" id={`${idPrefix}thumbnail`} accept="image/*" />
+        {thumbnailUrl && (
+          <label class="admin-check">
+            <input type="checkbox" name="remove_thumbnail" value="1" />
+            Remove thumbnail
+          </label>
+        )}
+        <p class="form-hint">Shown on the events list and home page. PNG or JPEG recommended.</p>
+      </div>
+      <div class="form-field">
+        <label for={`${idPrefix}flyer`}>Flyer (event page)</label>
+        {flyerUrl && (
+          <img src={flyerUrl} alt="" class="admin-event-image-preview admin-event-flyer-preview" loading="lazy" decoding="async" />
+        )}
+        <input type="file" name="flyer" id={`${idPrefix}flyer`} accept="image/*" />
+        {flyerUrl && (
+          <label class="admin-check">
+            <input type="checkbox" name="remove_flyer" value="1" />
+            Remove flyer
+          </label>
+        )}
+        <p class="form-hint">Hero image on the public event page.</p>
+      </div>
+    </div>
+  )
 }
 
 function EventRepeatFields({
@@ -101,6 +147,7 @@ function EventEditModal({ event }: { event: EventRecord }) {
       id={modalId}
       title={`Edit ${event.title}`}
       formAction={`/admin/events/${event.id}`}
+      formEncType="multipart/form-data"
       formId={formId}
       footer={
         <AdminEditModalFooter
@@ -143,7 +190,14 @@ function EventEditModal({ event }: { event: EventRecord }) {
       <div class="form-field">
         <label for={`${formId}-location`}>Location</label>
         <input type="text" name="location" id={`${formId}-location`} value={event.location ?? ''} />
+        <p class="form-hint">
+          Full street address when possible. We geocode Clark County addresses for the map on the event page.
+        </p>
+        {event.latitude != null && event.longitude != null && (
+          <p class="form-hint">Map coordinates saved ({event.latitude.toFixed(5)}, {event.longitude.toFixed(5)}).</p>
+        )}
       </div>
+      <EventImageFields formId={formId} event={event} />
       <div class="form-field">
         <label for={`${formId}-description`}>Description</label>
         <textarea name="description" id={`${formId}-description`} rows={4}>
@@ -187,6 +241,7 @@ export function AdminEventsPage({
         addModalId="add-event-dialog"
         addModalTitle="Add event"
         addFormAction="/admin/events"
+        addFormEncType="multipart/form-data"
         addFormId="add-event-form"
         addSubmitLabel="Publish event"
         addFormBody={
@@ -209,7 +264,11 @@ export function AdminEventsPage({
             <div class="form-field">
               <label for="location">Location</label>
               <input type="text" name="location" id="location" />
+              <p class="form-hint">
+                Full street address when possible. We geocode Clark County addresses for the map on the event page.
+              </p>
             </div>
+            <EventImageFields />
             <div class="form-field">
               <label for="description">Description</label>
               <textarea name="description" id="description" rows={3}></textarea>

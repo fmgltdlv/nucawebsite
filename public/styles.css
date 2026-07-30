@@ -1307,6 +1307,7 @@ button.pill {
   font-size: 0.72rem;
   line-height: 1.3;
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -1411,7 +1412,31 @@ button.pill {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  overflow: hidden;
+}
+
+.event-card-link {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: 1rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.event-card-thumb {
+  width: 100%;
+  height: 100%;
+  min-height: 7rem;
+  object-fit: cover;
+  background: var(--color-bg);
+}
+
+.event-card-thumb-fallback {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 18%, var(--color-bg)), var(--color-bg));
+}
+
+.event-card-body {
+  padding: 1rem 1rem 1rem 0;
 }
 
 .event-card-meta {
@@ -1429,8 +1454,179 @@ button.pill {
 }
 
 .event-card p {
-  margin: 0 0 1rem;
+  margin: 0 0 0.75rem;
   color: var(--color-muted);
+}
+
+.event-card-cta {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.event-card-link:hover .event-card-cta {
+  text-decoration: underline;
+}
+
+@media (max-width: 599px) {
+  .event-card-link {
+    grid-template-columns: 1fr;
+  }
+
+  .event-card-thumb,
+  .event-card-thumb-fallback {
+    min-height: 10rem;
+  }
+
+  .event-card-body {
+    padding: 0 1rem 1rem;
+  }
+}
+
+/* Event detail (Luma-style) */
+
+.event-detail-hero {
+  width: 100%;
+  max-height: 28rem;
+  overflow: hidden;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.event-detail-hero-fallback {
+  min-height: 12rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 16%, var(--color-bg)), var(--color-bg));
+}
+
+.event-detail-flyer {
+  display: block;
+  width: 100%;
+  max-height: 28rem;
+  object-fit: cover;
+}
+
+.event-detail-body {
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+}
+
+.event-detail-back {
+  margin: 0 0 1.5rem;
+}
+
+.event-detail-grid {
+  display: grid;
+  gap: 2rem;
+}
+
+@media (min-width: 900px) {
+  .event-detail-grid {
+    grid-template-columns: minmax(0, 1fr) 18rem;
+    align-items: start;
+  }
+}
+
+.event-detail-title {
+  font-family: var(--font-serif, 'Instrument Serif', serif);
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 400;
+  line-height: 1.1;
+  margin: 0 0 1.25rem;
+}
+
+.event-detail-meta-list {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.event-detail-meta-item {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.event-detail-meta-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
+.event-detail-section h2 {
+  font-size: 1.15rem;
+  margin: 0 0 0.75rem;
+}
+
+.event-detail-description {
+  white-space: pre-wrap;
+}
+
+.event-detail-location-text {
+  margin: 0 0 1rem;
+}
+
+.event-map-wrap {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.event-map {
+  display: block;
+  width: 100%;
+  min-height: 18rem;
+  border: 0;
+}
+
+.event-detail-sidebar {
+  display: grid;
+  gap: 1rem;
+}
+
+.event-detail-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+}
+
+.event-detail-card-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+  margin: 0 0 0.75rem;
+}
+
+.event-detail-card p {
+  margin: 0;
+}
+
+.event-detail-card-muted {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
+.event-detail-register {
+  width: 100%;
+  justify-content: center;
+}
+
+.admin-event-image-preview {
+  display: block;
+  width: 100%;
+  max-width: 12rem;
+  margin-bottom: 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+}
+
+.admin-event-flyer-preview {
+  max-width: 16rem;
 }
 
 /* Join */

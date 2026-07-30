@@ -6,7 +6,16 @@ import type { Env } from '../env'
 import { assignChairCommittees, approveMemberLink, createUser, listUsersWithMemberInfo, rejectMemberLink, requestMemberLink, verifyUserLogin } from '../lib/auth'
 import { canAccessRole, resolveAdminContext } from '../lib/admin-context'
 import { parseRepeatRule, parseRepeatUntil } from '../lib/event-repeat'
-import { createEvent, deleteEvent, listAllEventsForAdmin, updateEvent } from '../lib/events'
+import {
+  applyEventImageUploads,
+  createEvent,
+  deleteEvent,
+  deleteEventAssets,
+  getEventById,
+  listAllEventsForAdmin,
+  resolveEventCoordinates,
+  updateEvent,
+} from '../lib/events'
 import { parseDatetimeLocal } from '../lib/datetime'
 import { registerAdminContentRoutes } from './admin-content'
 import { listActiveMembers } from '../lib/members'
@@ -314,8 +323,9 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       typeof body.registration_url === 'string' ? body.registration_url.trim() : ''
     const repeat_rule = parseRepeatRule(typeof body.repeat_rule === 'string' ? body.repeat_rule : '')
     const repeat_until = parseRepeatUntil(typeof body.repeat_until === 'string' ? body.repeat_until : '')
+    const coords = await resolveEventCoordinates(location || null)
 
-    await createEvent(c.env.DB, {
+    const id = await createEvent(c.env.DB, {
       title,
       starts_at,
       ends_at: ends_at ?? undefined,
@@ -324,7 +334,28 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       registration_url: registration_url || undefined,
       repeat_rule,
       repeat_until,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
     })
+
+    const images = await applyEventImageUploads(c.env.R2, id, body)
+    if (images.thumbnail_r2_key || images.flyer_r2_key) {
+      await updateEvent(c.env.DB, id, {
+        title,
+        starts_at,
+        ends_at,
+        location: location || null,
+        description: description || null,
+        registration_url: registration_url || null,
+        published: true,
+        repeat_rule,
+        repeat_until,
+        thumbnail_r2_key: images.thumbnail_r2_key,
+        flyer_r2_key: images.flyer_r2_key,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      })
+    }
 
     return c.redirect('/admin/events?created=1', 303)
   })
@@ -335,6 +366,9 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     if (!canAccessRole(ctx.user, ['admin', 'chair'])) return c.redirect('/admin', 303)
 
     const id = c.req.param('id')
+    const existing = await getEventById(c.env.DB, id)
+    if (!existing) return c.redirect('/admin/events', 303)
+
     const body = await c.req.parseBody()
     const title = typeof body.title === 'string' ? body.title.trim() : ''
     const startsRaw = typeof body.starts_at === 'string' ? body.starts_at : ''
@@ -349,6 +383,8 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       typeof body.registration_url === 'string' ? body.registration_url.trim() : ''
     const repeat_rule = parseRepeatRule(typeof body.repeat_rule === 'string' ? body.repeat_rule : '')
     const repeat_until = parseRepeatUntil(typeof body.repeat_until === 'string' ? body.repeat_until : '')
+    const coords = await resolveEventCoordinates(location || null, existing)
+    const images = await applyEventImageUploads(c.env.R2, id, body, existing)
 
     await updateEvent(c.env.DB, id, {
       title,
@@ -360,6 +396,10 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       published: body.published === '1',
       repeat_rule,
       repeat_until,
+      thumbnail_r2_key: images.thumbnail_r2_key,
+      flyer_r2_key: images.flyer_r2_key,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
     })
 
     return c.redirect('/admin/events?ok=1', 303)
@@ -369,7 +409,10 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const ctx = await resolveAdminContext(c)
     if (!ctx) return c.redirect('/admin/login', 303)
     if (!canAccessRole(ctx.user, ['admin', 'chair'])) return c.redirect('/admin', 303)
-    await deleteEvent(c.env.DB, c.req.param('id'))
+    const id = c.req.param('id')
+    const existing = await getEventById(c.env.DB, id)
+    if (existing) await deleteEventAssets(c.env.R2, existing)
+    await deleteEvent(c.env.DB, id)
     return c.redirect('/admin/events?ok=1', 303)
   })
 

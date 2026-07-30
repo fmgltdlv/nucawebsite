@@ -1,4 +1,4 @@
-import type { EventRecord } from '../lib/events'
+import type { ExpandedEventRecord } from '../lib/event-repeat'
 import type { PageProps } from '../types/page'
 import { EventCard } from '../views/EventCard'
 import { JsonScript } from '../views/JsonScript'
@@ -15,27 +15,6 @@ function eventsViewHref(view: EventsView, focusDate: string, page = 1): string {
   return qs ? `/events?${qs}` : '/events'
 }
 
-function EventDialog() {
-  return (
-    <dialog id="event-dialog" class="leader-dialog event-dialog">
-      <article class="leader-dialog-card">
-        <button type="button" class="leader-dialog-close" aria-label="Close" data-modal-close>
-          ×
-        </button>
-        <div class="event-dialog-content">
-          <p class="event-dialog-meta" id="event-dialog-meta" />
-          <h2 id="event-dialog-title" class="leader-dialog-name" />
-          <p id="event-dialog-location" class="leader-dialog-role" hidden />
-          <p id="event-dialog-description" class="leader-dialog-bio" hidden />
-          <a id="event-dialog-registration" class="btn btn-secondary btn-sm" hidden>
-            Registration
-          </a>
-        </div>
-      </article>
-    </dialog>
-  )
-}
-
 export function EventsPage({
   theme,
   contact,
@@ -49,8 +28,8 @@ export function EventsPage({
   totalEvents,
   focusDate,
 }: PageProps & {
-  events: EventRecord[]
-  calendarEvents: EventRecord[]
+  events: ExpandedEventRecord[]
+  calendarEvents: ExpandedEventRecord[]
   view: EventsView
   page: number
   totalPages: number
@@ -186,7 +165,6 @@ export function EventsPage({
           </div>
 
           <JsonScript id="events-calendar-data" json={JSON.stringify(calendarEvents)} />
-          <EventDialog />
         </div>
       </section>
     </Layout>

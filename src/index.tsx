@@ -12,6 +12,8 @@ import {
   listPublishedEventsForCalendar,
   listUpcomingEvents,
   listUpcomingEventsPage,
+  getPublishedEventById,
+  resolveEventOccurrence,
 } from './lib/events'
 import { listLeadership } from './lib/leadership-db'
 import {
@@ -34,6 +36,7 @@ import { CommitteesPage } from './pages/Committees'
 import { CommitteeDetailPage } from './pages/CommitteeDetail'
 import { ContentPage } from './pages/ContentPage'
 import { ContactPage, ContactErrorPage, ContactThanksPage } from './pages/Contact'
+import { EventDetailPage, EventNotFoundPage } from './pages/EventDetail'
 import { EventsPage, type EventsView } from './pages/Events'
 import { HomePage } from './pages/Home'
 import { IndustryUpdateDetailPage, IndustryUpdatesPage } from './pages/IndustryUpdates'
@@ -236,6 +239,18 @@ app.get('/events', async (c) => {
       focusDate={focusDate}
     />,
   )
+})
+
+app.get('/events/:id', async (c) => {
+  const site = await siteProps(c)
+  const master = await getPublishedEventById(c.env.DB, c.req.param('id'))
+  if (!master) return c.html(<EventNotFoundPage {...site} />, 404)
+
+  const at = c.req.query('at')
+  const occurrence = resolveEventOccurrence(master, at)
+  if (!occurrence) return c.html(<EventNotFoundPage {...site} />, 404)
+
+  return c.html(<EventDetailPage {...site} occurrence={occurrence} />)
 })
 
 app.get('/advocacy', (c) => c.redirect('/about/committees', 301))

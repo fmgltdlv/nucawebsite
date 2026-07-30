@@ -2,7 +2,7 @@ import { Layout } from '../views/Layout'
 import { ArchiveCard, ArchiveCardList } from '../views/ArchiveCard'
 import { EventCard } from '../views/EventCard'
 import type { DirtReleaseRecord } from '../lib/dirt-db'
-import type { EventRecord } from '../lib/events'
+import type { ExpandedEventRecord } from '../lib/event-repeat'
 import type { PostRecord } from '../lib/posts-db'
 import type { PageProps } from '../types/page'
 
@@ -15,7 +15,7 @@ export function HomePage({
   dirtReleases,
   posts,
 }: PageProps & {
-  events: EventRecord[]
+  events: ExpandedEventRecord[]
   dirtReleases: DirtReleaseRecord[]
   posts: PostRecord[]
 }) {
