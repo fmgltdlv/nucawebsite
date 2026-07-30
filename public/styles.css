@@ -1060,6 +1060,19 @@ button.pill {
   padding: 0.25rem;
 }
 
+.member-dialog-initial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 8rem;
+  height: 8rem;
+  border-radius: 50%;
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: #eef4ff;
+}
+
 .member-dialog-contacts {
   margin-top: 1rem;
   padding-top: 1rem;
@@ -1717,8 +1730,16 @@ button.pill {
 }
 
 .leader-dialog-media {
-  display: flex;
-  justify-content: center;
+  display: grid;
+  place-items: center;
+}
+
+.leader-dialog-media > * {
+  grid-area: 1 / 1;
+}
+
+.leader-dialog-media > [hidden] {
+  display: none !important;
 }
 
 .leader-dialog-photo,
@@ -1798,12 +1819,22 @@ button.pill {
     gap: 1.5rem;
   }
 
+  .member-dialog .leader-dialog-layout {
+    grid-template-columns: auto 1fr;
+  }
+
   .leader-dialog-media {
-    justify-content: flex-start;
+    justify-items: start;
+    place-items: start center;
   }
 
   .leader-dialog-photo,
   .leader-dialog-initial {
+    width: 8.5rem;
+    height: 8.5rem;
+  }
+
+  .member-dialog-initial {
     width: 8.5rem;
     height: 8.5rem;
   }

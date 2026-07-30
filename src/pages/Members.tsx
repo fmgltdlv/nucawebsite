@@ -36,7 +36,7 @@ function MemberBubble({ member }: { member: Member }) {
 
 function MemberDialog() {
   return (
-    <dialog id="member-dialog" class="leader-dialog">
+    <dialog id="member-dialog" class="leader-dialog member-dialog">
       <article class="leader-dialog-card">
         <button type="button" class="leader-dialog-close" aria-label="Close" data-modal-close>
           ×
@@ -44,7 +44,7 @@ function MemberDialog() {
         <div class="leader-dialog-layout">
           <div class="leader-dialog-media">
             <img id="member-dialog-logo" class="member-dialog-logo" alt="" hidden />
-            <div id="member-dialog-initial" class="leader-dialog-initial" hidden />
+            <div id="member-dialog-initial" class="member-dialog-initial" hidden />
           </div>
           <div class="leader-dialog-content">
             <h2 id="member-dialog-company" class="leader-dialog-name" />
