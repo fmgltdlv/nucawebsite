@@ -1,7 +1,6 @@
 import type { EventRecord } from '../../lib/events'
 import { toDatetimeLocalValue } from '../../lib/datetime'
 import { AdminShell } from '../../views/AdminShell'
-import { AdminCrudSections } from '../../views/admin/AdminCrudSections'
 import { AdminEditActions } from '../../views/admin/AdminEditActions'
 import type { AdminContext } from '../../lib/admin-context'
 import type { PageProps } from '../../types/page'
@@ -80,11 +79,23 @@ export function AdminEventsPage({
       title="Events"
       activePath="/admin/events"
     >
-      <AdminCrudSections
-        flash={flash}
-        addTitle="Add event"
-        addForm={
-          <form class="form" method="post" action="/admin/events">
+      {flash && <p class="admin-flash">{flash}</p>}
+
+      <div class="admin-members-toolbar">
+        <button type="button" class="btn btn-primary" id="add-event-open">
+          Add event
+        </button>
+      </div>
+
+      <dialog id="add-event-dialog" class="admin-modal">
+        <form class="form admin-modal-form" method="post" action="/admin/events" id="add-event-form">
+          <header class="admin-modal-header">
+            <h2>Add event</h2>
+            <button type="button" class="admin-modal-close" aria-label="Close" data-modal-close>
+              ×
+            </button>
+          </header>
+          <div class="admin-modal-body">
             <div class="form-field">
               <label for="title">Title</label>
               <input type="text" name="title" id="title" required />
@@ -111,35 +122,44 @@ export function AdminEventsPage({
               <label for="registration_url">Registration URL</label>
               <input type="url" name="registration_url" id="registration_url" />
             </div>
+          </div>
+          <footer class="admin-modal-footer">
+            <button type="button" class="btn btn-secondary" data-modal-close>
+              Cancel
+            </button>
             <button type="submit" class="btn btn-primary">Publish event</button>
-          </form>
-        }
-        listTitle="Events"
-        listCount={events.length}
-        emptyMessage="No events in the database yet."
-        hasItems={events.length > 0}
-        table={
-          <table class="admin-members-table">
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Starts</th>
-                <th>Ends</th>
-                <th>Location</th>
-                <th>Description</th>
-                <th>Registration</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((event) => (
-                <EventEditRow event={event} key={event.id} />
-              ))}
-            </tbody>
-          </table>
-        }
-      />
+          </footer>
+        </form>
+      </dialog>
+
+      <section class="section">
+        <h2>Events ({events.length})</h2>
+        {events.length === 0 ? (
+          <p class="muted">No events in the database yet. Click Add event to create one.</p>
+        ) : (
+          <div class="table-wrap">
+            <table class="admin-members-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Starts</th>
+                  <th>Ends</th>
+                  <th>Location</th>
+                  <th>Description</th>
+                  <th>Registration</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.map((event) => (
+                  <EventEditRow event={event} key={event.id} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </AdminShell>
   )
 }

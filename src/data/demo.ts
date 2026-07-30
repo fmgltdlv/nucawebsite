@@ -6,6 +6,7 @@ export interface Member {
   id: string
   company: string
   type: MemberType
+  description?: string
   website?: string
   phone?: string
   email?: string

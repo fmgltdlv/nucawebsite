@@ -19,6 +19,7 @@ function MemberBubble({ member }: { member: Member }) {
       </div>
       <div class="member-bubble-body">
         <span class="member-bubble-company">{member.company}</span>
+        {member.description && <p class="member-bubble-desc">{member.description}</p>}
         <span class={`badge badge-${member.type}`}>{memberTypeLabel[member.type]}</span>
         {(member.website || member.phone) && (
           <div class="member-bubble-links">

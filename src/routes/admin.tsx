@@ -47,11 +47,13 @@ function parseMemberFormBody(body: Record<string, File | string>) {
   const website = typeof body.website === 'string' ? body.website.trim() : ''
   const phone = typeof body.phone === 'string' ? body.phone.trim() : ''
   const email = typeof body.email === 'string' ? body.email.trim() : ''
+  const description = typeof body.description === 'string' ? body.description.trim() : ''
   const active = body.active === '1'
 
   return {
     company_name,
     member_type,
+    description: description || undefined,
     website: website || undefined,
     phone: phone || undefined,
     email: email || undefined,

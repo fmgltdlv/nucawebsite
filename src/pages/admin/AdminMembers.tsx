@@ -51,6 +51,16 @@ function MemberEditRow({ member }: { member: AdminMember }) {
         </select>
       </td>
       <td>
+        <textarea
+          form={formId}
+          name="description"
+          class="admin-table-input admin-table-textarea"
+          rows={3}
+        >
+          {member.description ?? ''}
+        </textarea>
+      </td>
+      <td>
         <input
           form={formId}
           type="url"
@@ -93,6 +103,7 @@ function MemberEditRow({ member }: { member: AdminMember }) {
           method="post"
           action={`/admin/members/${member.id}`}
           enctype="multipart/form-data"
+          data-member-logo-form
         >
           <button type="submit" class="btn btn-secondary btn-sm">
             Save
@@ -128,63 +139,92 @@ export function AdminMembersPage({
       <p class="section-lead">
         Public directory at <a href="/members">/members</a>. Only members marked <strong>Listed</strong>{' '}
         appear on the public site. Upload a company logo (PNG, JPEG, WebP, or SVG, max 2 MB) for the member grid.
+        Large images are automatically compressed in your browser before upload.
       </p>
 
-      <section class="admin-form-section">
-        <h2>Add member</h2>
-        <form class="form" method="post" action="/admin/members" enctype="multipart/form-data">
-          <div class="form-row">
-            <div class="form-field">
-              <label for="company_name">Company</label>
-              <input type="text" name="company_name" id="company_name" required />
+      <div class="admin-members-toolbar">
+        <button type="button" class="btn btn-primary" id="add-member-open">
+          Add member
+        </button>
+      </div>
+
+      <dialog id="add-member-dialog" class="admin-modal">
+        <form
+          class="form admin-modal-form"
+          method="post"
+          action="/admin/members"
+          enctype="multipart/form-data"
+          data-member-logo-form
+        >
+          <header class="admin-modal-header">
+            <h2>Add member</h2>
+            <button type="button" class="admin-modal-close" aria-label="Close" data-modal-close>
+              ×
+            </button>
+          </header>
+          <div class="admin-modal-body">
+            <div class="form-row">
+              <div class="form-field">
+                <label for="company_name">Company</label>
+                <input type="text" name="company_name" id="company_name" required />
+              </div>
+              <div class="form-field">
+                <label for="member_type">Type</label>
+                <select name="member_type" id="member_type" required>
+                  {MEMBER_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {memberTypeLabel[type]}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div class="form-field">
-              <label for="member_type">Type</label>
-              <select name="member_type" id="member_type" required>
-                {MEMBER_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {memberTypeLabel[type]}
-                  </option>
-                ))}
-              </select>
+              <label for="description">Description</label>
+              <textarea name="description" id="description" rows={3}></textarea>
             </div>
-          </div>
-          <div class="form-row">
-            <div class="form-field">
-              <label for="website">Website</label>
-              <input type="url" name="website" id="website" placeholder="https://" />
+            <div class="form-row">
+              <div class="form-field">
+                <label for="website">Website</label>
+                <input type="url" name="website" id="website" placeholder="https://" />
+              </div>
+              <div class="form-field">
+                <label for="phone">Phone</label>
+                <input type="tel" name="phone" id="phone" />
+              </div>
             </div>
             <div class="form-field">
-              <label for="phone">Phone</label>
-              <input type="tel" name="phone" id="phone" />
+              <label for="email">Email</label>
+              <input type="email" name="email" id="email" />
             </div>
+            <div class="form-field">
+              <label for="logo">Company logo</label>
+              <input
+                type="file"
+                name="logo"
+                id="logo"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              />
+              <p class="form-hint">Optional. Shown on the public member grid.</p>
+            </div>
+            <label class="admin-check">
+              <input type="checkbox" name="active" value="1" />
+              Listed on public member directory
+            </label>
           </div>
-          <div class="form-field">
-            <label for="email">Email</label>
-            <input type="email" name="email" id="email" />
-          </div>
-          <div class="form-field">
-            <label for="logo">Company logo</label>
-            <input
-              type="file"
-              name="logo"
-              id="logo"
-              accept="image/png,image/jpeg,image/webp,image/svg+xml"
-            />
-            <p class="form-hint">Optional. Shown on the public member grid.</p>
-          </div>
-          <label class="admin-check">
-            <input type="checkbox" name="active" value="1" />
-            Listed on public member directory
-          </label>
-          <button type="submit" class="btn btn-primary">Add member</button>
+          <footer class="admin-modal-footer">
+            <button type="button" class="btn btn-secondary" data-modal-close>
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary">Add member</button>
+          </footer>
         </form>
-      </section>
+      </dialog>
 
       <section class="section">
         <h2>All members ({members.length})</h2>
         {members.length === 0 ? (
-          <p class="muted">No members yet. Add one above.</p>
+          <p class="muted">No members yet. Click Add member to create one.</p>
         ) : (
           <div class="table-wrap">
             <table class="data-table admin-members-table admin-member-list-table">
@@ -193,6 +233,7 @@ export function AdminMembersPage({
                   <th>Logo</th>
                   <th class="admin-member-company-col">Company</th>
                   <th>Type</th>
+                  <th>Description</th>
                   <th>Website</th>
                   <th>Phone</th>
                   <th>Email</th>

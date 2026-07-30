@@ -139,6 +139,201 @@
 })();
 
 (function () {
+  const MEMBER_LOGO_MAX_BYTES = 2 * 1024 * 1024
+
+  function extForMime(mime) {
+    if (mime === 'image/png') return 'png'
+    if (mime === 'image/webp') return 'webp'
+    return 'jpg'
+  }
+
+  function outputMimeForFile(file) {
+    if (file.type === 'image/png') return 'image/png'
+    if (file.type === 'image/webp') return 'image/webp'
+    if (file.type === 'image/jpeg') return 'image/jpeg'
+    const name = file.name.toLowerCase()
+    if (name.endsWith('.png')) return 'image/png'
+    if (name.endsWith('.webp')) return 'image/webp'
+    return 'image/jpeg'
+  }
+
+  function isSvgFile(file) {
+    return file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')
+  }
+
+  function loadImageFromFile(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file)
+      const img = new Image()
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        resolve(img)
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(url)
+        reject(new Error('Could not read image file.'))
+      }
+      img.src = url
+    })
+  }
+
+  function canvasToBlob(canvas, mime, quality) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error('Image compression failed.'))),
+        mime,
+        quality,
+      )
+    })
+  }
+
+  async function renderToBlob(img, width, height, mime, quality) {
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Could not prepare image compression.')
+    ctx.drawImage(img, 0, 0, width, height)
+    return canvasToBlob(canvas, mime, quality)
+  }
+
+  async function compressMemberLogo(file) {
+    if (file.size <= MEMBER_LOGO_MAX_BYTES) return file
+    if (isSvgFile(file)) {
+      throw new Error('SVG logos must be 2 MB or smaller. Please optimize the file first.')
+    }
+
+    const img = await loadImageFromFile(file)
+    const mime = outputMimeForFile(file)
+    let width = img.naturalWidth || img.width
+    let height = img.naturalHeight || img.height
+    let quality = mime === 'image/png' ? undefined : 0.92
+
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const blob = await renderToBlob(img, width, height, mime, quality)
+      if (blob.size <= MEMBER_LOGO_MAX_BYTES) {
+        const baseName = file.name.replace(/\.[^.]+$/, '') || 'logo'
+        return new File([blob], `${baseName}.${extForMime(mime)}`, {
+          type: mime,
+          lastModified: Date.now(),
+        })
+      }
+
+      if (mime !== 'image/png' && quality > 0.45) {
+        quality = Math.max(0.45, quality - 0.08)
+        continue
+      }
+
+      width = Math.max(64, Math.round(width * 0.85))
+      height = Math.max(64, Math.round(height * 0.85))
+      if (mime !== 'image/png') quality = 0.85
+
+      if (width <= 64 && height <= 64) break
+    }
+
+    throw new Error('Could not compress logo below 2 MB. Try a smaller image.')
+  }
+
+  function replaceFileInput(fileInput, file) {
+    const transfer = new DataTransfer()
+    transfer.items.add(file)
+    fileInput.files = transfer.files
+  }
+
+  document.querySelectorAll('form[data-member-logo-form]').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      if (form.dataset.logoProcessed === '1') return
+
+      const logoInput = form.querySelector('input[type="file"][name="logo"]')
+      const file = logoInput?.files?.[0]
+      if (!file || file.size <= MEMBER_LOGO_MAX_BYTES) return
+
+      event.preventDefault()
+
+      const submitBtn = form.querySelector('button[type="submit"]')
+      const originalText = submitBtn?.textContent ?? ''
+      if (submitBtn) {
+        submitBtn.disabled = true
+        submitBtn.textContent = 'Compressing logo…'
+      }
+
+      try {
+        const compressed = await compressMemberLogo(file)
+        replaceFileInput(logoInput, compressed)
+        form.dataset.logoProcessed = '1'
+        form.requestSubmit()
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Logo could not be compressed.'
+        window.alert(message)
+        if (submitBtn) {
+          submitBtn.disabled = false
+          submitBtn.textContent = originalText
+        }
+      }
+    })
+  })
+
+  const addMemberDialog = document.getElementById('add-member-dialog')
+  const addMemberOpen = document.getElementById('add-member-open')
+
+  if (addMemberDialog instanceof HTMLDialogElement && addMemberOpen) {
+    addMemberOpen.addEventListener('click', () => addMemberDialog.showModal())
+
+    addMemberDialog.querySelectorAll('[data-modal-close]').forEach((button) => {
+      button.addEventListener('click', () => addMemberDialog.close())
+    })
+
+    addMemberDialog.addEventListener('click', (event) => {
+      const rect = addMemberDialog.getBoundingClientRect()
+      const inDialog =
+        rect.top <= event.clientY &&
+        event.clientY <= rect.top + rect.height &&
+        rect.left <= event.clientX &&
+        event.clientX <= rect.left + rect.width
+      if (!inDialog) addMemberDialog.close()
+    })
+
+    addMemberDialog.addEventListener('close', () => {
+      const form = addMemberDialog.querySelector('form[data-member-logo-form]')
+      if (!(form instanceof HTMLFormElement)) return
+      form.reset()
+      delete form.dataset.logoProcessed
+      const submitBtn = form.querySelector('button[type="submit"]')
+      if (submitBtn) {
+        submitBtn.disabled = false
+        submitBtn.textContent = 'Add member'
+      }
+    })
+  }
+
+  const addEventDialog = document.getElementById('add-event-dialog')
+  const addEventOpen = document.getElementById('add-event-open')
+
+  if (addEventDialog instanceof HTMLDialogElement && addEventOpen) {
+    addEventOpen.addEventListener('click', () => addEventDialog.showModal())
+
+    addEventDialog.querySelectorAll('[data-modal-close]').forEach((button) => {
+      button.addEventListener('click', () => addEventDialog.close())
+    })
+
+    addEventDialog.addEventListener('click', (event) => {
+      const rect = addEventDialog.getBoundingClientRect()
+      const inDialog =
+        rect.top <= event.clientY &&
+        event.clientY <= rect.top + rect.height &&
+        rect.left <= event.clientX &&
+        event.clientX <= rect.left + rect.width
+      if (!inDialog) addEventDialog.close()
+    })
+
+    addEventDialog.addEventListener('close', () => {
+      const form = addEventDialog.querySelector('#add-event-form')
+      if (form instanceof HTMLFormElement) form.reset()
+    })
+  }
+})();
+
+(function () {
   const banner = document.querySelector('.breaking-news')
   const dismiss = document.querySelector('[data-breaking-dismiss]')
   if (banner && dismiss) {
