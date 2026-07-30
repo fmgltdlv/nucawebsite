@@ -1,3 +1,5 @@
+import { getAssetUrl } from './r2-assets'
+
 export const MEMBER_LOGO_MAX_BYTES = 2 * 1024 * 1024
 
 const ALLOWED_LOGO_TYPES = new Set([
@@ -14,12 +16,8 @@ const MIME_TO_EXT: Record<string, string> = {
   'image/svg+xml': 'svg',
 }
 
-export function memberLogoPublicPath(memberId: string): string {
-  return `/files/members/${memberId}/logo`
-}
-
-export function memberLogoUrl(memberId: string, logoR2Key?: string | null): string | undefined {
-  return logoR2Key ? memberLogoPublicPath(memberId) : undefined
+export function memberLogoUrl(logoR2Key?: string | null): string | undefined {
+  return logoR2Key ? getAssetUrl(logoR2Key) : undefined
 }
 
 export function parseLogoFile(body: Record<string, File | string>): File | null {

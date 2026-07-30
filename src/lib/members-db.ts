@@ -27,7 +27,7 @@ function mapMemberRow(row: MemberRow): Member {
     website: row.website ?? undefined,
     phone: row.phone ?? undefined,
     email: row.email ?? undefined,
-    logoUrl: memberLogoUrl(row.id, row.logo_r2_key),
+    logoUrl: memberLogoUrl(row.logo_r2_key),
   }
 }
 

@@ -24,6 +24,6 @@ export async function listActiveMembers(db: D1Database): Promise<Member[]> {
     description: r.description ?? undefined,
     website: r.website ?? undefined,
     phone: r.phone ?? undefined,
-    logoUrl: memberLogoUrl(r.id, r.logo_r2_key),
+    logoUrl: memberLogoUrl(r.logo_r2_key),
   }))
 }
