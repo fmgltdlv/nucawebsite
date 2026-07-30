@@ -9,22 +9,62 @@ export type EventRecord = {
   published: number
 }
 
-export async function listUpcomingEvents(db: D1Database): Promise<EventRecord[]> {
+export const EVENTS_LIST_PAGE_SIZE = 5
+
+const EVENT_COLUMNS = `id, title, starts_at, ends_at, location, description, registration_url, published`
+
+const UPCOMING_WHERE = `published = 1 AND starts_at >= datetime('now')`
+
+export async function countUpcomingEvents(db: D1Database): Promise<number> {
+  const row = await db
+    .prepare(`SELECT COUNT(*) as c FROM events WHERE ${UPCOMING_WHERE}`)
+    .first<{ c: number }>()
+  return row?.c ?? 0
+}
+
+export async function listUpcomingEventsPage(
+  db: D1Database,
+  page: number,
+  pageSize = EVENTS_LIST_PAGE_SIZE,
+): Promise<EventRecord[]> {
+  const offset = Math.max(0, (Math.max(1, page) - 1) * pageSize)
   const { results } = await db
     .prepare(
-      `SELECT id, title, starts_at, ends_at, location, description, registration_url, published
-       FROM events WHERE published = 1 ORDER BY starts_at ASC LIMIT 50`,
+      `SELECT ${EVENT_COLUMNS}
+       FROM events WHERE ${UPCOMING_WHERE}
+       ORDER BY starts_at ASC LIMIT ? OFFSET ?`,
     )
+    .bind(pageSize, offset)
+    .all<EventRecord>()
+  return results ?? []
+}
+
+export async function listPublishedEventsForCalendar(db: D1Database): Promise<EventRecord[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT ${EVENT_COLUMNS}
+       FROM events WHERE published = 1
+       ORDER BY starts_at ASC LIMIT 500`,
+    )
+    .all<EventRecord>()
+  return results ?? []
+}
+
+export async function listUpcomingEvents(db: D1Database, limit = 50): Promise<EventRecord[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT ${EVENT_COLUMNS}
+       FROM events WHERE ${UPCOMING_WHERE}
+       ORDER BY starts_at ASC LIMIT ?`,
+    )
+    .bind(limit)
     .all<EventRecord>()
   return results ?? []
 }
 
 export async function listAllEventsForAdmin(db: D1Database): Promise<EventRecord[]> {
   const { results } = await db
-    .prepare(
-      `SELECT id, title, starts_at, ends_at, location, description, registration_url, published
-       FROM events ORDER BY starts_at DESC LIMIT 100`,
-    )
+    .prepare(`SELECT ${EVENT_COLUMNS} FROM events ORDER BY starts_at DESC LIMIT 100`)
     .all<EventRecord>()
   return results ?? []
 }
@@ -32,10 +72,7 @@ export async function listAllEventsForAdmin(db: D1Database): Promise<EventRecord
 export async function getEventById(db: D1Database, id: string): Promise<EventRecord | null> {
   return (
     (await db
-      .prepare(
-        `SELECT id, title, starts_at, ends_at, location, description, registration_url, published
-         FROM events WHERE id = ?`,
-      )
+      .prepare(`SELECT ${EVENT_COLUMNS} FROM events WHERE id = ?`)
       .bind(id)
       .first<EventRecord>()) ?? null
   )

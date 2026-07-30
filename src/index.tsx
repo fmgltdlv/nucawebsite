@@ -6,7 +6,13 @@ import type { Env } from './env'
 import { createApplication } from './lib/applications-db'
 import { getDirtRelease, listDirtReleases } from './lib/dirt-db'
 import { sendContactMessage, notifyStaffOfApplication } from './lib/email'
-import { listUpcomingEvents } from './lib/events'
+import {
+  countUpcomingEvents,
+  EVENTS_LIST_PAGE_SIZE,
+  listPublishedEventsForCalendar,
+  listUpcomingEvents,
+  listUpcomingEventsPage,
+} from './lib/events'
 import { listLeadership } from './lib/leadership-db'
 import {
   getActiveMemberPublicProfile,
@@ -28,7 +34,7 @@ import { CommitteesPage } from './pages/Committees'
 import { CommitteeDetailPage } from './pages/CommitteeDetail'
 import { ContentPage } from './pages/ContentPage'
 import { ContactPage, ContactErrorPage, ContactThanksPage } from './pages/Contact'
-import { EventsPage } from './pages/Events'
+import { EventsPage, type EventsView } from './pages/Events'
 import { HomePage } from './pages/Home'
 import { IndustryUpdateDetailPage, IndustryUpdatesPage } from './pages/IndustryUpdates'
 import { JoinPage, JoinThanksPage } from './pages/Join'
@@ -192,10 +198,44 @@ app.get('/members', async (c) => {
   return c.html(<MembersPage {...site} members={members} filter={filter} />)
 })
 
+function parseEventsView(value: string | undefined): EventsView {
+  if (value === 'week' || value === 'month') return value
+  return 'list'
+}
+
+function parseEventsFocusDate(value: string | undefined): string {
+  if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
 app.get('/events', async (c) => {
   const site = await siteProps(c)
-  const events = await listUpcomingEvents(c.env.DB)
-  return c.html(<EventsPage {...site} events={events} />)
+  const view = parseEventsView(c.req.query('view'))
+  const focusDate = parseEventsFocusDate(c.req.query('date'))
+  const page = Math.max(1, Number.parseInt(c.req.query('page') ?? '1', 10) || 1)
+
+  const [totalEvents, calendarEvents] = await Promise.all([
+    countUpcomingEvents(c.env.DB),
+    listPublishedEventsForCalendar(c.env.DB),
+  ])
+  const totalPages = Math.max(1, Math.ceil(totalEvents / EVENTS_LIST_PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const events = await listUpcomingEventsPage(c.env.DB, safePage)
+
+  return c.html(
+    <EventsPage
+      {...site}
+      events={events}
+      calendarEvents={calendarEvents}
+      view={view}
+      page={safePage}
+      totalPages={totalPages}
+      totalEvents={totalEvents}
+      focusDate={focusDate}
+    />,
+  )
 })
 
 app.get('/advocacy', (c) => c.redirect('/about/committees', 301))

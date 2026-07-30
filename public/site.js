@@ -870,6 +870,343 @@
 })();
 
 (function () {
+  const page = document.getElementById('events-page')
+  if (!page) return
+
+  const dataEl = document.getElementById('events-calendar-data')
+  let events = []
+  if (dataEl) {
+    try {
+      events = JSON.parse(dataEl.textContent ?? '[]')
+    } catch {
+      events = []
+    }
+  }
+
+  const listView = document.getElementById('events-view-list')
+  const weekView = document.getElementById('events-view-week')
+  const monthView = document.getElementById('events-view-month')
+  const weekGrid = document.getElementById('events-week-grid')
+  const monthGrid = document.getElementById('events-month-grid')
+  const weekLabel = document.getElementById('events-week-label')
+  const monthLabel = document.getElementById('events-month-label')
+  const weekPrev = document.getElementById('events-week-prev')
+  const weekNext = document.getElementById('events-week-next')
+  const monthPrev = document.getElementById('events-month-prev')
+  const monthNext = document.getElementById('events-month-next')
+  const eventDialog = document.getElementById('event-dialog')
+
+  const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+  function parseDateParam(value) {
+    if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const [y, m, d] = value.split('-').map(Number)
+      return new Date(y, m - 1, d)
+    }
+    const now = new Date()
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  }
+
+  function toDateParam(date) {
+    const pad = (n) => String(n).padStart(2, '0')
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+  }
+
+  function startOfDay(date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  }
+
+  function addDays(date, days) {
+    const next = new Date(date)
+    next.setDate(next.getDate() + days)
+    return startOfDay(next)
+  }
+
+  function addMonths(date, months) {
+    return startOfDay(new Date(date.getFullYear(), date.getMonth() + months, date.getDate()))
+  }
+
+  function startOfWeek(date) {
+    const day = startOfDay(date)
+    return addDays(day, -day.getDay())
+  }
+
+  function startOfMonth(date) {
+    return startOfDay(new Date(date.getFullYear(), date.getMonth(), 1))
+  }
+
+  function sameDay(a, b) {
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    )
+  }
+
+  function eventOnDay(event, day) {
+    const start = new Date(event.starts_at)
+    const end = event.ends_at ? new Date(event.ends_at) : start
+    const dayStart = startOfDay(day)
+    const dayEnd = addDays(dayStart, 1)
+    return start < dayEnd && end >= dayStart
+  }
+
+  function eventsForDay(day) {
+    return events
+      .filter((event) => eventOnDay(event, day))
+      .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
+  }
+
+  function formatEventDateTime(iso) {
+    return new Date(iso).toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+  }
+
+  function formatEventTime(iso) {
+    return new Date(iso).toLocaleString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+  }
+
+  function formatMonthYear(date) {
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  }
+
+  function formatWeekRange(weekStart) {
+    const weekEnd = addDays(weekStart, 6)
+    const sameMonth = weekStart.getMonth() === weekEnd.getMonth()
+    const startFmt = weekStart.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    })
+    const endFmt = weekEnd.toLocaleDateString('en-US', {
+      month: sameMonth ? undefined : 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+    return `${startFmt} – ${endFmt}`
+  }
+
+  function readView() {
+    const params = new URLSearchParams(window.location.search)
+    const view = params.get('view')
+    if (view === 'week' || view === 'month') return view
+    return page.getAttribute('data-view') === 'week' || page.getAttribute('data-view') === 'month'
+      ? page.getAttribute('data-view')
+      : 'list'
+  }
+
+  let focusDate = parseDateParam(
+    new URLSearchParams(window.location.search).get('date') ?? page.getAttribute('data-focus-date'),
+  )
+  let activeView = readView()
+
+  function updateUrl() {
+    const params = new URLSearchParams()
+    if (activeView !== 'list') {
+      params.set('view', activeView)
+      params.set('date', toDateParam(focusDate))
+    }
+    const qs = params.toString()
+    const next = qs ? `/events?${qs}` : '/events'
+    window.history.replaceState(null, '', next)
+    page.setAttribute('data-view', activeView)
+    page.setAttribute('data-focus-date', toDateParam(focusDate))
+  }
+
+  function setViewVisibility() {
+    if (listView) listView.hidden = activeView !== 'list'
+    if (weekView) weekView.hidden = activeView !== 'week'
+    if (monthView) monthView.hidden = activeView !== 'month'
+  }
+
+  function openEventDialog(event) {
+    if (!(eventDialog instanceof HTMLDialogElement)) return
+
+    const meta = document.getElementById('event-dialog-meta')
+    const title = document.getElementById('event-dialog-title')
+    const location = document.getElementById('event-dialog-location')
+    const description = document.getElementById('event-dialog-description')
+    const registration = document.getElementById('event-dialog-registration')
+
+    if (meta) meta.textContent = formatEventDateTime(event.starts_at)
+    if (title) title.textContent = event.title
+
+    if (location instanceof HTMLElement) {
+      if (event.location) {
+        location.textContent = event.location
+        location.hidden = false
+      } else {
+        location.textContent = ''
+        location.hidden = true
+      }
+    }
+
+    if (description instanceof HTMLElement) {
+      if (event.description) {
+        description.textContent = event.description
+        description.hidden = false
+      } else {
+        description.textContent = ''
+        description.hidden = true
+      }
+    }
+
+    if (registration instanceof HTMLAnchorElement) {
+      if (event.registration_url) {
+        registration.href = event.registration_url
+        registration.hidden = false
+      } else {
+        registration.removeAttribute('href')
+        registration.hidden = true
+      }
+    }
+
+    eventDialog.showModal()
+  }
+
+  function createEventButton(event, compact) {
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.className = compact ? 'events-cal-event events-cal-event-compact' : 'events-cal-event'
+    btn.textContent = compact ? event.title : `${formatEventTime(event.starts_at)} · ${event.title}`
+    btn.addEventListener('click', () => openEventDialog(event))
+    return btn
+  }
+
+  function renderWeek() {
+    if (!weekGrid || !weekLabel) return
+    weekGrid.replaceChildren()
+
+    const weekStart = startOfWeek(focusDate)
+    weekLabel.textContent = formatWeekRange(weekStart)
+    const today = startOfDay(new Date())
+
+    for (let i = 0; i < 7; i += 1) {
+      const day = addDays(weekStart, i)
+      const col = document.createElement('div')
+      col.className = 'events-week-day'
+      if (sameDay(day, today)) col.classList.add('events-cal-day-today')
+
+      const header = document.createElement('div')
+      header.className = 'events-week-day-header'
+      header.innerHTML = `<span class="events-week-day-name">${WEEKDAY_LABELS[i]}</span><span class="events-week-day-num">${day.getDate()}</span>`
+      col.appendChild(header)
+
+      const list = document.createElement('div')
+      list.className = 'events-week-day-events'
+      const dayEvents = eventsForDay(day)
+      if (dayEvents.length === 0) {
+        const empty = document.createElement('p')
+        empty.className = 'events-week-empty'
+        empty.textContent = 'No events'
+        list.appendChild(empty)
+      } else {
+        dayEvents.forEach((event) => list.appendChild(createEventButton(event, false)))
+      }
+      col.appendChild(list)
+      weekGrid.appendChild(col)
+    }
+  }
+
+  function renderMonth() {
+    if (!monthGrid || !monthLabel) return
+    monthGrid.replaceChildren()
+
+    const monthStart = startOfMonth(focusDate)
+    monthLabel.textContent = formatMonthYear(monthStart)
+    const gridStart = startOfWeek(monthStart)
+    const today = startOfDay(new Date())
+
+    for (let i = 0; i < 42; i += 1) {
+      const day = addDays(gridStart, i)
+      const cell = document.createElement('div')
+      cell.className = 'events-month-day'
+      if (day.getMonth() !== monthStart.getMonth()) cell.classList.add('events-month-day-other')
+      if (sameDay(day, today)) cell.classList.add('events-cal-day-today')
+
+      const num = document.createElement('span')
+      num.className = 'events-month-day-num'
+      num.textContent = String(day.getDate())
+      cell.appendChild(num)
+
+      const dayEvents = eventsForDay(day)
+      const maxShown = 3
+      dayEvents.slice(0, maxShown).forEach((event) => {
+        cell.appendChild(createEventButton(event, true))
+      })
+      if (dayEvents.length > maxShown) {
+        const more = document.createElement('span')
+        more.className = 'events-month-more'
+        more.textContent = `+${dayEvents.length - maxShown} more`
+        cell.appendChild(more)
+      }
+
+      monthGrid.appendChild(cell)
+    }
+  }
+
+  function renderActiveCalendarView() {
+    setViewVisibility()
+    if (activeView === 'week') renderWeek()
+    if (activeView === 'month') renderMonth()
+    updateUrl()
+  }
+
+  weekPrev?.addEventListener('click', () => {
+    focusDate = addDays(startOfWeek(focusDate), -7)
+    activeView = 'week'
+    renderActiveCalendarView()
+  })
+
+  weekNext?.addEventListener('click', () => {
+    focusDate = addDays(startOfWeek(focusDate), 7)
+    activeView = 'week'
+    renderActiveCalendarView()
+  })
+
+  monthPrev?.addEventListener('click', () => {
+    focusDate = addMonths(focusDate, -1)
+    activeView = 'month'
+    renderActiveCalendarView()
+  })
+
+  monthNext?.addEventListener('click', () => {
+    focusDate = addMonths(focusDate, 1)
+    activeView = 'month'
+    renderActiveCalendarView()
+  })
+
+  if (eventDialog instanceof HTMLDialogElement) {
+    eventDialog.querySelectorAll('[data-modal-close]').forEach((button) => {
+      button.addEventListener('click', () => eventDialog.close())
+    })
+    eventDialog.addEventListener('click', (event) => {
+      const rect = eventDialog.getBoundingClientRect()
+      const inDialog =
+        rect.top <= event.clientY &&
+        event.clientY <= rect.top + rect.height &&
+        rect.left <= event.clientX &&
+        event.clientX <= rect.left + rect.width
+      if (!inDialog) eventDialog.close()
+    })
+  }
+
+  if (activeView === 'week' || activeView === 'month') {
+    renderActiveCalendarView()
+  } else {
+    setViewVisibility()
+  }
+})();
+
+(function () {
   const banner = document.querySelector('.breaking-news')
   const dismiss = document.querySelector('[data-breaking-dismiss]')
   if (banner && dismiss) {
