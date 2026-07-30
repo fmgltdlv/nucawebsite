@@ -1048,10 +1048,16 @@ button.pill {
   outline: none;
 }
 
+
 .member-dialog-logo {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 10rem;
+  max-height: 6rem;
   object-fit: contain;
-  padding: 0.2rem;
   background: #fff;
+  padding: 0.25rem;
 }
 
 .member-dialog-contacts {

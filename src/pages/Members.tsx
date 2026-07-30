@@ -43,7 +43,7 @@ function MemberDialog() {
         </button>
         <div class="leader-dialog-layout">
           <div class="leader-dialog-media">
-            <img id="member-dialog-logo" class="leader-dialog-photo member-dialog-logo" alt="" hidden />
+            <img id="member-dialog-logo" class="member-dialog-logo" alt="" hidden />
             <div id="member-dialog-initial" class="leader-dialog-initial" hidden />
           </div>
           <div class="leader-dialog-content">
