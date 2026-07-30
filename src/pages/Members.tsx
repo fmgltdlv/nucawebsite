@@ -19,7 +19,7 @@ function MemberBubble({ member }: { member: MemberSummary }) {
       >
         <div class="member-bubble-avatar" aria-hidden="true">
           {member.logoUrl ? (
-            <img src={member.logoUrl} alt="" class="member-bubble-logo" />
+            <img src={member.logoUrl} alt="" class="member-bubble-logo" loading="lazy" />
           ) : (
             initial
           )}

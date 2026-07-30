@@ -32,7 +32,6 @@
     const items = Array.from(grid.querySelectorAll('.member-bubble'))
     const validTypes = new Set(['contractor', 'associate', 'institutional'])
     const MEMBER_PAGE_SIZE = 15
-    const mobileMemberMq = window.matchMedia('(max-width: 699px)')
     let currentMemberPage = 0
 
     function readTypeFromUrl() {
@@ -41,10 +40,6 @@
     }
 
     let activeType = readTypeFromUrl()
-
-    function memberUsesPagination() {
-      return mobileMemberMq.matches
-    }
 
     function getFilteredMemberItems() {
       const q = search?.value.trim().toLowerCase() ?? ''
@@ -58,7 +53,7 @@
     }
 
     function updateMemberPagination(filteredCount, totalPages) {
-      const usePagination = memberUsesPagination() && filteredCount > MEMBER_PAGE_SIZE
+      const usePagination = filteredCount > MEMBER_PAGE_SIZE
 
       if (memberPagination instanceof HTMLElement) {
         memberPagination.hidden = !usePagination
@@ -81,7 +76,7 @@
 
     function applyMemberFilters() {
       const filtered = getFilteredMemberItems()
-      const usePagination = memberUsesPagination()
+      const usePagination = filtered.length > MEMBER_PAGE_SIZE
       const totalPages = usePagination
         ? Math.max(1, Math.ceil(filtered.length / MEMBER_PAGE_SIZE))
         : 1
@@ -146,11 +141,6 @@
         currentMemberPage += 1
         applyMemberFilters()
       }
-    })
-
-    mobileMemberMq.addEventListener('change', () => {
-      currentMemberPage = 0
-      applyMemberFilters()
     })
 
     if (activeType !== 'all') {

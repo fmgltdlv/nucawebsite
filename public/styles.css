@@ -981,12 +981,6 @@ button.pill {
   color: var(--color-muted);
 }
 
-@media (min-width: 700px) {
-  .member-pagination {
-    display: none;
-  }
-}
-
 .member-dialog-loading,
 .member-dialog-error {
   margin: 0;
