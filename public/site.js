@@ -1,5 +1,5 @@
 (function () {
-  // NUCA public site interactions
+  // NUCA public site interactions (v12)
   const toggle = document.getElementById('nav-toggle')
   const nav = document.getElementById('site-nav')
 
