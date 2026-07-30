@@ -94,6 +94,19 @@ export async function setBreakingNews(db: D1Database, news: BreakingNews): Promi
   await setSetting(db, 'breaking_news', news)
 }
 
+export async function getSiteLogoR2Key(db: D1Database): Promise<string | null> {
+  const stored = await getSetting<string>(db, 'logo_r2_key')
+  return stored ?? null
+}
+
+export async function setSiteLogoR2Key(db: D1Database, key: string | null): Promise<void> {
+  if (key === null) {
+    await db.prepare('DELETE FROM site_settings WHERE key = ?').bind('logo_r2_key').run()
+    return
+  }
+  await setSetting(db, 'logo_r2_key', key)
+}
+
 export function phoneTelHref(phone: string): string {
   return `tel:${phone.replace(/\D/g, '')}`
 }

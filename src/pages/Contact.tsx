@@ -1,4 +1,4 @@
-import { Layout, PageHeader } from '../views/Layout'
+import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import { StatusPage } from '../views/StatusPage'
 import type { ContactInfo } from '../lib/site-settings'
 import { phoneTelHref } from '../lib/site-settings'
@@ -9,9 +9,10 @@ export function ContactPage({
   contact,
   footer,
   breakingNews,
+  logoUrl,
 }: PageProps & { contact: ContactInfo }) {
   return (
-    <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title="Contact">
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title="Contact">
       <PageHeader title="Contact us" lead="Reach the Las Vegas chapter by phone, email, or the form below." />
       <section class="section">
         <div class="container contact-layout">

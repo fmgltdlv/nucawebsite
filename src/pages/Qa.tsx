@@ -1,17 +1,11 @@
-import { Layout, PageHeader } from '../views/Layout'
+import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import { markdownToSafeHtml } from '../lib/markdown'
 import type { QaRecord } from '../lib/qa-db'
 import type { PageProps } from '../types/page'
 
-export function QaPage({ theme, contact, footer, breakingNews, items }: PageProps & { items: QaRecord[] }) {
+export function QaPage({ theme, contact, footer, breakingNews, logoUrl, items }: PageProps & { items: QaRecord[] }) {
   return (
-    <Layout
-      theme={theme}
-      contact={contact}
-      footer={footer}
-      breakingNews={breakingNews}
-      title="Q & A"
-    >
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title="Q & A">
       <PageHeader
         title="Q & A"
         lead="Frequently asked questions about NUCA and the Las Vegas chapter."

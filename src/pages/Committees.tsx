@@ -1,6 +1,6 @@
 import { CHAPTER_COMMITTEES } from '../data/committees'
 import { committeePublicPath } from '../lib/committee-pages'
-import { Layout, PageHeader } from '../views/Layout'
+import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import { renderPageContent } from '../lib/page-blocks'
 import type { PageRecord } from '../lib/pages-db'
 import type { PageProps } from '../types/page'
@@ -10,10 +10,11 @@ export function CommitteesPage({
   contact,
   footer,
   breakingNews,
+  logoUrl,
   page,
 }: PageProps & { page: PageRecord | null }) {
   return (
-    <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title="Committees">
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title="Committees">
       <PageHeader
         title={page?.title ?? 'Committees'}
         lead={

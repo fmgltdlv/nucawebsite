@@ -1,4 +1,4 @@
-import { Layout, PageHeader } from './Layout'
+import { Layout, PageHeader, pickLayoutSite } from './Layout'
 import type { PageProps } from '../types/page'
 
 type StatusPageProps = PageProps & {
@@ -16,6 +16,7 @@ export function StatusPage({
   contact,
   footer,
   breakingNews,
+  logoUrl,
   title,
   heading,
   lead,
@@ -25,7 +26,7 @@ export function StatusPage({
   children,
 }: StatusPageProps) {
   return (
-    <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title={title}>
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title={title}>
       <PageHeader title={heading} lead={lead} />
       <section class="section">
         <div class={`container${prose ? ' prose' : ''}`}>

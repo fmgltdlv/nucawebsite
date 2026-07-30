@@ -1,4 +1,4 @@
-import { Layout, PageHeader } from '../views/Layout'
+import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import { ArchiveCard, ArchiveCardList } from '../views/ArchiveCard'
 import { markdownToSafeHtml } from '../lib/markdown'
 import { formatArchiveDate } from '../lib/format'
@@ -10,16 +10,11 @@ export function IndustryUpdatesPage({
   contact,
   footer,
   breakingNews,
+  logoUrl,
   posts,
 }: PageProps & { posts: PostRecord[] }) {
   return (
-    <Layout
-      theme={theme}
-      contact={contact}
-      footer={footer}
-      breakingNews={breakingNews}
-      title="Industry Updates"
-    >
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title="Industry Updates">
       <PageHeader
         title="Industry Updates"
         lead="News, policy, and chapter announcements from NUCA of Las Vegas."
@@ -53,16 +48,11 @@ export function IndustryUpdateDetailPage({
   contact,
   footer,
   breakingNews,
+  logoUrl,
   post,
 }: PageProps & { post: PostRecord }) {
   return (
-    <Layout
-      theme={theme}
-      contact={contact}
-      footer={footer}
-      breakingNews={breakingNews}
-      title={post.title}
-    >
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title={post.title}>
       <PageHeader
         title={post.title}
         lead={post.excerpt ?? formatArchiveDate(post.published_at)}

@@ -6,6 +6,7 @@ export type SiteLayoutProps = {
   contact?: ContactInfo
   footer?: FooterInfo
   breakingNews?: BreakingNews | null
+  logoUrl?: string
 }
 
 export type PageProps = SiteLayoutProps

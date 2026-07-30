@@ -2,7 +2,7 @@ import type { ExpandedEventRecord } from '../lib/event-repeat'
 import type { PageProps } from '../types/page'
 import { EventCard } from '../views/EventCard'
 import { JsonScript } from '../views/JsonScript'
-import { Layout, PageHeader } from '../views/Layout'
+import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 
 export type EventsView = 'list' | 'week' | 'month'
 
@@ -20,6 +20,7 @@ export function EventsPage({
   contact,
   footer,
   breakingNews,
+  logoUrl,
   events,
   calendarEvents,
   view,
@@ -43,7 +44,7 @@ export function EventsPage({
   ]
 
   return (
-    <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title="Events">
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title="Events">
       <PageHeader
         title="Events"
         lead="Chapter meetings, training, and member gatherings across Las Vegas."

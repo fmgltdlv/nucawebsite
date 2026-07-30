@@ -1,13 +1,13 @@
-import { Layout, PageHeader } from '../views/Layout'
+import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import { JoinApplicationAside, JoinApplicationForm } from '../views/JoinApplicationForm'
 import { StatusPage } from '../views/StatusPage'
 import { joinBenefits, memberTypes } from '../data/demo'
 
 import type { PageProps } from '../types/page'
 
-export function JoinPage({ theme, contact, footer, breakingNews }: PageProps) {
+export function JoinPage({ theme, contact, footer, breakingNews, logoUrl }: PageProps) {
   return (
-    <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title="Join">
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title="Join">
       <PageHeader
         title="Join NUCA of Las Vegas"
         lead="Membership connects your firm to advocacy, safety resources, events, and a network of industry peers."

@@ -35,14 +35,17 @@ import {
   uploadImage,
   uploadPdf,
 } from '../lib/r2-assets'
+import { applySiteLogoChange, resolveSiteLogoUrl } from '../lib/site-logo'
 import {
   getBreakingNews,
   getContactInfo,
   getFooterInfo,
+  getSiteLogoR2Key,
   getThemeId,
   setBreakingNews,
   setContactInfo,
   setFooterInfo,
+  setSiteLogoR2Key,
   setThemeId,
   type BreakingNews,
 } from '../lib/site-settings'
@@ -115,6 +118,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const contact = await getContactInfo(c.env.DB)
     const footer = await getFooterInfo(c.env.DB)
     const themeId = await getThemeId(c.env.DB)
+    const logoR2Key = await getSiteLogoR2Key(c.env.DB)
     const breaking = (await getBreakingNews(c.env.DB)) ?? {
       active: false,
       title: '',
@@ -128,7 +132,9 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
         footer={footer}
         themeId={themeId}
         breakingNews={breaking}
+        logoUrl={resolveSiteLogoUrl(logoR2Key)}
         flash={flashMessage(c, '1')}
+        error={c.req.query('error')}
       />,
     )
   })
@@ -137,6 +143,16 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const auth = await requireAdmin(c)
     if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
     const body = await c.req.parseBody()
+    const previousLogoKey = await getSiteLogoR2Key(c.env.DB)
+    const logoError = await applySiteLogoChange(
+      c.env.R2,
+      (key) => setSiteLogoR2Key(c.env.DB, key),
+      body,
+      previousLogoKey,
+    )
+    if (logoError) {
+      return c.redirect(`/admin/content/settings?error=${encodeURIComponent(logoError)}`, 303)
+    }
     await setContactInfo(c.env.DB, {
       name: typeof body.name === 'string' ? body.name.trim() : '',
       phone: typeof body.phone === 'string' ? body.phone.trim() : '',

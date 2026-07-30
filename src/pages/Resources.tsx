@@ -1,4 +1,4 @@
-import { Layout, PageHeader } from '../views/Layout'
+import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import { renderPageContent } from '../lib/page-blocks'
 import { groupResourceItems, type ResourceItemRecord } from '../lib/resource-items-db'
 import type { PageRecord } from '../lib/pages-db'
@@ -9,6 +9,7 @@ export function ResourcesPage({
   contact,
   footer,
   breakingNews,
+  logoUrl,
   page,
   items,
 }: PageProps & { page: PageRecord | null; items: ResourceItemRecord[] }) {
@@ -17,10 +18,7 @@ export function ResourcesPage({
 
   return (
     <Layout
-      theme={theme}
-      contact={contact}
-      footer={footer}
-      breakingNews={breakingNews}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })}
       title="Resources"
       description={page?.meta_description ?? undefined}
     >

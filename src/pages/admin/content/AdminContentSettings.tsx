@@ -1,5 +1,6 @@
 import { themeOptions } from '../../../config/themes'
 import { toDatetimeLocalValue } from '../../../lib/datetime'
+import { DEFAULT_SITE_LOGO_URL } from '../../../lib/site-logo'
 import type { BreakingNews, ContactInfo, FooterInfo } from '../../../lib/site-settings'
 import { AdminShell } from '../../../views/AdminShell'
 import type { AdminContext } from '../../../lib/admin-context'
@@ -12,14 +13,18 @@ export function AdminContentSettingsPage({
   footer,
   themeId,
   breakingNews,
+  logoUrl,
   flash,
+  error,
 }: PageProps & {
   ctx: AdminContext
   contact: ContactInfo
   footer: FooterInfo
   themeId: string
   breakingNews: BreakingNews
+  logoUrl: string
   flash?: string
+  error?: string
 }) {
   return (
     <AdminShell
@@ -33,7 +38,35 @@ export function AdminContentSettingsPage({
         <a href="/admin/content">← Content</a>
       </p>
       {flash && <p class="admin-flash">{flash}</p>}
-      <form class="form admin-form-section" method="post" action="/admin/content/settings">
+      {error && <p class="form-hint-warn">{error}</p>}
+      <form
+        class="form admin-form-section"
+        method="post"
+        action="/admin/content/settings"
+        encType="multipart/form-data"
+      >
+        <h2>Site logo</h2>
+        <p class="admin-note">
+          Shown in the site header on every public page. PNG, JPEG, WebP, or SVG up to 2 MB.
+        </p>
+        <div class="form-field">
+          <label for="site_logo">Header logo</label>
+          <img
+            src={logoUrl}
+            alt="Current site logo"
+            class="admin-modal-logo-preview"
+            width={231}
+            height={77}
+          />
+          <input type="file" name="site_logo" id="site_logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" />
+          {logoUrl !== DEFAULT_SITE_LOGO_URL && (
+            <label class="admin-check">
+              <input type="checkbox" name="remove_site_logo" value="1" />
+              Remove custom logo (revert to default)
+            </label>
+          )}
+        </div>
+
         <h2>Contact information</h2>
         <div class="form-field">
           <label for="name">Organization name</label>

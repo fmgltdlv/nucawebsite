@@ -1,4 +1,4 @@
-import { Layout, PageHeader } from '../views/Layout'
+import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import {
   memberTypeLabel,
   type MemberSummary,
@@ -70,6 +70,7 @@ export function MembersPage({
   contact,
   footer,
   breakingNews,
+  logoUrl,
   filter,
   members,
 }: PageProps & { filter?: MemberType; members: MemberSummary[] }) {
@@ -85,7 +86,7 @@ export function MembersPage({
   ]
 
   return (
-    <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title="Members">
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title="Members">
       <PageHeader title="Members" />
       <section class="section">
         <div class="container">

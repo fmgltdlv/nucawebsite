@@ -1,4 +1,5 @@
 export type AssetType =
+  | 'site_logo'
   | 'member_logo'
   | 'dirt_pdf'
   | 'leadership_photo'
@@ -6,6 +7,7 @@ export type AssetType =
   | 'event_flyer'
 
 export const ASSET_TYPES: AssetType[] = [
+  'site_logo',
   'member_logo',
   'dirt_pdf',
   'leadership_photo',
@@ -14,6 +16,7 @@ export const ASSET_TYPES: AssetType[] = [
 ]
 
 export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
+  site_logo: 'Site logo',
   member_logo: 'Member logos',
   dirt_pdf: 'THE DIRT PDFs',
   leadership_photo: 'Leadership photos',
@@ -43,6 +46,33 @@ export function assetTypeLabel(type: AssetType): string {
 
 export function isPdfAsset(entry: Pick<AssetIndexEntry, 'contentKind' | 'key'>): boolean {
   return entry.contentKind === 'pdf' || entry.key.endsWith('.pdf')
+}
+
+async function listSiteLogoAssets(db: D1Database): Promise<AssetIndexEntry[]> {
+  const row = await db
+    .prepare('SELECT value_json FROM site_settings WHERE key = ?')
+    .bind('logo_r2_key')
+    .first<{ value_json: string }>()
+  if (!row) return []
+
+  let key: string | null = null
+  try {
+    key = JSON.parse(row.value_json) as string
+  } catch {
+    return []
+  }
+  if (!key) return []
+
+  return [
+    {
+      type: 'site_logo' as const,
+      key,
+      entityId: 'site',
+      label: 'Header logo',
+      adminEditUrl: '/admin/content/settings',
+      contentKind: 'image' as const,
+    },
+  ]
 }
 
 async function listMemberLogoAssets(db: D1Database): Promise<AssetIndexEntry[]> {
@@ -134,6 +164,7 @@ export async function listIndexedAssets(
   filterType?: AssetType,
 ): Promise<AssetIndexEntry[]> {
   const loaders: Record<AssetType, () => Promise<AssetIndexEntry[]>> = {
+    site_logo: () => listSiteLogoAssets(db),
     member_logo: () => listMemberLogoAssets(db),
     dirt_pdf: () => listDirtPdfAssets(db),
     leadership_photo: () => listLeadershipPhotoAssets(db),

@@ -1,4 +1,4 @@
-import { Layout, PageHeader } from '../views/Layout'
+import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import { ArchiveCard, ArchiveCardList } from '../views/ArchiveCard'
 import type { DirtReleaseRecord } from '../lib/dirt-db'
 import { getAssetUrl } from '../lib/r2-assets'
@@ -9,14 +9,12 @@ export function TheDirtArchivePage({
   contact,
   footer,
   breakingNews,
+  logoUrl,
   releases,
 }: PageProps & { releases: DirtReleaseRecord[] }) {
   return (
     <Layout
-      theme={theme}
-      contact={contact}
-      footer={footer}
-      breakingNews={breakingNews}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })}
       title="THE DIRT"
       description="Archive of THE DIRT news releases from NUCA of Las Vegas."
     >

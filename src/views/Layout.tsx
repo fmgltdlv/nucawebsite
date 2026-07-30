@@ -1,21 +1,28 @@
 import { HtmlEscapedString } from 'hono/utils/html'
-import { DEFAULT_THEME, layoutForTheme, type ThemeId } from '../config/themes'
+import { DEFAULT_THEME, layoutForTheme } from '../config/themes'
 import { site as defaultSite } from '../data/demo'
-import type { BreakingNews, ContactInfo, FooterInfo } from '../lib/site-settings'
+import { DEFAULT_SITE_LOGO_URL } from '../lib/site-logo'
 import { phoneTelHref } from '../lib/site-settings'
 import { BreakingNewsBanner } from './BreakingNewsBanner'
 import { SiteNav } from './SiteNav'
 import { StaffPortalLink } from './StaffPortalLink'
 import { ThemeSwitcher } from './ThemeSwitcher'
+import type { SiteLayoutProps } from '../types/page'
 
-type LayoutProps = {
+type LayoutProps = SiteLayoutProps & {
   title: string
   children: unknown
   description?: string
-  theme?: ThemeId
-  contact?: ContactInfo
-  footer?: FooterInfo
-  breakingNews?: BreakingNews | null
+}
+
+export function pickLayoutSite(props: SiteLayoutProps): SiteLayoutProps {
+  return {
+    theme: props.theme,
+    contact: props.contact,
+    footer: props.footer,
+    breakingNews: props.breakingNews,
+    logoUrl: props.logoUrl,
+  }
 }
 
 export function Layout({
@@ -26,6 +33,7 @@ export function Layout({
   contact = defaultSite,
   footer,
   breakingNews,
+  logoUrl = DEFAULT_SITE_LOGO_URL,
 }: LayoutProps) {
   const layout = layoutForTheme(theme)
   const fullTitle = title === 'Home' ? 'NUCA of Las Vegas' : `${title} · NUCA of Las Vegas`
@@ -63,8 +71,8 @@ export function Layout({
               <a class="brand brand-logo-link" href="/">
                 <img
                   class="brand-logo"
-                  src="/images/nuca-logo.png"
-                  alt="NUCA of Las Vegas — We Dig Las Vegas"
+                  src={logoUrl}
+                  alt={`${contact.name} — We Dig Las Vegas`}
                   width={231}
                   height={77}
                   decoding="async"

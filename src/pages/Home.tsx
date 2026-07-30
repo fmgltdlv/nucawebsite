@@ -1,4 +1,4 @@
-import { Layout } from '../views/Layout'
+import { Layout, pickLayoutSite } from '../views/Layout'
 import { ArchiveCard, ArchiveCardList } from '../views/ArchiveCard'
 import { EventCard } from '../views/EventCard'
 import type { DirtReleaseRecord } from '../lib/dirt-db'
@@ -11,6 +11,7 @@ export function HomePage({
   contact,
   footer,
   breakingNews,
+  logoUrl,
   events,
   dirtReleases,
   posts,
@@ -23,10 +24,7 @@ export function HomePage({
 
   return (
     <Layout
-      theme={theme}
-      contact={contact}
-      footer={footer}
-      breakingNews={breakingNews}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })}
       title="Home"
       description="NUCA of Las Vegas chapter — members, events, advocacy, and industry resources."
     >

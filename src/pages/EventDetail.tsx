@@ -2,7 +2,7 @@ import type { EventOccurrenceView } from '../lib/events'
 import { eventFlyerUrl } from '../lib/events'
 import { formatEventDate } from '../lib/format'
 import type { PageProps } from '../types/page'
-import { Layout } from '../views/Layout'
+import { Layout, pickLayoutSite } from '../views/Layout'
 import { StatusPage } from '../views/StatusPage'
 
 function formatEventDateRange(startsAt: string, endsAt: string | null): string {
@@ -27,6 +27,7 @@ export function EventDetailPage({
   contact,
   footer,
   breakingNews,
+  logoUrl,
   occurrence,
 }: PageProps & { occurrence: EventOccurrenceView }) {
   const { master, starts_at, ends_at } = occurrence
@@ -35,10 +36,7 @@ export function EventDetailPage({
 
   return (
     <Layout
-      theme={theme}
-      contact={contact}
-      footer={footer}
-      breakingNews={breakingNews}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })}
       title={master.title}
       description={master.description ?? undefined}
     >

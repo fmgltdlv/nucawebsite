@@ -1,4 +1,4 @@
-import { Layout, PageHeader } from '../views/Layout'
+import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import { renderPageContent } from '../lib/page-blocks'
 import type { PageRecord } from '../lib/pages-db'
 import type { PageProps } from '../types/page'
@@ -8,15 +8,13 @@ export function ContentPage({
   contact,
   footer,
   breakingNews,
+  logoUrl,
   page,
   fallbackLead,
 }: PageProps & { page: PageRecord; fallbackLead?: string }) {
   return (
     <Layout
-      theme={theme}
-      contact={contact}
-      footer={footer}
-      breakingNews={breakingNews}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })}
       title={page.title}
       description={page.meta_description ?? undefined}
     >

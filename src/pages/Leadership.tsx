@@ -1,4 +1,4 @@
-import { Layout, PageHeader } from '../views/Layout'
+import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import { JsonScript } from '../views/JsonScript'
 import { groupLeadership } from '../lib/leadership-groups'
 import {
@@ -107,6 +107,7 @@ export function LeadershipPage({
   contact,
   footer,
   breakingNews,
+  logoUrl,
   leaders,
 }: PageProps & { contact: ContactInfo; leaders: LeadershipRecord[] }) {
   const groups = groupLeadership(leaders)
@@ -114,7 +115,7 @@ export function LeadershipPage({
   const rosterJson = serializeLeadershipRoster(leaders.map(toLeadershipPublicProfile))
 
   return (
-    <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title="Leadership">
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title="Leadership">
       <PageHeader title="Leadership" lead="Chapter officers and leadership team." />
       <section class="section">
         <div class="container">

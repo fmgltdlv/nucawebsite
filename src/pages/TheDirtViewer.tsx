@@ -1,4 +1,4 @@
-import { Layout, PageHeader } from '../views/Layout'
+import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import { StatusPage } from '../views/StatusPage'
 import type { DirtReleaseRecord } from '../lib/dirt-db'
 import { formatArchiveDate } from '../lib/format'
@@ -10,12 +10,13 @@ export function TheDirtViewerPage({
   contact,
   footer,
   breakingNews,
+  logoUrl,
   release,
 }: PageProps & { release: DirtReleaseRecord }) {
   const pdfUrl = getAssetUrl(release.pdf_r2_key)
 
   return (
-    <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title={release.title}>
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title={release.title}>
       <PageHeader title={release.title} lead={`Published ${formatArchiveDate(release.published_at)}`} />
       <section class="section">
         <div class="container">
