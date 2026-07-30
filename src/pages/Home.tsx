@@ -1,6 +1,7 @@
-import { Layout, DemoBanner } from '../views/Layout'
-import { demoEvents } from '../data/demo'
-import { demoDirtReleases } from '../data/the-dirt'
+import { Layout } from '../views/Layout'
+import type { DirtReleaseRecord } from '../lib/dirt-db'
+import type { EventRecord } from '../lib/events'
+import type { PostRecord } from '../lib/posts-db'
 import type { PageProps } from '../types/page'
 
 function formatEventDate(iso: string) {
@@ -22,12 +23,30 @@ function formatUpdateDate(iso: string) {
   })
 }
 
-export function HomePage({ theme }: PageProps) {
-  const industryUpdates = demoDirtReleases.slice(0, 3)
+export function HomePage({
+  theme,
+  contact,
+  footer,
+  breakingNews,
+  events,
+  dirtReleases,
+  posts,
+}: PageProps & {
+  events: EventRecord[]
+  dirtReleases: DirtReleaseRecord[]
+  posts: PostRecord[]
+}) {
+  const industryUpdates = posts.length > 0 ? posts.slice(0, 3) : dirtReleases.slice(0, 3)
 
   return (
-    <Layout theme={theme} title="Home" description="NUCA of Las Vegas chapter — members, events, advocacy, and industry resources.">
-      <DemoBanner />
+    <Layout
+      theme={theme}
+      contact={contact}
+      footer={footer}
+      breakingNews={breakingNews}
+      title="Home"
+      description="NUCA of Las Vegas chapter — members, events, advocacy, and industry resources."
+    >
       <section class="hero">
         <div class="container hero-copy">
           <p class="eyebrow">National Utility Contractors Association</p>
@@ -48,17 +67,17 @@ export function HomePage({ theme }: PageProps) {
           <h2>Calendar events</h2>
           <p class="section-lead">Chapter meetings, training, and member gatherings across Las Vegas.</p>
           <div class="event-list">
-            {demoEvents.map((event) => (
+            {events.map((event) => (
               <article class="event-card" key={event.id}>
                 <div class="event-card-meta">
-                  <time dateTime={event.date}>{formatEventDate(event.date)}</time>
-                  <span>{event.location}</span>
+                  <time dateTime={event.starts_at}>{formatEventDate(event.starts_at)}</time>
+                  {event.location && <span>{event.location}</span>}
                 </div>
                 <h2>{event.title}</h2>
-                <p>{event.description}</p>
-                {event.registrationUrl && (
-                  <a class="btn btn-secondary btn-sm" href={event.registrationUrl}>
-                    Registration (demo)
+                {event.description && <p>{event.description}</p>}
+                {event.registration_url && (
+                  <a class="btn btn-secondary btn-sm" href={event.registration_url}>
+                    Registration
                   </a>
                 )}
               </article>
@@ -78,22 +97,33 @@ export function HomePage({ theme }: PageProps) {
             <a href="/about/the-dirt">THE DIRT</a> archive.
           </p>
           <ul class="dirt-archive">
-            {industryUpdates.map((release) => (
-              <li key={release.id}>
-                <article class="dirt-card">
-                  <div class="dirt-card-meta">
-                    <time dateTime={release.publishedAt}>{formatUpdateDate(release.publishedAt)}</time>
-                  </div>
-                  <h2>
-                    <a href={`/about/the-dirt/${release.id}`}>{release.title}</a>
-                  </h2>
-                  {release.summary && <p>{release.summary}</p>}
-                  <a class="text-link" href={`/about/the-dirt/${release.id}`}>
-                    Read update →
-                  </a>
-                </article>
-              </li>
-            ))}
+            {industryUpdates.map((item) => {
+              const isPost = 'slug' in item
+              const href = isPost
+                ? `/industry-updates/${(item as PostRecord).slug}`
+                : `/about/the-dirt/${item.id}`
+              const date = isPost
+                ? (item as PostRecord).published_at ?? ''
+                : (item as DirtReleaseRecord).published_at
+              const title = item.title
+              const summary = isPost ? (item as PostRecord).excerpt : (item as DirtReleaseRecord).summary
+              return (
+                <li key={item.id}>
+                  <article class="dirt-card">
+                    <div class="dirt-card-meta">
+                      <time dateTime={date}>{formatUpdateDate(date)}</time>
+                    </div>
+                    <h2>
+                      <a href={href}>{title}</a>
+                    </h2>
+                    {summary && <p>{summary}</p>}
+                    <a class="text-link" href={href}>
+                      Read update →
+                    </a>
+                  </article>
+                </li>
+              )
+            })}
           </ul>
           <p class="section-footer-link">
             <a class="text-link" href="/industry-updates">All industry updates →</a>

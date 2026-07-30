@@ -1,13 +1,12 @@
-import { Layout, PageHeader, DemoBanner } from '../views/Layout'
+import { Layout, PageHeader } from '../views/Layout'
 import { JoinApplicationAside, JoinApplicationForm } from '../views/JoinApplicationForm'
 import { joinBenefits, memberTypes } from '../data/demo'
 
 import type { PageProps } from '../types/page'
 
-export function JoinPage({ theme }: PageProps) {
+export function JoinPage({ theme, contact, footer, breakingNews }: PageProps) {
   return (
-    <Layout theme={theme} title="Join">
-      <DemoBanner />
+    <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title="Join">
       <PageHeader
         title="Join NUCA of Las Vegas"
         lead="Membership connects your firm to advocacy, safety resources, events, and a network of industry peers."
@@ -89,19 +88,16 @@ export function JoinPage({ theme }: PageProps) {
   )
 }
 
-export function JoinThanksPage({ theme }: PageProps) {
+export function JoinThanksPage({ theme, contact, footer, breakingNews }: PageProps) {
   return (
-    <Layout theme={theme} title="Application received">
+    <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title="Application received">
       <PageHeader
         title="Thank you"
-        lead="This demo showed a success state. No data was saved."
+        lead="Your membership application has been received. Chapter staff will follow up with next steps."
       />
       <section class="section">
         <div class="container prose">
-          <p>
-            On the production site, staff would receive an email via Cloudflare Email Service and the application would
-            appear in the admin queue.
-          </p>
+          <p>Questions? Contact the chapter through the <a href="/contact">Contact page</a>.</p>
           <a class="btn btn-primary" href="/">Back to home</a>
         </div>
       </section>

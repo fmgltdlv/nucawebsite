@@ -1,4 +1,4 @@
-import { Layout, PageHeader, DemoBanner } from '../views/Layout'
+import { Layout, PageHeader } from '../views/Layout'
 import {
   memberTypeLabel,
   type Member,
@@ -41,6 +41,9 @@ import type { PageProps } from '../types/page'
 
 export function MembersPage({
   theme,
+  contact,
+  footer,
+  breakingNews,
   filter,
   members,
 }: PageProps & { filter?: MemberType; members: Member[] }) {
@@ -56,11 +59,10 @@ export function MembersPage({
   ]
 
   return (
-    <Layout theme={theme} title="Member List">
-      <DemoBanner />
+    <Layout theme={theme} contact={contact} footer={footer} breakingNews={breakingNews} title="Member List">
       <PageHeader
         title="Member list"
-        lead="Directory of chapter members. Search and filters are front-end only in this demo."
+        lead="Directory of current chapter members."
       />
       <section class="section">
         <div class="container">

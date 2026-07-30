@@ -1,4 +1,5 @@
 import type { EventRecord } from '../../lib/events'
+import { toDatetimeLocalValue } from '../../lib/events'
 import { AdminShell } from '../../views/AdminShell'
 import type { AdminContext } from '../../lib/admin-context'
 import type { PageProps } from '../../types/page'
@@ -8,6 +9,67 @@ function formatEventDate(iso: string) {
     dateStyle: 'medium',
     timeStyle: 'short',
   })
+}
+
+function EventEditRow({ event }: { event: EventRecord }) {
+  const formId = `event-${event.id}`
+  return (
+    <tr>
+      <td>
+        <input form={formId} type="text" name="title" class="admin-table-input" value={event.title} required />
+      </td>
+      <td>
+        <input
+          form={formId}
+          type="datetime-local"
+          name="starts_at"
+          class="admin-table-input"
+          value={toDatetimeLocalValue(event.starts_at)}
+          required
+        />
+      </td>
+      <td>
+        <input
+          form={formId}
+          type="datetime-local"
+          name="ends_at"
+          class="admin-table-input"
+          value={event.ends_at ? toDatetimeLocalValue(event.ends_at) : ''}
+        />
+      </td>
+      <td>
+        <input form={formId} type="text" name="location" class="admin-table-input" value={event.location ?? ''} />
+      </td>
+      <td>
+        <textarea form={formId} name="description" class="admin-table-input" rows={2}>
+          {event.description ?? ''}
+        </textarea>
+      </td>
+      <td>
+        <input
+          form={formId}
+          type="url"
+          name="registration_url"
+          class="admin-table-input"
+          value={event.registration_url ?? ''}
+        />
+      </td>
+      <td>
+        <label class="admin-check-inline">
+          <input form={formId} type="checkbox" name="published" value="1" checked={event.published === 1} />
+          Published
+        </label>
+      </td>
+      <td>
+        <form id={formId} method="post" action={`/admin/events/${event.id}`}>
+          <button type="submit" class="btn btn-secondary btn-sm">Save</button>
+        </form>
+        <form method="post" action={`/admin/events/${event.id}/delete`} class="admin-inline-form">
+          <button type="submit" class="btn btn-secondary btn-sm">Delete</button>
+        </form>
+      </td>
+    </tr>
+  )
 }
 
 export function AdminEventsPage({
@@ -58,17 +120,30 @@ export function AdminEventsPage({
         </form>
       </section>
       <section class="section">
-        <h2>Upcoming events</h2>
-        <ul class="admin-event-list">
-          {events.map((e) => (
-            <li key={e.id}>
-              <strong>{e.title}</strong>
-              <span>{formatEventDate(e.starts_at)}</span>
-              {e.location && <span>{e.location}</span>}
-            </li>
-          ))}
-        </ul>
-        {events.length === 0 && <p class="muted">No events in the database yet.</p>}
+        <h2>Events ({events.length})</h2>
+        {events.length > 0 ? (
+          <table class="admin-members-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Starts</th>
+                <th>Ends</th>
+                <th>Location</th>
+                <th>Description</th>
+                <th>Registration</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.map((e) => (
+                <EventEditRow event={e} key={e.id} />
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p class="muted">No events in the database yet.</p>
+        )}
       </section>
     </AdminShell>
   )

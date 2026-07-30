@@ -1979,6 +1979,84 @@ a:hover {
   display: inline;
 }
 
+.admin-flash-error {
+  background: #fdecea;
+  border-color: #f5c2c0;
+  color: #8a1f17;
+}
+
+.admin-detail-list {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+}
+
+.admin-detail-list dt {
+  font-weight: 600;
+  margin-top: 0.35rem;
+}
+
+.admin-detail-list dd {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.breaking-news {
+  background: var(--color-primary);
+  color: #fff;
+  padding: 0.65rem 0;
+}
+
+.breaking-news-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  position: relative;
+  padding-right: 2rem;
+}
+
+.breaking-news-link {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.breaking-news-dismiss {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
+.leader-photo {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 50%;
+  margin-right: 0.75rem;
+  vertical-align: middle;
+}
+
+.resource-link-list {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 0;
+}
+
+.resource-link-list li {
+  margin: 0.5rem 0;
+}
+
+.resource-link-list a {
+  font-weight: 500;
+}
+
 @media (max-width: 720px) {
   .admin-shell {
     grid-template-columns: 1fr;

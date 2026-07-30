@@ -5,7 +5,8 @@ import { MEMBER_TYPES, type MemberType } from '../data/demo'
 import type { Env } from '../env'
 import { assignChairCommittees, approveMemberLink, createUser, listUsersWithMemberInfo, rejectMemberLink, requestMemberLink, verifyUserLogin } from '../lib/auth'
 import { canAccessRole, resolveAdminContext } from '../lib/admin-context'
-import { createEvent, listUpcomingEvents } from '../lib/events'
+import { createEvent, deleteEvent, listAllEventsForAdmin, updateEvent } from '../lib/events'
+import { registerAdminContentRoutes } from './admin-content'
 import { listActiveMembers } from '../lib/members'
 import {
   createMember,
@@ -25,7 +26,6 @@ import {
 } from '../lib/session'
 import { AdminLoginPage } from '../pages/AdminAuth'
 import { AdminCommitteesPage } from '../pages/admin/AdminCommittees'
-import { AdminContentPage } from '../pages/admin/AdminContent'
 import { AdminEventsPage } from '../pages/admin/AdminEvents'
 import { AdminHomePage } from '../pages/admin/AdminHome'
 import { AdminMembersPage } from '../pages/admin/AdminMembers'
@@ -76,6 +76,7 @@ function parseMemberFormBody(body: Record<string, File | string>) {
 }
 
 export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminVariables }>) {
+  registerAdminContentRoutes(app)
   app.get('/admin/login', async (c) => {
     await seedAdminIfNeeded(c.env)
     const ctx = await resolveAdminContext(c)
@@ -295,8 +296,13 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const ctx = await resolveAdminContext(c)
     if (!ctx) return c.redirect('/admin/login', 303)
     if (!canAccessRole(ctx.user, ['admin', 'chair'])) return c.redirect('/admin', 303)
-    const events = await listUpcomingEvents(c.env.DB)
-    const flash = c.req.query('ok') === '1' ? 'Event published.' : undefined
+    const events = await listAllEventsForAdmin(c.env.DB)
+    const flash =
+      c.req.query('ok') === '1'
+        ? 'Event saved.'
+        : c.req.query('created') === '1'
+          ? 'Event published.'
+          : undefined
     return c.html(
       <AdminEventsPage theme={c.get('theme')} ctx={ctx} events={events} flash={flash} />,
     )
@@ -329,14 +335,47 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       registration_url: registration_url || undefined,
     })
 
+    return c.redirect('/admin/events?created=1', 303)
+  })
+
+  app.post('/admin/events/:id', async (c) => {
+    const ctx = await resolveAdminContext(c)
+    if (!ctx) return c.redirect('/admin/login', 303)
+    if (!canAccessRole(ctx.user, ['admin', 'chair'])) return c.redirect('/admin', 303)
+
+    const id = c.req.param('id')
+    const body = await c.req.parseBody()
+    const title = typeof body.title === 'string' ? body.title.trim() : ''
+    const startsRaw = typeof body.starts_at === 'string' ? body.starts_at : ''
+    const starts_at = parseDatetimeLocal(startsRaw)
+    if (!title || !starts_at) return c.redirect('/admin/events', 303)
+
+    const endsRaw = typeof body.ends_at === 'string' ? body.ends_at : ''
+    const ends_at = endsRaw ? parseDatetimeLocal(endsRaw) : null
+    const location = typeof body.location === 'string' ? body.location.trim() : ''
+    const description = typeof body.description === 'string' ? body.description.trim() : ''
+    const registration_url =
+      typeof body.registration_url === 'string' ? body.registration_url.trim() : ''
+
+    await updateEvent(c.env.DB, id, {
+      title,
+      starts_at,
+      ends_at,
+      location: location || null,
+      description: description || null,
+      registration_url: registration_url || null,
+      published: body.published === '1',
+    })
+
     return c.redirect('/admin/events?ok=1', 303)
   })
 
-  app.get('/admin/content', async (c) => {
+  app.post('/admin/events/:id/delete', async (c) => {
     const ctx = await resolveAdminContext(c)
     if (!ctx) return c.redirect('/admin/login', 303)
-    if (!canAccessRole(ctx.user, ['admin'])) return c.redirect('/admin', 303)
-    return c.html(<AdminContentPage theme={c.get('theme')} ctx={ctx} />)
+    if (!canAccessRole(ctx.user, ['admin', 'chair'])) return c.redirect('/admin', 303)
+    await deleteEvent(c.env.DB, c.req.param('id'))
+    return c.redirect('/admin/events?ok=1', 303)
   })
 
   app.get('/admin/committees', async (c) => {

@@ -1,27 +1,38 @@
-import { Hono } from 'hono'
-import { setCookie } from 'hono/cookie'
+import { Hono, type Context } from 'hono'
+import { getCookie, setCookie } from 'hono/cookie'
 import type { MemberType } from './data/demo'
 import { parseThemeId, type ThemeId } from './config/themes'
 import type { Env } from './env'
-import { getDirtRelease } from './data/the-dirt'
+import { createApplication } from './lib/applications-db'
+import { getDirtRelease, listDirtReleases } from './lib/dirt-db'
+import { sendContactMessage, notifyStaffOfApplication } from './lib/email'
+import { listUpcomingEvents } from './lib/events'
+import { listLeadership } from './lib/leadership-db'
 import { listActiveMembers } from './lib/members'
-import { getMemberLogoR2Key } from './lib/members-db'
-import { seedDemoMembersIfEmpty } from './lib/seed'
-import { THEME_COOKIE, themeFromRequest } from './lib/theme'
+import { getPageBySlug } from './lib/pages-db'
+import { getPostBySlug, listPublishedPosts } from './lib/posts-db'
+import { listQaItems } from './lib/qa-db'
+import { listResourceItems } from './lib/resource-items-db'
+import { getAssetObject } from './lib/r2-assets'
+import { subscribeNewsletter } from './lib/newsletter-db'
+import { loadPublicSiteContext } from './lib/site-context'
+import { seedContentIfEmpty, seedDemoMembersIfEmpty, seedDirtIfEmpty } from './lib/seed'
+import { THEME_COOKIE } from './lib/theme'
 import { registerAdminRoutes } from './routes/admin'
-import { AboutPage } from './pages/About'
 import { CommitteesPage } from './pages/Committees'
-import { ContactPage, ContactThanksPage } from './pages/Contact'
+import { ContentPage } from './pages/ContentPage'
+import { ContactPage, ContactErrorPage, ContactThanksPage } from './pages/Contact'
 import { EventsPage } from './pages/Events'
 import { HomePage } from './pages/Home'
+import { IndustryUpdateDetailPage, IndustryUpdatesPage } from './pages/IndustryUpdates'
 import { JoinPage, JoinThanksPage } from './pages/Join'
 import { MembersPage } from './pages/Members'
 import { LeadershipPage } from './pages/Leadership'
-import { PlaceholderPage } from './pages/Placeholder'
 import { QaPage } from './pages/Qa'
+import { ResourcesPage } from './pages/Resources'
 import { TheDirtArchivePage } from './pages/TheDirt'
 import { TheDirtNotFoundPage, TheDirtViewerPage } from './pages/TheDirtViewer'
-import { NewsletterThanksPage } from './pages/Newsletter'
+import { NewsletterErrorPage, NewsletterThanksPage } from './pages/Newsletter'
 import { NotFoundPage } from './pages/NotFound'
 
 type Variables = { theme: ThemeId }
@@ -33,12 +44,15 @@ app.onError((err, c) => {
   return c.text('Internal Server Error', 500)
 })
 
-app.use('*', async (c, next) => {
-  c.set('theme', themeFromRequest(c))
-  await next()
-})
+async function ensureSeeded(env: Env) {
+  await seedContentIfEmpty(env)
+  await seedDirtIfEmpty(env)
+}
 
-const theme = (c: { get: (k: 'theme') => ThemeId }) => c.get('theme')
+async function siteProps(c: Context<{ Bindings: Env; Variables: Variables }>) {
+  await ensureSeeded(c.env)
+  return loadPublicSiteContext(c.env, getCookie(c, THEME_COOKIE))
+}
 
 app.post('/theme', async (c) => {
   const body = await c.req.parseBody()
@@ -53,95 +67,168 @@ app.post('/theme', async (c) => {
   return c.redirect(referer && referer.startsWith('http') ? referer : '/', 303)
 })
 
+app.get('/assets/*', async (c) => {
+  const key = c.req.path.replace(/^\/assets\//, '')
+  if (!key) return c.notFound()
+  const object = await getAssetObject(c.env.R2, key)
+  if (!object) return c.notFound()
+  const headers = new Headers()
+  object.writeHttpMetadata(headers)
+  headers.set('Cache-Control', 'public, max-age=86400')
+  return new Response(object.body, { headers })
+})
+
 registerAdminRoutes(app)
 
-app.get('/', (c) => c.html(<HomePage theme={theme(c)} />))
-app.get('/about', (c) => c.html(<AboutPage theme={theme(c)} />))
-app.get('/about/q-and-a', (c) => c.html(<QaPage theme={theme(c)} />))
-app.get('/about/leadership', (c) => c.html(<LeadershipPage theme={theme(c)} />))
-app.get('/about/committees', (c) => c.html(<CommitteesPage theme={theme(c)} />))
-app.get('/about/the-dirt', (c) => c.html(<TheDirtArchivePage theme={theme(c)} />))
-app.get('/about/the-dirt/:id', (c) => {
-  const release = getDirtRelease(c.req.param('id'))
-  const t = theme(c)
-  if (!release) return c.html(<TheDirtNotFoundPage theme={t} />, 404)
-  return c.html(<TheDirtViewerPage release={release} theme={t} />)
+app.get('/', async (c) => {
+  const site = await siteProps(c)
+  const [events, dirtReleases, posts] = await Promise.all([
+    listUpcomingEvents(c.env.DB),
+    listDirtReleases(c.env.DB, true),
+    listPublishedPosts(c.env.DB),
+  ])
+  return c.html(
+    <HomePage {...site} events={events} dirtReleases={dirtReleases} posts={posts} />,
+  )
 })
-app.get('/scholarships', (c) =>
-  c.html(
-    <PlaceholderPage
-      theme={theme(c)}
-      title="NUCA Las Vegas Scholarships"
-      status="todo"
-      legacyUrl="https://nucalasvegas.com/nuca-las-vegas-scholarships/"
-      notes="Copy scholarship criteria, deadlines, and applications from the live site. Nav groups this under Committees."
-    />,
-  ),
-)
-app.get('/industry-updates', (c) =>
-  c.html(
-    <PlaceholderPage
-      theme={theme(c)}
-      title="Industry Updates"
-      status="todo"
-      legacyUrl="https://nucalasvegas.com/industry-updates/"
-      notes="This will become a news/blog listing (posts managed in admin, similar to events)."
-    />,
-  ),
-)
-app.get('/resources', (c) =>
-  c.html(
-    <PlaceholderPage
-      theme={theme(c)}
-      title="Resources"
-      status="todo"
-      legacyUrl="https://nucalasvegas.com/resources/"
-      notes="Copy links, documents, and reference material from the current Resources page."
-    />,
-  ),
-)
-app.get('/files/members/:id/logo', async (c) => {
-  const id = c.req.param('id')
-  const logoKey = await getMemberLogoR2Key(c.env.DB, id)
-  if (!logoKey) return c.notFound()
 
-  const object = await c.env.R2.get(logoKey)
-  if (!object) return c.notFound()
+app.get('/about', async (c) => {
+  const site = await siteProps(c)
+  const page = await getPageBySlug(c.env.DB, 'about', true)
+  if (!page) return c.html(<NotFoundPage {...site} />, 404)
+  return c.html(<ContentPage {...site} page={page} />)
+})
 
-  const headers = new Headers()
-  const contentType = object.httpMetadata?.contentType
-  if (contentType) headers.set('Content-Type', contentType)
-  headers.set('Cache-Control', 'public, max-age=86400')
+app.get('/about/q-and-a', async (c) => {
+  const site = await siteProps(c)
+  const items = await listQaItems(c.env.DB, true)
+  return c.html(<QaPage {...site} items={items} />)
+})
 
-  return new Response(object.body, { headers })
+app.get('/about/leadership', async (c) => {
+  const site = await siteProps(c)
+  const leaders = await listLeadership(c.env.DB, true)
+  return c.html(<LeadershipPage {...site} leaders={leaders} />)
+})
+
+app.get('/about/committees', async (c) => {
+  const site = await siteProps(c)
+  const page = await getPageBySlug(c.env.DB, 'committees', true)
+  return c.html(<CommitteesPage {...site} page={page} />)
+})
+
+app.get('/about/the-dirt', async (c) => {
+  const site = await siteProps(c)
+  const releases = await listDirtReleases(c.env.DB, true)
+  return c.html(<TheDirtArchivePage {...site} releases={releases} />)
+})
+
+app.get('/about/the-dirt/:id', async (c) => {
+  const site = await siteProps(c)
+  const release = await getDirtRelease(c.env.DB, c.req.param('id'))
+  if (!release || release.published !== 1) {
+    return c.html(<TheDirtNotFoundPage {...site} />, 404)
+  }
+  return c.html(<TheDirtViewerPage {...site} release={release} />)
+})
+
+app.get('/scholarships', async (c) => {
+  const site = await siteProps(c)
+  const page = await getPageBySlug(c.env.DB, 'scholarships', true)
+  if (!page) return c.html(<NotFoundPage {...site} />, 404)
+  return c.html(<ContentPage {...site} page={page} />)
+})
+
+app.get('/industry-updates', async (c) => {
+  const site = await siteProps(c)
+  const posts = await listPublishedPosts(c.env.DB)
+  return c.html(<IndustryUpdatesPage {...site} posts={posts} />)
+})
+
+app.get('/industry-updates/:slug', async (c) => {
+  const site = await siteProps(c)
+  const post = await getPostBySlug(c.env.DB, c.req.param('slug'))
+  if (!post) return c.html(<NotFoundPage {...site} />, 404)
+  return c.html(<IndustryUpdateDetailPage {...site} post={post} />)
+})
+
+app.get('/resources', async (c) => {
+  const site = await siteProps(c)
+  const [page, items] = await Promise.all([
+    getPageBySlug(c.env.DB, 'resources', true),
+    listResourceItems(c.env.DB, true),
+  ])
+  return c.html(<ResourcesPage {...site} page={page} items={items} />)
 })
 
 app.get('/members', async (c) => {
   await seedDemoMembersIfEmpty(c.env)
+  const site = await siteProps(c)
   const members = await listActiveMembers(c.env.DB)
   const type = c.req.query('type')
   const valid: MemberType[] = ['contractor', 'associate', 'institutional']
   const filter = valid.includes(type as MemberType) ? (type as MemberType) : undefined
-  return c.html(<MembersPage theme={theme(c)} members={members} filter={filter} />)
+  return c.html(<MembersPage {...site} members={members} filter={filter} />)
 })
-app.get('/events', (c) => c.html(<EventsPage theme={theme(c)} />))
+
+app.get('/events', async (c) => {
+  const site = await siteProps(c)
+  const events = await listUpcomingEvents(c.env.DB)
+  return c.html(<EventsPage {...site} events={events} />)
+})
+
 app.get('/advocacy', (c) => c.redirect('/about/committees', 301))
-app.get('/join', (c) => c.html(<JoinPage theme={theme(c)} />))
-app.post('/join', async (c) => {
-  await c.req.parseBody()
-  return c.html(<JoinThanksPage theme={theme(c)} />)
+
+app.get('/join', async (c) => {
+  const site = await siteProps(c)
+  return c.html(<JoinPage {...site} />)
 })
-app.get('/contact', (c) => c.html(<ContactPage theme={theme(c)} />))
+
+app.post('/join', async (c) => {
+  const site = await siteProps(c)
+  const body = await c.req.parseBody()
+  const payload: Record<string, string> = {}
+  for (const [key, value] of Object.entries(body)) {
+    if (typeof value === 'string' && value.trim()) payload[key] = value.trim()
+  }
+  const member_type = typeof body.member_type === 'string' ? body.member_type : undefined
+  const id = await createApplication(c.env.DB, { member_type, payload })
+  const company = payload.company_name || payload.company || 'New application'
+  await notifyStaffOfApplication(c.env, id, `Membership application from ${company}.\n\nReview at /admin/applications`)
+  return c.html(<JoinThanksPage {...site} />)
+})
+
+app.get('/contact', async (c) => {
+  const site = await siteProps(c)
+  return c.html(<ContactPage {...site} />)
+})
+
 app.post('/contact', async (c) => {
-  await c.req.parseBody()
-  return c.html(<ContactThanksPage theme={theme(c)} />)
+  const site = await siteProps(c)
+  const body = await c.req.parseBody()
+  const name = typeof body.name === 'string' ? body.name.trim() : ''
+  const email = typeof body.email === 'string' ? body.email.trim() : ''
+  const message = typeof body.message === 'string' ? body.message.trim() : ''
+  if (!name || !email || !message) {
+    return c.html(<ContactErrorPage {...site} error="Name, email, and message are required." />)
+  }
+  const result = await sendContactMessage(c.env, { name, email, message })
+  if (!result.ok) return c.html(<ContactErrorPage {...site} error={result.error} />)
+  return c.html(<ContactThanksPage {...site} />)
 })
 
 app.post('/newsletter/subscribe', async (c) => {
-  await c.req.parseBody()
-  return c.html(<NewsletterThanksPage theme={theme(c)} />)
+  const site = await siteProps(c)
+  const body = await c.req.parseBody()
+  const email = typeof body.newsletter_email === 'string' ? body.newsletter_email : ''
+  const result = await subscribeNewsletter(c.env.DB, email, 'contact')
+  if (!result.ok) return c.html(<NewsletterErrorPage {...site} error={result.error} />)
+  return c.html(<NewsletterThanksPage {...site} />)
 })
 
-app.notFound((c) => c.html(<NotFoundPage theme={theme(c)} />, 404))
+app.notFound(async (c) => {
+  const site = await siteProps(c)
+  return c.html(<NotFoundPage {...site} />, 404)
+})
 
 export default app

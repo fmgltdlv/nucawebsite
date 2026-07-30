@@ -96,4 +96,19 @@
       })
     }
   }
+})();
+
+(function () {
+  const banner = document.querySelector('.breaking-news')
+  const dismiss = document.querySelector('[data-breaking-dismiss]')
+  if (banner && dismiss) {
+    if (sessionStorage.getItem('nuca_breaking_dismissed') === '1') {
+      banner.remove()
+      return
+    }
+    dismiss.addEventListener('click', () => {
+      sessionStorage.setItem('nuca_breaking_dismissed', '1')
+      banner.remove()
+    })
+  }
 })()
