@@ -13,10 +13,12 @@ import {
   deleteEventAssets,
   getEventById,
   listAllEventsForAdmin,
-  resolveEventCoordinates,
+  parseManualCoordinates,
+  resolveEventFormCoordinates,
   updateEvent,
   parseEventCommitteeKey,
 } from '../lib/events'
+import { geocodeClarkCountyAddress } from '../lib/geocode'
 import { parseDatetimeLocal } from '../lib/datetime'
 import { registerAdminContentRoutes } from './admin-content'
 import { listActiveMembers } from '../lib/members'
@@ -157,6 +159,25 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     }))
 
     return c.json({ assets })
+  })
+
+  app.get('/admin/api/geocode', async (c) => {
+    const ctx = await resolveAdminContext(c)
+    if (!ctx) return c.json({ error: 'Unauthorized' }, 401)
+    if (!canAccessRole(ctx.user, ['admin', 'chair'])) return c.json({ error: 'Forbidden' }, 403)
+
+    const address = c.req.query('address')?.trim() ?? ''
+    if (!address) return c.json({ ok: false })
+
+    const result = await geocodeClarkCountyAddress(address).catch(() => null)
+    if (!result) return c.json({ ok: false })
+
+    return c.json({
+      ok: true,
+      latitude: result.lat,
+      longitude: result.lng,
+      formatted: result.formatted,
+    })
   })
 
   app.get('/admin/users', async (c) => {
@@ -374,7 +395,10 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const repeat_rule = parseRepeatRule(typeof body.repeat_rule === 'string' ? body.repeat_rule : '')
     const repeat_until = parseRepeatUntil(typeof body.repeat_until === 'string' ? body.repeat_until : '')
     const committee_key = parseEventCommitteeKey(body.committee_key)
-    const coords = await resolveEventCoordinates(location || null)
+    const coords = await resolveEventFormCoordinates(location || null, {
+      manual: parseManualCoordinates(body.latitude, body.longitude),
+      skipMap: body.map_skip === '1',
+    })
 
     const id = await createEvent(c.env.DB, {
       title,
@@ -440,7 +464,11 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const repeat_rule = parseRepeatRule(typeof body.repeat_rule === 'string' ? body.repeat_rule : '')
     const repeat_until = parseRepeatUntil(typeof body.repeat_until === 'string' ? body.repeat_until : '')
     const committee_key = parseEventCommitteeKey(body.committee_key)
-    const coords = await resolveEventCoordinates(location || null, existing)
+    const coords = await resolveEventFormCoordinates(location || null, {
+      existing,
+      manual: parseManualCoordinates(body.latitude, body.longitude),
+      skipMap: body.map_skip === '1',
+    })
     const images = await applyEventImageUploads(c.env.R2, id, body, existing)
     if (images.error) {
       return c.redirect(`/admin/events?error=${encodeURIComponent(images.error)}`, 303)

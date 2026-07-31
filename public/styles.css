@@ -1587,6 +1587,23 @@ button.pill {
   border: 0;
 }
 
+.admin-location-picker-dialog .admin-modal-form {
+  width: min(42rem, calc(100vw - 2rem));
+}
+
+.admin-location-picker-lead {
+  margin: 0 0 1rem;
+}
+
+.event-location-picker-map {
+  width: 100%;
+  min-height: 20rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-surface-muted);
+}
+
 .event-detail-sidebar {
   display: grid;
   gap: 1rem;

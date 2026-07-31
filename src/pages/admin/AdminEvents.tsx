@@ -10,6 +10,7 @@ import { AdminCrudSections } from '../../views/admin/AdminCrudSections'
 import { AdminEditModalFooter } from '../../views/admin/AdminEditActions'
 import { AdminEditButton } from '../../views/admin/AdminListSection'
 import { AdminModal } from '../../views/admin/AdminModal'
+import { EventLocationFields, EventLocationPickerDialog } from '../../views/admin/EventLocationFields'
 import type { AdminContext } from '../../lib/admin-context'
 import type { PageProps } from '../../types/page'
 
@@ -226,16 +227,12 @@ function EventEditModal({ event }: { event: EventRecord }) {
         repeatUntil={event.repeat_until}
       />
       <EventCommitteeField formId={formId} committeeKey={event.committee_key} />
-      <div class="form-field">
-        <label for={`${formId}-location`}>Location</label>
-        <input type="text" name="location" id={`${formId}-location`} value={event.location ?? ''} />
-        <p class="form-hint">
-          Full street address when possible. We geocode Clark County addresses for the map on the event page.
-        </p>
-        {event.latitude != null && event.longitude != null && (
-          <p class="form-hint">Map coordinates saved ({event.latitude.toFixed(5)}, {event.longitude.toFixed(5)}).</p>
-        )}
-      </div>
+      <EventLocationFields
+        formId={formId}
+        location={event.location}
+        latitude={event.latitude}
+        longitude={event.longitude}
+      />
       <EventImageFields formId={formId} event={event} />
       <div class="form-field">
         <label for={`${formId}-description`}>Description</label>
@@ -301,13 +298,7 @@ export function AdminEventsPage({
             </div>
             <EventRepeatFields />
             <EventCommitteeField />
-            <div class="form-field">
-              <label for="location">Location</label>
-              <input type="text" name="location" id="location" />
-              <p class="form-hint">
-                Full street address when possible. We geocode Clark County addresses for the map on the event page.
-              </p>
-            </div>
+            <EventLocationFields />
             <EventImageFields />
             <div class="form-field">
               <label for="description">Description</label>
@@ -337,6 +328,20 @@ export function AdminEventsPage({
         tableBody={events.map((event) => <EventListRow event={event} key={event.id} />)}
         afterTable={events.map((event) => <EventEditModal event={event} key={event.id} />)}
       />
+      <EventLocationPickerDialog />
+      <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+      />
+      <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""
+        defer
+      ></script>
+      <script src="/event-location-picker.js?v=1" defer></script>
     </AdminShell>
   )
 }

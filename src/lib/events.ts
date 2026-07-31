@@ -151,6 +151,18 @@ export function resolveEventOccurrence(master: EventRecord, at?: string | null):
   }
 }
 
+export function parseManualCoordinates(
+  latitude: unknown,
+  longitude: unknown,
+): { latitude: number; longitude: number } | null {
+  const lat = typeof latitude === 'string' ? Number(latitude) : typeof latitude === 'number' ? latitude : NaN
+  const lng =
+    typeof longitude === 'string' ? Number(longitude) : typeof longitude === 'number' ? longitude : NaN
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null
+  return { latitude: lat, longitude: lng }
+}
+
 export async function resolveEventCoordinates(
   location: string | null,
   existing?: EventRecord | null,
@@ -171,6 +183,19 @@ export async function resolveEventCoordinates(
   if (!geocoded) return { latitude: null, longitude: null }
 
   return { latitude: geocoded.lat, longitude: geocoded.lng }
+}
+
+export async function resolveEventFormCoordinates(
+  location: string | null,
+  options?: {
+    existing?: EventRecord | null
+    manual?: { latitude: number; longitude: number } | null
+    skipMap?: boolean
+  },
+): Promise<{ latitude: number | null; longitude: number | null }> {
+  if (options?.manual) return options.manual
+  if (options?.skipMap) return { latitude: null, longitude: null }
+  return resolveEventCoordinates(location, options?.existing)
 }
 
 export async function applyEventImageUploads(
