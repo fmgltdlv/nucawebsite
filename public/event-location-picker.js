@@ -2,23 +2,31 @@
   const CLARK_COUNTY_CENTER = [36.1699, -115.1398]
   const CLARK_COUNTY_ZOOM = 11
 
-  const pickerDialog = document.getElementById('event-location-picker')
-  if (!(pickerDialog instanceof HTMLDialogElement)) return
-
-  const messageEl = pickerDialog.querySelector('[data-event-location-picker-message]')
-  const coordsEl = pickerDialog.querySelector('[data-event-location-picker-coords]')
-  const confirmBtn = pickerDialog.querySelector('[data-event-location-confirm]')
-  const skipBtn = pickerDialog.querySelector('[data-event-location-skip]')
-  const mapEl = document.getElementById('event-location-map')
-
-  /** @type {HTMLFormElement | null} */
-  let pendingForm = null
   /** @type {any} */
   let map = null
   /** @type {any} */
   let marker = null
+  /** @type {HTMLFormElement | null} */
+  let pendingForm = null
   /** @type {{ lat: number, lng: number } | null} */
   let pickedPoint = null
+
+  window.initEventLocationPicker = function initEventLocationPicker() {
+    const pickerDialog = document.getElementById('event-location-picker')
+    if (!(pickerDialog instanceof HTMLDialogElement)) return
+
+    const messageEl = pickerDialog.querySelector('[data-event-location-picker-message]')
+    const coordsEl = pickerDialog.querySelector('[data-event-location-picker-coords]')
+    const confirmBtn = pickerDialog.querySelector('[data-event-location-confirm]')
+    const skipBtn = pickerDialog.querySelector('[data-event-location-skip]')
+    const mapEl = document.getElementById('event-location-map')
+    if (!mapEl) return
+
+    if (map && map.getContainer() !== mapEl) {
+      map.remove()
+      map = null
+      marker = null
+    }
 
   function isEventForm(form) {
     if (!(form instanceof HTMLFormElement)) return false
@@ -234,6 +242,8 @@
 
   document.querySelectorAll('form').forEach((form) => {
     if (!isEventForm(form)) return
+    if (form.dataset.eventLocationWired === '1') return
+    form.dataset.eventLocationWired = '1'
 
     const locationInput = getLocationField(form)
     locationInput?.addEventListener('input', () => {
@@ -274,29 +284,36 @@
     })
   })
 
-  confirmBtn?.addEventListener('click', () => {
-    if (!(pendingForm instanceof HTMLFormElement) || !pickedPoint) return
-    setManualCoords(pendingForm, pickedPoint.lat, pickedPoint.lng)
-    submitPendingForm()
-  })
+  if (pickerDialog.dataset.eventPickerWired !== '1') {
+    pickerDialog.dataset.eventPickerWired = '1'
 
-  skipBtn?.addEventListener('click', () => {
-    if (!(pendingForm instanceof HTMLFormElement)) return
-    setSkipMap(pendingForm)
-    submitPendingForm()
-  })
+    confirmBtn?.addEventListener('click', () => {
+      if (!(pendingForm instanceof HTMLFormElement) || !pickedPoint) return
+      setManualCoords(pendingForm, pickedPoint.lat, pickedPoint.lng)
+      submitPendingForm()
+    })
 
-  pickerDialog.querySelectorAll('[data-modal-close]').forEach((button) => {
-    button.addEventListener('click', () => closePicker())
-  })
+    skipBtn?.addEventListener('click', () => {
+      if (!(pendingForm instanceof HTMLFormElement)) return
+      setSkipMap(pendingForm)
+      submitPendingForm()
+    })
 
-  pickerDialog.addEventListener('click', (event) => {
-    const rect = pickerDialog.getBoundingClientRect()
-    const inDialog =
-      rect.top <= event.clientY &&
-      event.clientY <= rect.top + rect.height &&
-      rect.left <= event.clientX &&
-      event.clientX <= rect.left + rect.width
-    if (!inDialog) closePicker()
-  })
+    pickerDialog.querySelectorAll('[data-modal-close]').forEach((button) => {
+      button.addEventListener('click', () => closePicker())
+    })
+
+    pickerDialog.addEventListener('click', (event) => {
+      const rect = pickerDialog.getBoundingClientRect()
+      const inDialog =
+        rect.top <= event.clientY &&
+        event.clientY <= rect.top + rect.height &&
+        rect.left <= event.clientX &&
+        event.clientX <= rect.left + rect.width
+      if (!inDialog) closePicker()
+    })
+  }
+  }
+
+  window.initEventLocationPicker()
 })()

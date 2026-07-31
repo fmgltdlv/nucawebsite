@@ -430,36 +430,39 @@
     })
   }
 
-  document.querySelectorAll('form[data-member-logo-form]').forEach((form) => {
-    form.addEventListener('submit', async (event) => {
-      if (form.dataset.logoProcessed === '1') return
+  function wireMemberLogoForms(scope = document) {
+    scope.querySelectorAll('form[data-member-logo-form]:not([data-admin-bound])').forEach((form) => {
+      form.dataset.adminBound = '1'
+      form.addEventListener('submit', async (event) => {
+        if (form.dataset.logoProcessed === '1') return
 
-      const logoInput = form.querySelector('input[type="file"][name="logo"]')
-      const file = logoInput?.files?.[0]
-      if (!file || file.size <= MEMBER_LOGO_MAX_BYTES) return
+        const logoInput = form.querySelector('input[type="file"][name="logo"]')
+        const file = logoInput?.files?.[0]
+        if (!file || file.size <= MEMBER_LOGO_MAX_BYTES) return
 
-      event.preventDefault()
+        event.preventDefault()
 
-      const submitBtn =
-        event.submitter instanceof HTMLButtonElement
-          ? event.submitter
-          : getFormSubmitButtons(form).find((btn) => btn.classList.contains('btn-primary')) ??
-            getFormSubmitButtons(form)[0]
+        const submitBtn =
+          event.submitter instanceof HTMLButtonElement
+            ? event.submitter
+            : getFormSubmitButtons(form).find((btn) => btn.classList.contains('btn-primary')) ??
+              getFormSubmitButtons(form)[0]
 
-      if (submitBtn) setButtonBusy(submitBtn, true, 'Compressing logo…')
+        if (submitBtn) setButtonBusy(submitBtn, true, 'Compressing logo…')
 
-      try {
-        const compressed = await compressMemberLogo(file)
-        replaceFileInput(logoInput, compressed)
-        form.dataset.logoProcessed = '1'
-        form.requestSubmit()
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Logo could not be compressed.'
-        window.alert(message)
-        if (submitBtn) setButtonBusy(submitBtn, false)
-      }
+        try {
+          const compressed = await compressMemberLogo(file)
+          replaceFileInput(logoInput, compressed)
+          form.dataset.logoProcessed = '1'
+          form.requestSubmit()
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Logo could not be compressed.'
+          window.alert(message)
+          if (submitBtn) setButtonBusy(submitBtn, false)
+        }
+      })
     })
-  })
+  }
 
   const adminShell = document.querySelector('.admin-shell')
   if (adminShell) {
@@ -474,6 +477,8 @@
 
   function wireAdminModal(dialog) {
     if (!(dialog instanceof HTMLDialogElement)) return
+    if (dialog.dataset.adminModalWired === '1') return
+    dialog.dataset.adminModalWired = '1'
 
     dialog.querySelectorAll('[data-modal-close]').forEach((button) => {
       button.addEventListener('click', () => dialog.close())
@@ -498,18 +503,23 @@
     })
   }
 
-  document.querySelectorAll('[data-admin-modal-open]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const id = button.getAttribute('data-admin-modal-open')
-      if (!id) return
-      const dialog = document.getElementById(id)
-      if (dialog instanceof HTMLDialogElement) dialog.showModal()
+  function wireAdminModalOpenButtons(scope = document) {
+    scope.querySelectorAll('[data-admin-modal-open]:not([data-admin-bound])').forEach((button) => {
+      button.dataset.adminBound = '1'
+      button.addEventListener('click', () => {
+        const id = button.getAttribute('data-admin-modal-open')
+        if (!id) return
+        const dialog = document.getElementById(id)
+        if (dialog instanceof HTMLDialogElement) dialog.showModal()
+      })
     })
-  })
+  }
 
-  document.querySelectorAll('.admin-modal').forEach((dialog) => {
-    wireAdminModal(dialog)
-  })
+  function wireAdminModals(scope = document) {
+    scope.querySelectorAll('.admin-modal').forEach((dialog) => {
+      wireAdminModal(dialog)
+    })
+  }
 
   const assetLibraryDialog = document.getElementById('asset-library-dialog')
   if (assetLibraryDialog instanceof HTMLDialogElement) {
@@ -658,39 +668,49 @@
       }
     }
 
-    document.querySelectorAll('[data-asset-picker-open]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const field = button.closest('[data-asset-picker]')
-        if (field instanceof HTMLElement) openAssetLibrary(field)
+    function wireAssetPickers(scope = document) {
+      scope.querySelectorAll('[data-asset-picker-open]:not([data-admin-bound])').forEach((button) => {
+        button.dataset.adminBound = '1'
+        button.addEventListener('click', () => {
+          const field = button.closest('[data-asset-picker]')
+          if (field instanceof HTMLElement) openAssetLibrary(field)
+        })
       })
-    })
 
-    document.querySelectorAll('[data-asset-picker-clear]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const field = button.closest('[data-asset-picker]')
-        if (field instanceof HTMLElement) clearPickerSelection(field)
+      scope.querySelectorAll('[data-asset-picker-clear]:not([data-admin-bound])').forEach((button) => {
+        button.dataset.adminBound = '1'
+        button.addEventListener('click', () => {
+          const field = button.closest('[data-asset-picker]')
+          if (field instanceof HTMLElement) clearPickerSelection(field)
+        })
       })
-    })
 
-    document.querySelectorAll('[data-asset-picker-file]').forEach((input) => {
-      input.addEventListener('change', () => {
-        const field = input.closest('[data-asset-picker]')
-        if (!(field instanceof HTMLElement)) return
-        const hiddenInput = field.querySelector('[data-asset-picker-value]')
-        const clearBtn = field.querySelector('[data-asset-picker-clear]')
-        if (hiddenInput instanceof HTMLInputElement) hiddenInput.value = ''
-        if (input instanceof HTMLInputElement && input.files?.length) {
-          if (clearBtn instanceof HTMLButtonElement) clearBtn.hidden = false
-        }
+      scope.querySelectorAll('[data-asset-picker-file]:not([data-admin-bound])').forEach((input) => {
+        input.dataset.adminBound = '1'
+        input.addEventListener('change', () => {
+          const field = input.closest('[data-asset-picker]')
+          if (!(field instanceof HTMLElement)) return
+          const hiddenInput = field.querySelector('[data-asset-picker-value]')
+          const clearBtn = field.querySelector('[data-asset-picker-clear]')
+          if (hiddenInput instanceof HTMLInputElement) hiddenInput.value = ''
+          if (input instanceof HTMLInputElement && input.files?.length) {
+            if (clearBtn instanceof HTMLButtonElement) clearBtn.hidden = false
+          }
+        })
       })
-    })
+    }
+
+    window.wireAssetPickers = wireAssetPickers
+    wireAssetPickers()
 
     searchInput?.addEventListener('input', () => {
       renderAssetGrid()
     })
   }
 
-  document.querySelectorAll('[data-admin-list]').forEach((listRoot) => {
+  function wireAdminLists(scope = document) {
+    scope.querySelectorAll('[data-admin-list]:not([data-admin-list-bound])').forEach((listRoot) => {
+    listRoot.dataset.adminListBound = '1'
     const pageSize = parseInt(listRoot.getAttribute('data-page-size') || '15', 10)
     const rows = Array.from(listRoot.querySelectorAll('[data-admin-list-row]'))
     const searchInput = listRoot.querySelector('[data-admin-search]')
@@ -762,7 +782,17 @@
     })
 
     updateVisibility()
-  })
+    })
+  }
+
+  window.initAdminPageContent = function initAdminPageContent(scope = document) {
+    wireMemberLogoForms(scope)
+    wireAdminModalOpenButtons(scope)
+    wireAdminModals(scope)
+    if (typeof window.wireAssetPickers === 'function') window.wireAssetPickers(scope)
+    wireAdminLists(scope)
+  }
+  window.initAdminPageContent(document)
 
   const leaderDialog = document.getElementById('leader-dialog')
   const leaderRosterEl = document.getElementById('leadership-roster')

@@ -2866,6 +2866,12 @@ button.pill {
   min-width: 0;
   width: 100%;
   max-width: none;
+  transition: opacity 0.15s ease;
+}
+
+.admin-main.is-loading {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 .admin-main-header h1 {

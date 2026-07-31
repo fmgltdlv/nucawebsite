@@ -1,4 +1,5 @@
 (function () {
+  window.initPageBlocksEditor = function initPageBlocksEditor() {
   const root = document.getElementById('page-blocks-editor')
   const hiddenInput = document.getElementById('body_json')
   const previewFrame = document.getElementById('page-live-preview')
@@ -9,6 +10,8 @@
     form instanceof HTMLFormElement ? form.dataset.previewDraftUrl || '' : ''
 
   if (!(root instanceof HTMLElement) || !(hiddenInput instanceof HTMLInputElement)) return
+  if (root.dataset.pageBlocksWired === '1') return
+  root.dataset.pageBlocksWired = '1'
 
   /** @typedef {'left' | 'center' | 'right'} TextAlign */
   /** @typedef {'default' | 'muted' | 'accent' | 'primary'} BlockColor */
@@ -735,4 +738,7 @@
   form?.addEventListener('submit', syncHidden)
   titleInput?.addEventListener('input', schedulePreview)
   metaInput?.addEventListener('input', schedulePreview)
+  }
+
+  window.initPageBlocksEditor()
 })()
