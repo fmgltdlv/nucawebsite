@@ -1,18 +1,15 @@
-import { CHAPTER_COMMITTEES, type ChapterCommitteeKey } from '../data/committees'
-
-export function parseCommitteeKey(key: string): ChapterCommitteeKey | null {
-  return CHAPTER_COMMITTEES.some((committee) => committee.key === key)
-    ? (key as ChapterCommitteeKey)
-    : null
+export function parseCommitteeKey(key: string): string | null {
+  const trimmed = key.trim()
+  if (!/^[a-z][a-z0-9_]*$/.test(trimmed)) return null
+  return trimmed
 }
 
-export function committeeKeyFromSlug(slug: string): ChapterCommitteeKey | null {
+export function committeeKeyFromSlug(slug: string): string | null {
   if (!slug.startsWith('committee-')) return null
-  const key = slug.slice('committee-'.length)
-  return CHAPTER_COMMITTEES.some((c) => c.key === key) ? (key as ChapterCommitteeKey) : null
+  return parseCommitteeKey(slug.slice('committee-'.length))
 }
 
-export function committeePublicPath(key: ChapterCommitteeKey): string {
+export function committeePublicPath(key: string): string {
   return `/about/committees/${key}`
 }
 

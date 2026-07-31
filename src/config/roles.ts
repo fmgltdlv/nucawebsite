@@ -19,22 +19,23 @@ export type UserWithMemberInfo = User & {
   pending_company: string | null
 }
 
-import { CHAPTER_COMMITTEES, type ChapterCommitteeKey } from '../data/committees'
-
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Admin',
   chair: 'Chair',
   member: 'Member',
 }
 
-/** Committee page keys a Chair may be assigned to edit */
-export const COMMITTEE_KEYS = [
-  ...CHAPTER_COMMITTEES.map((c) => c.key),
-  'scholarships',
-] as const
-export type CommitteeKey = ChapterCommitteeKey | 'scholarships'
+export const SCHOLARSHIPS_COMMITTEE_KEY = 'scholarships' as const
 
-export const COMMITTEE_LABELS: Record<CommitteeKey, string> = {
-  ...Object.fromEntries(CHAPTER_COMMITTEES.map((c) => [c.key, c.name])),
-  scholarships: 'NUCA Las Vegas Scholarships',
-} as Record<CommitteeKey, string>
+export function committeeAssignmentKeys(committees: { key: string }[]): string[] {
+  return [...committees.map((committee) => committee.key), SCHOLARSHIPS_COMMITTEE_KEY]
+}
+
+export function committeeAssignmentLabels(
+  committees: { key: string; name: string }[],
+): Record<string, string> {
+  return {
+    ...Object.fromEntries(committees.map((committee) => [committee.key, committee.name])),
+    [SCHOLARSHIPS_COMMITTEE_KEY]: 'NUCA Las Vegas Scholarships',
+  }
+}

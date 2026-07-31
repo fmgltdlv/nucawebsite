@@ -31,6 +31,7 @@ export function AdminContentSettingsPage({
       theme={theme}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
+      inboxCounts={ctx.inboxCounts}
       title="Site settings"
       activePath="/admin/content"
     >

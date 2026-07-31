@@ -14,6 +14,7 @@ type LayoutProps = SiteLayoutProps & {
   title: string
   children: unknown
   description?: string
+  staffInboxCount?: number
 }
 
 export function pickLayoutSite(props: SiteLayoutProps): SiteLayoutProps {
@@ -24,6 +25,7 @@ export function pickLayoutSite(props: SiteLayoutProps): SiteLayoutProps {
     breakingNews: props.breakingNews,
     logoUrl: props.logoUrl,
     navigation: props.navigation,
+    staffInboxCount: props.staffInboxCount,
   }
 }
 
@@ -37,6 +39,7 @@ export function Layout({
   breakingNews,
   logoUrl = DEFAULT_SITE_LOGO_URL,
   navigation = siteNavigation,
+  staffInboxCount,
 }: LayoutProps) {
   const layout = layoutForTheme(theme)
   const fullTitle = title === 'Home' ? 'NUCA of Las Vegas' : `${title} · NUCA of Las Vegas`
@@ -62,7 +65,7 @@ export function Layout({
           href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap"
           rel="stylesheet"
         />
-        <link rel="stylesheet" href="/styles.css?v=11" />
+        <link rel="stylesheet" href="/styles.css?v=12" />
       </head>
       <body>
         <a class="skip-link" href="#main">Skip to content</a>
@@ -70,7 +73,7 @@ export function Layout({
         <header class="site-header">
           <div class="container header-inner">
             <div class="header-left">
-              <StaffPortalLink />
+              <StaffPortalLink inboxCount={staffInboxCount} />
               <a class="brand brand-logo-link" href="/">
                 <img
                   class="brand-logo"
@@ -134,7 +137,7 @@ export function Layout({
             <ThemeSwitcher activeTheme={theme} />
           </div>
         </footer>
-        <script src="/site.js?v=12" defer></script>
+        <script src="/site.js?v=14" defer></script>
       </body>
     </html>
   )

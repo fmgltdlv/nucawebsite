@@ -99,6 +99,7 @@ export function AdminContentResourcesPage({
       theme={theme}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
+      inboxCounts={ctx.inboxCounts}
       title="Resource links"
       activePath="/admin/content"
     >

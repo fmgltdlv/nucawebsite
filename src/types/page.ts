@@ -9,6 +9,7 @@ export type SiteLayoutProps = {
   breakingNews?: BreakingNews | null
   logoUrl?: string
   navigation?: NavEntry[]
+  staffInboxCount?: number
 }
 
 export type PageProps = SiteLayoutProps

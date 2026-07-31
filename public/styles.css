@@ -197,6 +197,7 @@ a:hover {
 }
 
 .portal-link {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1208,7 +1209,33 @@ button.pill {
 
 /* Events */
 
-/* Events */
+.page-block-calendar {
+  margin: 2rem 0;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.page-block-calendar-title {
+  margin: 0 0 1rem;
+  font-family: var(--font-serif, 'Instrument Serif', serif);
+  font-size: 1.35rem;
+  font-weight: 400;
+}
+
+.page-block-committee-list {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.page-block-check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.92rem;
+}
 
 .events-toolbar {
   margin-bottom: 1.5rem;
@@ -1510,18 +1537,12 @@ button.pill {
 }
 
 .event-card p {
-  margin: 0 0 0.75rem;
+  margin: 0;
   color: var(--color-muted);
 }
 
-.event-card-cta {
-  font-size: 0.9rem;
-  font-weight: 600;
+.event-card-link:hover h2 {
   color: var(--color-primary);
-}
-
-.event-card-link:hover .event-card-cta {
-  text-decoration: underline;
 }
 
 @media (max-width: 599px) {
@@ -2417,6 +2438,70 @@ button.pill {
   background: var(--color-surface-muted, #f4f6f8);
 }
 
+.page-section--bg-muted {
+  margin-left: -1rem;
+  margin-right: -1rem;
+  padding: 1.25rem 1rem;
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-surface-muted, #f4f6f8);
+}
+
+.page-section--bg-surface {
+  margin-left: -1rem;
+  margin-right: -1rem;
+  padding: 1.25rem 1rem;
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border);
+}
+
+.page-section--bg-accent-soft {
+  margin-left: -1rem;
+  margin-right: -1rem;
+  padding: 1.25rem 1rem;
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-accent-soft);
+}
+
+.page-section--bg-accent {
+  margin-left: -1rem;
+  margin-right: -1rem;
+  padding: 1.25rem 1rem;
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.page-section--bg-primary {
+  margin-left: -1rem;
+  margin-right: -1rem;
+  padding: 1.25rem 1rem;
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-primary);
+  color: var(--color-footer-text, #e8eef4);
+}
+
+.page-section--bg-accent a,
+.page-section--bg-primary a {
+  color: inherit;
+}
+
+.page-block-color-muted {
+  color: var(--color-muted);
+}
+
+.page-block-color-accent {
+  color: var(--color-accent);
+}
+
+.page-block-color-primary {
+  color: var(--color-primary);
+}
+
+.page-block-font-display {
+  font-family: var(--font-display);
+}
+
 .page-section-title {
   font-family: var(--font-display);
   font-size: 1.35rem;
@@ -2526,7 +2611,7 @@ button.pill {
   margin: 0;
 }
 
-/* Q & A */
+/* FAQ */
 
 .qa-list {
   margin: 0;
@@ -2578,6 +2663,16 @@ button.pill {
   padding: 1.25rem 1.5rem;
 }
 
+.dirt-card-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.dirt-card-link:hover h2 {
+  color: var(--color-primary);
+}
+
 .dirt-card-meta {
   font-size: 0.85rem;
   color: var(--color-muted);
@@ -2599,8 +2694,12 @@ button.pill {
 }
 
 .dirt-card p {
-  margin: 0 0 1rem;
+  margin: 0;
   color: var(--color-muted);
+}
+
+.dirt-card:has(.dirt-card-actions) p {
+  margin-bottom: 1rem;
 }
 
 .dirt-card-actions {
@@ -2669,6 +2768,10 @@ button.pill {
 }
 
 .admin-sidebar-user {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 0.9rem;
   margin: 0 0 1rem;
   line-height: 1.4;
@@ -2688,12 +2791,51 @@ button.pill {
 }
 
 .admin-nav a {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   padding: 0.45rem 0.5rem;
   border-radius: var(--radius-sm, 4px);
   color: var(--color-text);
   text-decoration: none;
   font-size: 0.95rem;
+}
+
+.admin-nav-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-nav-active .admin-count-badge {
+  background: #fff;
+  color: var(--color-primary);
+}
+
+.admin-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.portal-link .admin-count-badge {
+  position: absolute;
+  top: -0.2rem;
+  right: -0.2rem;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  font-size: 0.65rem;
+  border: 2px solid var(--color-surface, #fff);
 }
 
 .admin-nav a:hover {
@@ -3277,6 +3419,39 @@ button.pill {
   color: #2d6a4f;
 }
 
+.admin-status-newsletter-new {
+  background: #eef4ff;
+  color: var(--color-primary);
+}
+
+.admin-status-newsletter-acknowledged {
+  background: #f0f2f5;
+  color: var(--color-muted);
+}
+
+.admin-inbox-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 4px);
+  background: #fafbfc;
+}
+
+.admin-inbox-toolbar-text {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.admin-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .admin-message-body {
   white-space: pre-wrap;
 }
@@ -3524,4 +3699,43 @@ button.pill {
 .page-block-textarea {
   resize: vertical;
   min-height: 4.5rem;
+}
+
+.page-edit-layout {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 1100px) {
+  .page-edit-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 42%);
+    align-items: start;
+  }
+}
+
+.page-edit-panel--preview {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  gap: 0.5rem;
+  min-height: 24rem;
+}
+
+.page-edit-preview-header {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.page-edit-preview-title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.page-edit-preview-frame {
+  width: 100%;
+  min-height: 28rem;
+  height: calc(100vh - 10rem);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-surface, #fff);
 }

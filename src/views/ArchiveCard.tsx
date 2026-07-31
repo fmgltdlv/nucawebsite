@@ -5,7 +5,6 @@ type ArchiveCardProps = {
   date: string
   title: string
   summary?: string | null
-  ctaLabel?: string
   actions?: unknown
 }
 
@@ -18,23 +17,32 @@ export function ArchiveCard({
   date,
   title,
   summary,
-  ctaLabel = 'Read more →',
   actions,
 }: ArchiveCardProps) {
+  if (actions) {
+    return (
+      <article class="dirt-card">
+        <div class="dirt-card-meta">
+          <time dateTime={date}>{formatArchiveDate(date)}</time>
+        </div>
+        <h2>
+          <a href={href}>{title}</a>
+        </h2>
+        {summary && <p>{summary}</p>}
+        {actions}
+      </article>
+    )
+  }
+
   return (
     <article class="dirt-card">
-      <div class="dirt-card-meta">
-        <time dateTime={date}>{formatArchiveDate(date)}</time>
-      </div>
-      <h2>
-        <a href={href}>{title}</a>
-      </h2>
-      {summary && <p>{summary}</p>}
-      {actions ?? (
-        <a class="text-link" href={href}>
-          {ctaLabel}
-        </a>
-      )}
+      <a class="dirt-card-link" href={href}>
+        <div class="dirt-card-meta">
+          <time dateTime={date}>{formatArchiveDate(date)}</time>
+        </div>
+        <h2>{title}</h2>
+        {summary && <p>{summary}</p>}
+      </a>
     </article>
   )
 }

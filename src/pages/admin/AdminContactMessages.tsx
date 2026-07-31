@@ -1,7 +1,9 @@
 import type { ContactSubmission } from '../../lib/contact-db'
 import { AdminShell } from '../../views/AdminShell'
 import { AdminEditButton, AdminListSection, AdminListSearch } from '../../views/admin/AdminListSection'
-import { AdminModal, AdminModalCancelButton } from '../../views/admin/AdminModal'
+import { AdminInboxToolbar } from '../../views/admin/AdminInboxToolbar'
+import { AdminEditModalFooter } from '../../views/admin/AdminEditActions'
+import { AdminModal } from '../../views/admin/AdminModal'
 import type { AdminContext } from '../../lib/admin-context'
 import type { PageProps } from '../../types/page'
 
@@ -39,6 +41,12 @@ function ContactMessageListRow({ submission }: { submission: ContactSubmission }
         <span class={`admin-status-badge admin-status-contact-${submission.status}`}>{submission.status}</span>
       </td>
       <td class="admin-list-actions">
+        {submission.status === 'new' && (
+          <form method="post" action={`/admin/contact-messages/${submission.id}`} class="admin-inline-form">
+            <input type="hidden" name="status" value="read" />
+            <button type="submit" class="btn btn-secondary btn-sm">Acknowledge</button>
+          </form>
+        )}
         <AdminEditButton modalId={editModalId} label="View" />
       </td>
     </tr>
@@ -55,10 +63,13 @@ function ContactMessageModal({ submission }: { submission: ContactSubmission }) 
       formAction={`/admin/contact-messages/${submission.id}`}
       formId={formId}
       footer={
-        <>
-          <AdminModalCancelButton />
-          <button type="submit" class="btn btn-primary" form={formId}>Update status</button>
-        </>
+        <AdminEditModalFooter
+          formId={formId}
+          saveAction={`/admin/contact-messages/${submission.id}`}
+          deleteAction={`/admin/contact-messages/${submission.id}/delete`}
+          saveLabel="Update status"
+          deleteLabel="Delete"
+        />
       }
     >
       <dl class="admin-detail-list admin-detail-list-modal">
@@ -105,11 +116,14 @@ export function AdminContactMessagesPage({
   submissions,
   flash,
 }: PageProps & { ctx: AdminContext; submissions: ContactSubmission[]; flash?: string }) {
+  const newCount = submissions.filter((submission) => submission.status === 'new').length
+
   return (
     <AdminShell
       theme={theme}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
+      inboxCounts={ctx.inboxCounts}
       title="Contact messages"
       activePath="/admin/contact-messages"
     >
@@ -118,6 +132,12 @@ export function AdminContactMessagesPage({
         submissions are stored here regardless.
       </p>
       {flash && <p class="admin-flash">{flash}</p>}
+
+      <AdminInboxToolbar
+        newCount={newCount}
+        acknowledgeAction="/admin/contact-messages/acknowledge-all"
+        acknowledgeLabel="Mark all as read"
+      />
 
       <AdminListSection
         title="Inbox"

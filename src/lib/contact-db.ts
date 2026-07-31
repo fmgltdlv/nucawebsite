@@ -38,3 +38,11 @@ export async function updateContactSubmissionStatus(
 ): Promise<void> {
   await db.prepare('UPDATE contact_submissions SET status = ? WHERE id = ?').bind(status, id).run()
 }
+
+export async function deleteContactSubmission(db: D1Database, id: string): Promise<void> {
+  await db.prepare('DELETE FROM contact_submissions WHERE id = ?').bind(id).run()
+}
+
+export async function acknowledgeAllContactSubmissions(db: D1Database): Promise<void> {
+  await db.prepare(`UPDATE contact_submissions SET status = 'read' WHERE status = 'new'`).run()
+}

@@ -23,6 +23,8 @@ import {
 } from './lib/members'
 import { committeePageSlug } from './lib/chair-pages'
 import { parseCommitteeKey } from './lib/committee-pages'
+import { getCommitteeByKey, listCommittees } from './lib/committees-db'
+import { loadPageCalendarEvents } from './lib/cms-page-extras'
 import { getPageBySlug } from './lib/pages-db'
 import { getPostBySlug, listPublishedPosts } from './lib/posts-db'
 import { listQaItems } from './lib/qa-db'
@@ -30,6 +32,8 @@ import { listResourceItems } from './lib/resource-items-db'
 import { getAssetObject } from './lib/r2-assets'
 import { subscribeNewsletter } from './lib/newsletter-db'
 import { loadPublicSiteContext } from './lib/site-context'
+import { resolveAdminContext } from './lib/admin-context'
+import { totalInboxCount } from './lib/admin-inbox-counts'
 import { seedContentIfEmpty, seedDemoMembersIfEmpty, seedDirtIfEmpty } from './lib/seed'
 import { THEME_COOKIE } from './lib/theme'
 import { registerAdminRoutes } from './routes/admin'
@@ -67,7 +71,13 @@ async function ensureSeeded(env: Env) {
 
 async function siteProps(c: Context<{ Bindings: Env; Variables: Variables }>) {
   await ensureSeeded(c.env)
-  return loadPublicSiteContext(c.env, getCookie(c, THEME_COOKIE))
+  const site = await loadPublicSiteContext(c.env, getCookie(c, THEME_COOKIE))
+  const adminCtx = await resolveAdminContext(c)
+  const total = adminCtx?.inboxCounts ? totalInboxCount(adminCtx.inboxCounts) : 0
+  return {
+    ...site,
+    staffInboxCount: total > 0 ? total : undefined,
+  }
 }
 
 app.post('/theme', async (c) => {
@@ -98,13 +108,14 @@ registerAdminRoutes(app)
 
 app.get('/', async (c) => {
   const site = await siteProps(c)
+  const page = await getPageBySlug(c.env.DB, 'home', true)
   const [events, dirtReleases, posts] = await Promise.all([
-    listUpcomingEvents(c.env.DB, 3),
+    listUpcomingEvents(c.env.DB, 12),
     listDirtReleases(c.env.DB, true),
     listPublishedPosts(c.env.DB),
   ])
   return c.html(
-    <HomePage {...site} events={events} dirtReleases={dirtReleases} posts={posts} />,
+    <HomePage {...site} page={page} events={events} dirtReleases={dirtReleases} posts={posts} />,
   )
 })
 
@@ -112,14 +123,17 @@ app.get('/about', async (c) => {
   const site = await siteProps(c)
   const page = await getPageBySlug(c.env.DB, 'about', true)
   if (!page) return c.html(<NotFoundPage {...site} />, 404)
-  return c.html(<ContentPage {...site} page={page} />)
+  const calendarEvents = await loadPageCalendarEvents(c.env.DB, page.body_json)
+  return c.html(<ContentPage {...site} page={page} calendarEvents={calendarEvents} />)
 })
 
-app.get('/about/q-and-a', async (c) => {
+app.get('/about/faq', async (c) => {
   const site = await siteProps(c)
   const items = await listQaItems(c.env.DB, true)
   return c.html(<QaPage {...site} items={items} />)
 })
+
+app.get('/about/q-and-a', (c) => c.redirect('/about/faq', 301))
 
 app.get('/about/leadership', async (c) => {
   const site = await siteProps(c)
@@ -130,16 +144,32 @@ app.get('/about/leadership', async (c) => {
 app.get('/about/committees', async (c) => {
   const site = await siteProps(c)
   const page = await getPageBySlug(c.env.DB, 'committees', true)
-  return c.html(<CommitteesPage {...site} page={page} />)
+  const committees = await listCommittees(c.env.DB, true)
+  const calendarEvents = page
+    ? await loadPageCalendarEvents(c.env.DB, page.body_json)
+    : undefined
+  return c.html(
+    <CommitteesPage {...site} page={page} calendarEvents={calendarEvents} committees={committees} />,
+  )
 })
 
 app.get('/about/committees/:key', async (c) => {
   const site = await siteProps(c)
   const committeeKey = parseCommitteeKey(c.req.param('key'))
   if (!committeeKey) return c.html(<NotFoundPage {...site} />, 404)
+  const committee = await getCommitteeByKey(c.env.DB, committeeKey, true)
+  if (!committee) return c.html(<NotFoundPage {...site} />, 404)
   const page = await getPageBySlug(c.env.DB, committeePageSlug(committeeKey), true)
   if (!page) return c.html(<NotFoundPage {...site} />, 404)
-  return c.html(<CommitteeDetailPage {...site} committeeKey={committeeKey} page={page} />)
+  const calendarEvents = await loadPageCalendarEvents(c.env.DB, page.body_json)
+  return c.html(
+    <CommitteeDetailPage
+      {...site}
+      committee={committee}
+      page={page}
+      calendarEvents={calendarEvents}
+    />,
+  )
 })
 
 app.get('/the-dirt', async (c) => {
@@ -166,14 +196,16 @@ app.get('/training', async (c) => {
   const site = await siteProps(c)
   const page = await getPageBySlug(c.env.DB, 'training', true)
   if (!page) return c.html(<NotFoundPage {...site} />, 404)
-  return c.html(<ContentPage {...site} page={page} />)
+  const calendarEvents = await loadPageCalendarEvents(c.env.DB, page.body_json)
+  return c.html(<ContentPage {...site} page={page} calendarEvents={calendarEvents} />)
 })
 
 app.get('/scholarships', async (c) => {
   const site = await siteProps(c)
   const page = await getPageBySlug(c.env.DB, 'scholarships', true)
   if (!page) return c.html(<NotFoundPage {...site} />, 404)
-  return c.html(<ContentPage {...site} page={page} />)
+  const calendarEvents = await loadPageCalendarEvents(c.env.DB, page.body_json)
+  return c.html(<ContentPage {...site} page={page} calendarEvents={calendarEvents} />)
 })
 
 app.get('/industry-updates', (c) => c.redirect('/the-dirt', 301))
@@ -191,7 +223,12 @@ app.get('/resources', async (c) => {
     getPageBySlug(c.env.DB, 'resources', true),
     listResourceItems(c.env.DB, true),
   ])
-  return c.html(<ResourcesPage {...site} page={page} items={items} />)
+  const calendarEvents = page
+    ? await loadPageCalendarEvents(c.env.DB, page.body_json)
+    : undefined
+  return c.html(
+    <ResourcesPage {...site} page={page} items={items} calendarEvents={calendarEvents} />,
+  )
 })
 
 app.get('/api/members/:id', async (c) => {
@@ -227,11 +264,18 @@ app.get('/events', async (c) => {
   const view = parseEventsView(c.req.query('view'))
   const focusDate = parseEventsFocusDate(c.req.query('date'))
   const page = Math.max(1, Number.parseInt(c.req.query('page') ?? '1', 10) || 1)
-  const committeeKey = parseCommitteeKey(c.req.query('committee') ?? '') ?? null
+  const committeeParam = c.req.query('committee') ?? ''
+  const parsedCommitteeKey = parseCommitteeKey(committeeParam)
+  let committeeKey: string | null = null
+  if (parsedCommitteeKey) {
+    const committee = await getCommitteeByKey(c.env.DB, parsedCommitteeKey, true)
+    committeeKey = committee ? committee.key : null
+  }
 
-  const [totalEvents, calendarEvents] = await Promise.all([
+  const [totalEvents, calendarEvents, committees] = await Promise.all([
     countUpcomingEvents(c.env.DB, committeeKey),
-    listPublishedEventsForCalendar(c.env.DB, committeeKey),
+    listPublishedEventsForCalendar(c.env.DB),
+    listCommittees(c.env.DB, true),
   ])
   const totalPages = Math.max(1, Math.ceil(totalEvents / EVENTS_LIST_PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
@@ -248,6 +292,7 @@ app.get('/events', async (c) => {
       totalEvents={totalEvents}
       focusDate={focusDate}
       committeeKey={committeeKey}
+      committees={committees}
     />,
   )
 })

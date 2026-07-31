@@ -1,5 +1,5 @@
 (function () {
-  // NUCA public site interactions (v12)
+  // NUCA public site interactions (v13)
   const toggle = document.getElementById('nav-toggle')
   const nav = document.getElementById('site-nav')
 
@@ -1049,18 +1049,26 @@
   if (!page) return
 
   const dataEl = document.getElementById('events-calendar-data')
-  let events = []
+  let allEvents = []
   if (dataEl) {
     try {
-      events = JSON.parse(dataEl.textContent ?? '[]')
+      allEvents = JSON.parse(dataEl.textContent ?? '[]')
     } catch {
-      events = []
+      allEvents = []
     }
   }
 
+  const viewTabs = document.getElementById('events-view-tabs')
+  const committeeFilters = document.getElementById('events-committee-filters')
   const listView = document.getElementById('events-view-list')
   const weekView = document.getElementById('events-view-week')
   const monthView = document.getElementById('events-view-month')
+  const listEl = document.getElementById('events-list')
+  const listEmpty = document.getElementById('events-list-empty')
+  const listPagination = document.getElementById('events-pagination')
+  const listPagePrev = document.getElementById('events-page-prev')
+  const listPageNext = document.getElementById('events-page-next')
+  const listPageInfo = document.getElementById('events-page-info')
   const weekGrid = document.getElementById('events-week-grid')
   const monthGrid = document.getElementById('events-month-grid')
   const weekLabel = document.getElementById('events-week-label')
@@ -1070,6 +1078,8 @@
   const monthPrev = document.getElementById('events-month-prev')
   const monthNext = document.getElementById('events-month-next')
 
+  const LIST_PAGE_SIZE =
+    Number.parseInt(page.getAttribute('data-list-page-size') ?? '5', 10) || 5
   const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
   function parseDateParam(value) {
@@ -1117,6 +1127,13 @@
     )
   }
 
+  function isUpcoming(event) {
+    const now = new Date()
+    const start = new Date(event.starts_at)
+    const end = event.ends_at ? new Date(event.ends_at) : start
+    return end >= now
+  }
+
   function eventOnDay(event, day) {
     const start = new Date(event.starts_at)
     const end = event.ends_at ? new Date(event.ends_at) : start
@@ -1125,13 +1142,26 @@
     return start < dayEnd && end >= dayStart
   }
 
+  function filterByCommittee(eventList) {
+    if (!activeCommittee) return eventList
+    return eventList.filter((event) => event.committee_key === activeCommittee)
+  }
+
+  function calendarEvents() {
+    return filterByCommittee(allEvents)
+  }
+
+  function upcomingListEvents() {
+    return filterByCommittee(allEvents).filter(isUpcoming)
+  }
+
   function eventsForDay(day) {
-    return events
+    return calendarEvents()
       .filter((event) => eventOnDay(event, day))
       .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
   }
 
-  function formatEventDateTime(iso) {
+  function formatEventDate(iso) {
     return new Date(iso).toLocaleString('en-US', {
       weekday: 'short',
       month: 'long',
@@ -1177,20 +1207,20 @@
       : 'list'
   }
 
-  let focusDate = parseDateParam(
-    new URLSearchParams(window.location.search).get('date') ?? page.getAttribute('data-focus-date'),
-  )
+  const urlParams = new URLSearchParams(window.location.search)
+  let focusDate = parseDateParam(urlParams.get('date') ?? page.getAttribute('data-focus-date'))
   let activeCommittee =
-    new URLSearchParams(window.location.search).get('committee') ??
-    page.getAttribute('data-committee') ??
-    ''
+    urlParams.get('committee') ?? page.getAttribute('data-committee') ?? ''
   let activeView = readView()
+  let listPage = Math.max(1, Number.parseInt(urlParams.get('page') ?? '1', 10) || 1)
 
   function updateUrl() {
     const params = new URLSearchParams()
     if (activeView !== 'list') {
       params.set('view', activeView)
       params.set('date', toDateParam(focusDate))
+    } else if (listPage > 1) {
+      params.set('page', String(listPage))
     }
     if (activeCommittee) params.set('committee', activeCommittee)
     const qs = params.toString()
@@ -1207,6 +1237,23 @@
     if (monthView) monthView.hidden = activeView !== 'month'
   }
 
+  function setActiveViewPill(view) {
+    viewTabs?.querySelectorAll('[data-view]').forEach((pill) => {
+      const pillView = pill.getAttribute('data-view') ?? 'list'
+      const isActive = pillView === view
+      pill.classList.toggle('pill-active', isActive)
+      pill.setAttribute('aria-selected', isActive ? 'true' : 'false')
+    })
+  }
+
+  function setActiveCommitteePill(committee) {
+    committeeFilters?.querySelectorAll('[data-committee]').forEach((pill) => {
+      const pillCommittee = pill.getAttribute('data-committee') ?? ''
+      const isActive = pillCommittee === committee
+      pill.classList.toggle('pill-active', isActive)
+    })
+  }
+
   function eventDetailHref(event) {
     const seriesId = event.series_id || String(event.id).split(':')[0]
     return `/events/${seriesId}?at=${encodeURIComponent(event.starts_at)}`
@@ -1218,6 +1265,106 @@
     link.href = eventDetailHref(event)
     link.textContent = compact ? event.title : `${formatEventTime(event.starts_at)} · ${event.title}`
     return link
+  }
+
+  function createEventCard(event) {
+    const article = document.createElement('article')
+    article.className = 'event-card'
+
+    const link = document.createElement('a')
+    link.className = 'event-card-link'
+    link.href = eventDetailHref(event)
+
+    if (event.thumbnail_r2_key) {
+      const img = document.createElement('img')
+      img.className = 'event-card-thumb'
+      img.src = `/assets/${event.thumbnail_r2_key}`
+      img.alt = ''
+      img.loading = 'lazy'
+      img.decoding = 'async'
+      link.appendChild(img)
+    } else if (event.latitude != null && event.longitude != null) {
+      const mapDiv = document.createElement('div')
+      mapDiv.className = 'event-card-thumb event-card-map-thumb'
+      mapDiv.dataset.eventMapThumb = ''
+      mapDiv.dataset.lat = String(event.latitude)
+      mapDiv.dataset.lng = String(event.longitude)
+      mapDiv.setAttribute('aria-hidden', 'true')
+      link.appendChild(mapDiv)
+    } else {
+      const fallback = document.createElement('div')
+      fallback.className = 'event-card-thumb event-card-thumb-fallback'
+      fallback.setAttribute('aria-hidden', 'true')
+      link.appendChild(fallback)
+    }
+
+    const body = document.createElement('div')
+    body.className = 'event-card-body'
+
+    const meta = document.createElement('div')
+    meta.className = 'event-card-meta'
+    const time = document.createElement('time')
+    time.dateTime = event.starts_at
+    time.textContent = formatEventDate(event.starts_at)
+    meta.appendChild(time)
+    if (event.location) {
+      const location = document.createElement('span')
+      location.textContent = event.location
+      meta.appendChild(location)
+    }
+    body.appendChild(meta)
+
+    const title = document.createElement('h2')
+    title.textContent = event.title
+    body.appendChild(title)
+
+    if (event.description) {
+      const desc = document.createElement('p')
+      desc.textContent = event.description
+      body.appendChild(desc)
+    }
+
+    link.appendChild(body)
+    article.appendChild(link)
+    return article
+  }
+
+  function renderList() {
+    if (!listEl) return
+
+    const filtered = upcomingListEvents()
+    const totalPages = Math.max(1, Math.ceil(filtered.length / LIST_PAGE_SIZE))
+    if (listPage > totalPages) listPage = totalPages
+    if (listPage < 1) listPage = 1
+
+    const offset = (listPage - 1) * LIST_PAGE_SIZE
+    const pageEvents = filtered.slice(offset, offset + LIST_PAGE_SIZE)
+
+    listEl.replaceChildren()
+    pageEvents.forEach((event) => listEl.appendChild(createEventCard(event)))
+
+    if (listEmpty instanceof HTMLElement) {
+      listEmpty.hidden = filtered.length > 0
+    }
+
+    if (listPagination instanceof HTMLElement) {
+      listPagination.hidden = totalPages <= 1
+    }
+
+    if (listPageInfo instanceof HTMLElement) {
+      listPageInfo.textContent = `Page ${listPage} of ${totalPages} (${filtered.length} upcoming)`
+    }
+
+    if (listPagePrev instanceof HTMLButtonElement) {
+      listPagePrev.disabled = listPage <= 1
+    }
+    if (listPageNext instanceof HTMLButtonElement) {
+      listPageNext.disabled = listPage >= totalPages
+    }
+
+    if (typeof window.initEventMapThumbs === 'function') {
+      window.initEventMapThumbs(listEl)
+    }
   }
 
   function renderWeek() {
@@ -1292,12 +1439,70 @@
     }
   }
 
-  function renderActiveCalendarView() {
+  function renderActiveView() {
     setViewVisibility()
+    setActiveViewPill(activeView)
+  }
+
+  function renderActiveCalendarView() {
+    renderActiveView()
     if (activeView === 'week') renderWeek()
     if (activeView === 'month') renderMonth()
     updateUrl()
   }
+
+  function setView(view) {
+    activeView = view
+    if (view === 'list') {
+      renderActiveView()
+      renderList()
+      updateUrl()
+    } else {
+      renderActiveCalendarView()
+    }
+  }
+
+  function setCommittee(committee) {
+    activeCommittee = committee
+    listPage = 1
+    setActiveCommitteePill(committee)
+    if (activeView === 'list') {
+      renderList()
+      updateUrl()
+    } else {
+      renderActiveCalendarView()
+    }
+  }
+
+  viewTabs?.querySelectorAll('[data-view]').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const view = pill.getAttribute('data-view')
+      if (view === 'week' || view === 'month' || view === 'list') setView(view)
+    })
+  })
+
+  committeeFilters?.querySelectorAll('[data-committee]').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      setCommittee(pill.getAttribute('data-committee') ?? '')
+    })
+  })
+
+  listPagePrev?.addEventListener('click', () => {
+    if (listPage > 1) {
+      listPage -= 1
+      renderList()
+      updateUrl()
+    }
+  })
+
+  listPageNext?.addEventListener('click', () => {
+    const totalPages = Math.max(1, Math.ceil(upcomingListEvents().length / LIST_PAGE_SIZE))
+    if (listPage < totalPages) {
+      listPage += 1
+      renderList()
+      updateUrl()
+    }
+  })
 
   weekPrev?.addEventListener('click', () => {
     focusDate = addDays(startOfWeek(focusDate), -7)
@@ -1323,11 +1528,458 @@
     renderActiveCalendarView()
   })
 
+  setActiveCommitteePill(activeCommittee)
   if (activeView === 'week' || activeView === 'month') {
     renderActiveCalendarView()
   } else {
-    setViewVisibility()
+    renderActiveView()
+    renderList()
+    updateUrl()
   }
+})();
+
+(function () {
+  const sharedDataEl = document.getElementById('page-calendar-events-data')
+  if (!sharedDataEl) return
+
+  let allEvents = []
+  try {
+    allEvents = JSON.parse(sharedDataEl.textContent ?? '[]')
+  } catch {
+    allEvents = []
+  }
+
+  const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+  function parseDateParam(value) {
+    if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const [y, m, d] = value.split('-').map(Number)
+      return new Date(y, m - 1, d)
+    }
+    const now = new Date()
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  }
+
+  function toDateParam(date) {
+    const pad = (n) => String(n).padStart(2, '0')
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+  }
+
+  function startOfDay(date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  }
+
+  function addDays(date, days) {
+    const next = new Date(date)
+    next.setDate(next.getDate() + days)
+    return startOfDay(next)
+  }
+
+  function addMonths(date, months) {
+    return startOfDay(new Date(date.getFullYear(), date.getMonth() + months, date.getDate()))
+  }
+
+  function startOfWeek(date) {
+    const day = startOfDay(date)
+    return addDays(day, -day.getDay())
+  }
+
+  function startOfMonth(date) {
+    return startOfDay(new Date(date.getFullYear(), date.getMonth(), 1))
+  }
+
+  function sameDay(a, b) {
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    )
+  }
+
+  function isUpcoming(event) {
+    const now = new Date()
+    const start = new Date(event.starts_at)
+    const end = event.ends_at ? new Date(event.ends_at) : start
+    return end >= now
+  }
+
+  function eventOnDay(event, day) {
+    const start = new Date(event.starts_at)
+    const end = event.ends_at ? new Date(event.ends_at) : start
+    const dayStart = startOfDay(day)
+    const dayEnd = addDays(dayStart, 1)
+    return start < dayEnd && end >= dayStart
+  }
+
+  function formatEventDate(iso) {
+    return new Date(iso).toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+  }
+
+  function formatEventTime(iso) {
+    return new Date(iso).toLocaleString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+  }
+
+  function formatMonthYear(date) {
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  }
+
+  function formatWeekRange(weekStart) {
+    const weekEnd = addDays(weekStart, 6)
+    const sameMonth = weekStart.getMonth() === weekEnd.getMonth()
+    const startFmt = weekStart.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    })
+    const endFmt = weekEnd.toLocaleDateString('en-US', {
+      month: sameMonth ? undefined : 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+    return `${startFmt} – ${endFmt}`
+  }
+
+  function eventDetailHref(event) {
+    const seriesId = event.series_id || String(event.id).split(':')[0]
+    return `/events/${seriesId}?at=${encodeURIComponent(event.starts_at)}`
+  }
+
+  function createEventLink(event, compact) {
+    const link = document.createElement('a')
+    link.className = compact ? 'events-cal-event events-cal-event-compact' : 'events-cal-event'
+    link.href = eventDetailHref(event)
+    link.textContent = compact ? event.title : `${formatEventTime(event.starts_at)} · ${event.title}`
+    return link
+  }
+
+  function createEventCard(event) {
+    const article = document.createElement('article')
+    article.className = 'event-card'
+
+    const link = document.createElement('a')
+    link.className = 'event-card-link'
+    link.href = eventDetailHref(event)
+
+    if (event.thumbnail_r2_key) {
+      const img = document.createElement('img')
+      img.className = 'event-card-thumb'
+      img.src = `/assets/${event.thumbnail_r2_key}`
+      img.alt = ''
+      img.loading = 'lazy'
+      img.decoding = 'async'
+      link.appendChild(img)
+    } else if (event.latitude != null && event.longitude != null) {
+      const mapDiv = document.createElement('div')
+      mapDiv.className = 'event-card-thumb event-card-map-thumb'
+      mapDiv.dataset.eventMapThumb = ''
+      mapDiv.dataset.lat = String(event.latitude)
+      mapDiv.dataset.lng = String(event.longitude)
+      mapDiv.setAttribute('aria-hidden', 'true')
+      link.appendChild(mapDiv)
+    } else {
+      const fallback = document.createElement('div')
+      fallback.className = 'event-card-thumb event-card-thumb-fallback'
+      fallback.setAttribute('aria-hidden', 'true')
+      link.appendChild(fallback)
+    }
+
+    const body = document.createElement('div')
+    body.className = 'event-card-body'
+
+    const meta = document.createElement('div')
+    meta.className = 'event-card-meta'
+    const time = document.createElement('time')
+    time.dateTime = event.starts_at
+    time.textContent = formatEventDate(event.starts_at)
+    meta.appendChild(time)
+    if (event.location) {
+      const location = document.createElement('span')
+      location.textContent = event.location
+      meta.appendChild(location)
+    }
+    body.appendChild(meta)
+
+    const title = document.createElement('h2')
+    title.textContent = event.title
+    body.appendChild(title)
+
+    if (event.description) {
+      const desc = document.createElement('p')
+      desc.textContent = event.description
+      body.appendChild(desc)
+    }
+
+    link.appendChild(body)
+    article.appendChild(link)
+    return article
+  }
+
+  function initCalendarBlock(root) {
+    const committeeKeysRaw = root.getAttribute('data-committee-keys') ?? ''
+    const committeeKeys = committeeKeysRaw
+      ? committeeKeysRaw.split(',').map((s) => s.trim()).filter(Boolean)
+      : []
+
+    const listPageSize =
+      Number.parseInt(root.getAttribute('data-list-page-size') ?? '5', 10) || 5
+
+    let focusDate = parseDateParam(root.getAttribute('data-focus-date'))
+    let activeView = root.getAttribute('data-view') === 'week' || root.getAttribute('data-view') === 'month'
+      ? root.getAttribute('data-view')
+      : 'list'
+    let listPage = 1
+
+    const viewTabs = root.querySelector('.page-calendar-view-tabs')
+    const listView = root.querySelector('.page-calendar-view-list')
+    const weekView = root.querySelector('.page-calendar-view-week')
+    const monthView = root.querySelector('.page-calendar-view-month')
+    const listEl = root.querySelector('.page-calendar-list')
+    const listEmpty = root.querySelector('.page-calendar-list-empty')
+    const listPagination = root.querySelector('.page-calendar-pagination')
+    const listPagePrev = root.querySelector('.page-calendar-page-prev')
+    const listPageNext = root.querySelector('.page-calendar-page-next')
+    const listPageInfo = root.querySelector('.page-calendar-page-info')
+    const weekGrid = root.querySelector('.page-calendar-week-grid')
+    const monthGrid = root.querySelector('.page-calendar-month-grid')
+    const weekLabel = root.querySelector('.page-calendar-week-label')
+    const monthLabel = root.querySelector('.page-calendar-month-label')
+    const weekPrev = root.querySelector('.page-calendar-week-prev')
+    const weekNext = root.querySelector('.page-calendar-week-next')
+    const monthPrev = root.querySelector('.page-calendar-month-prev')
+    const monthNext = root.querySelector('.page-calendar-month-next')
+
+    function filterEvents(eventList) {
+      if (committeeKeys.length === 0) return eventList
+      const allowed = new Set(committeeKeys)
+      return eventList.filter(
+        (event) => event.committee_key != null && allowed.has(event.committee_key),
+      )
+    }
+
+    function calendarEvents() {
+      return filterEvents(allEvents)
+    }
+
+    function upcomingListEvents() {
+      return filterEvents(allEvents).filter(isUpcoming)
+    }
+
+    function eventsForDay(day) {
+      return calendarEvents()
+        .filter((event) => eventOnDay(event, day))
+        .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
+    }
+
+    function setViewVisibility() {
+      if (listView instanceof HTMLElement) listView.hidden = activeView !== 'list'
+      if (weekView instanceof HTMLElement) weekView.hidden = activeView !== 'week'
+      if (monthView instanceof HTMLElement) monthView.hidden = activeView !== 'month'
+    }
+
+    function setActiveViewPill(view) {
+      viewTabs?.querySelectorAll('[data-view]').forEach((pill) => {
+        const pillView = pill.getAttribute('data-view') ?? 'list'
+        const isActive = pillView === view
+        pill.classList.toggle('pill-active', isActive)
+        pill.setAttribute('aria-selected', isActive ? 'true' : 'false')
+      })
+    }
+
+    function renderList() {
+      if (!listEl) return
+
+      const filtered = upcomingListEvents()
+      const totalPages = Math.max(1, Math.ceil(filtered.length / listPageSize))
+      if (listPage > totalPages) listPage = totalPages
+      if (listPage < 1) listPage = 1
+
+      const offset = (listPage - 1) * listPageSize
+      const pageEvents = filtered.slice(offset, offset + listPageSize)
+
+      listEl.replaceChildren()
+      pageEvents.forEach((event) => listEl.appendChild(createEventCard(event)))
+
+      if (listEmpty instanceof HTMLElement) {
+        listEmpty.hidden = filtered.length > 0
+      }
+
+      if (listPagination instanceof HTMLElement) {
+        listPagination.hidden = totalPages <= 1
+      }
+
+      if (listPageInfo instanceof HTMLElement) {
+        listPageInfo.textContent = `Page ${listPage} of ${totalPages} (${filtered.length} upcoming)`
+      }
+
+      if (listPagePrev instanceof HTMLButtonElement) {
+        listPagePrev.disabled = listPage <= 1
+      }
+      if (listPageNext instanceof HTMLButtonElement) {
+        listPageNext.disabled = listPage >= totalPages
+      }
+
+      if (typeof window.initEventMapThumbs === 'function') {
+        window.initEventMapThumbs(listEl)
+      }
+    }
+
+    function renderWeek() {
+      if (!weekGrid || !weekLabel) return
+      weekGrid.replaceChildren()
+
+      const weekStart = startOfWeek(focusDate)
+      weekLabel.textContent = formatWeekRange(weekStart)
+      const today = startOfDay(new Date())
+
+      for (let i = 0; i < 7; i += 1) {
+        const day = addDays(weekStart, i)
+        const col = document.createElement('div')
+        col.className = 'events-week-day'
+        if (sameDay(day, today)) col.classList.add('events-cal-day-today')
+
+        const header = document.createElement('div')
+        header.className = 'events-week-day-header'
+        header.innerHTML = `<span class="events-week-day-name">${WEEKDAY_LABELS[i]}</span><span class="events-week-day-num">${day.getDate()}</span>`
+        col.appendChild(header)
+
+        const list = document.createElement('div')
+        list.className = 'events-week-day-events'
+        const dayEvents = eventsForDay(day)
+        if (dayEvents.length === 0) {
+          const empty = document.createElement('p')
+          empty.className = 'events-week-empty'
+          empty.textContent = 'No events'
+          list.appendChild(empty)
+        } else {
+          dayEvents.forEach((event) => list.appendChild(createEventLink(event, false)))
+        }
+        col.appendChild(list)
+        weekGrid.appendChild(col)
+      }
+    }
+
+    function renderMonth() {
+      if (!monthGrid || !monthLabel) return
+      monthGrid.replaceChildren()
+
+      const monthStart = startOfMonth(focusDate)
+      monthLabel.textContent = formatMonthYear(monthStart)
+      const gridStart = startOfWeek(monthStart)
+      const today = startOfDay(new Date())
+
+      for (let i = 0; i < 42; i += 1) {
+        const day = addDays(gridStart, i)
+        const cell = document.createElement('div')
+        cell.className = 'events-month-day'
+        if (day.getMonth() !== monthStart.getMonth()) cell.classList.add('events-month-day-other')
+        if (sameDay(day, today)) cell.classList.add('events-cal-day-today')
+
+        const num = document.createElement('span')
+        num.className = 'events-month-day-num'
+        num.textContent = String(day.getDate())
+        cell.appendChild(num)
+
+        const dayEvents = eventsForDay(day)
+        const maxShown = 3
+        dayEvents.slice(0, maxShown).forEach((event) => {
+          cell.appendChild(createEventLink(event, true))
+        })
+        if (dayEvents.length > maxShown) {
+          const more = document.createElement('span')
+          more.className = 'events-month-more'
+          more.textContent = `+${dayEvents.length - maxShown} more`
+          cell.appendChild(more)
+        }
+
+        monthGrid.appendChild(cell)
+      }
+    }
+
+    function renderActiveCalendarView() {
+      setViewVisibility()
+      setActiveViewPill(activeView)
+      if (activeView === 'week') renderWeek()
+      if (activeView === 'month') renderMonth()
+    }
+
+    function setView(view) {
+      activeView = view
+      if (view === 'list') {
+        setViewVisibility()
+        setActiveViewPill(view)
+        renderList()
+      } else {
+        renderActiveCalendarView()
+      }
+    }
+
+    viewTabs?.querySelectorAll('[data-view]').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        const view = pill.getAttribute('data-view')
+        if (view === 'week' || view === 'month' || view === 'list') setView(view)
+      })
+    })
+
+    listPagePrev?.addEventListener('click', () => {
+      if (listPage > 1) {
+        listPage -= 1
+        renderList()
+      }
+    })
+
+    listPageNext?.addEventListener('click', () => {
+      const totalPages = Math.max(1, Math.ceil(upcomingListEvents().length / listPageSize))
+      if (listPage < totalPages) {
+        listPage += 1
+        renderList()
+      }
+    })
+
+    weekPrev?.addEventListener('click', () => {
+      focusDate = addDays(startOfWeek(focusDate), -7)
+      activeView = 'week'
+      renderActiveCalendarView()
+    })
+
+    weekNext?.addEventListener('click', () => {
+      focusDate = addDays(startOfWeek(focusDate), 7)
+      activeView = 'week'
+      renderActiveCalendarView()
+    })
+
+    monthPrev?.addEventListener('click', () => {
+      focusDate = addMonths(focusDate, -1)
+      activeView = 'month'
+      renderActiveCalendarView()
+    })
+
+    monthNext?.addEventListener('click', () => {
+      focusDate = addMonths(focusDate, 1)
+      activeView = 'month'
+      renderActiveCalendarView()
+    })
+
+    if (activeView === 'week' || activeView === 'month') {
+      renderActiveCalendarView()
+    } else {
+      setViewVisibility()
+      setActiveViewPill(activeView)
+      renderList()
+    }
+  }
+
+  document.querySelectorAll('.page-block-calendar').forEach((root) => {
+    if (root instanceof HTMLElement) initCalendarBlock(root)
+  })
 })();
 
 (function () {

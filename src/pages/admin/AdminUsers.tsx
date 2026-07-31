@@ -1,10 +1,11 @@
 import type { Member } from '../../data/demo'
 import {
-  COMMITTEE_KEYS,
-  COMMITTEE_LABELS,
+  committeeAssignmentKeys,
+  committeeAssignmentLabels,
   ROLE_LABELS,
   type UserWithMemberInfo,
 } from '../../config/roles'
+import type { CommitteeRecord } from '../../lib/committees-db'
 import { AdminShell } from '../../views/AdminShell'
 import { AdminCrudSections } from '../../views/admin/AdminCrudSections'
 import { AdminListSection, AdminListSearch } from '../../views/admin/AdminListSection'
@@ -31,20 +32,25 @@ export function AdminUsersPage({
   ctx,
   users,
   members,
+  committees,
   message,
 }: PageProps & {
   ctx: AdminContext
   users: UserWithMemberInfo[]
   members: Member[]
+  committees: CommitteeRecord[]
   message?: string
 }) {
   const pending = users.filter((u) => u.member_link_status === 'pending')
+  const assignmentKeys = committeeAssignmentKeys(committees)
+  const assignmentLabels = committeeAssignmentLabels(committees)
 
   return (
     <AdminShell
       theme={theme}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
+      inboxCounts={ctx.inboxCounts}
       title="Users & roles"
       activePath="/admin/users"
     >
@@ -158,10 +164,10 @@ export function AdminUsersPage({
             </div>
             <fieldset class="admin-fieldset">
               <legend>Chair committee assignments</legend>
-              {COMMITTEE_KEYS.map((key) => (
+              {assignmentKeys.map((key) => (
                 <label class="admin-check" key={key}>
                   <input type="checkbox" name={`committee_${key}`} value="1" />
-                  {COMMITTEE_LABELS[key]}
+                  {assignmentLabels[key]}
                 </label>
               ))}
             </fieldset>

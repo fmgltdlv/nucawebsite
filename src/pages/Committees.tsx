@@ -1,5 +1,6 @@
-import { CHAPTER_COMMITTEES } from '../data/committees'
 import { committeePublicPath } from '../lib/committee-pages'
+import type { CommitteeRecord } from '../lib/committees-db'
+import type { ExpandedEventRecord } from '../lib/event-repeat'
 import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import { renderPageContent } from '../lib/page-blocks'
 import type { PageRecord } from '../lib/pages-db'
@@ -12,10 +13,16 @@ export function CommitteesPage({
   breakingNews,
   logoUrl,
   navigation,
+  staffInboxCount,
   page,
-}: PageProps & { page: PageRecord | null }) {
-  return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })} title="Committees">
+  calendarEvents,
+  committees,
+}: PageProps & {
+  page: PageRecord | null
+  calendarEvents?: ExpandedEventRecord[]
+  committees: CommitteeRecord[]
+}) {  return (
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })} title="Committees">
       <PageHeader
         title={page?.title ?? 'Committees'}
         lead={
@@ -27,7 +34,7 @@ export function CommitteesPage({
         <div class="container">
           <h2>Chapter committees</h2>
           <ul class="leader-list committee-list">
-            {CHAPTER_COMMITTEES.map((committee) => (
+            {committees.map((committee) => (
               <li key={committee.key}>
                 <a class="leader-name" href={committeePublicPath(committee.key)}>
                   {committee.name}
@@ -43,7 +50,7 @@ export function CommitteesPage({
       {page && (page.body_json || page.body_md?.trim()) && (
         <section class="section section-muted">
           <div class="container prose">
-            {renderPageContent(page.body_md, page.body_json)}
+            {renderPageContent(page.body_md, page.body_json, { calendarEvents })}
           </div>
         </section>
       )}

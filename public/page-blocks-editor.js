@@ -1,19 +1,66 @@
 (function () {
   const root = document.getElementById('page-blocks-editor')
   const hiddenInput = document.getElementById('body_json')
+  const previewFrame = document.getElementById('page-live-preview')
+  const titleInput = document.getElementById('title')
+  const metaInput = document.getElementById('meta_description')
+  const form = hiddenInput instanceof HTMLInputElement ? hiddenInput.closest('form') : null
+  const previewDraftUrl =
+    form instanceof HTMLFormElement ? form.dataset.previewDraftUrl || '' : ''
+
   if (!(root instanceof HTMLElement) || !(hiddenInput instanceof HTMLInputElement)) return
 
   /** @typedef {'left' | 'center' | 'right'} TextAlign */
+  /** @typedef {'default' | 'muted' | 'accent' | 'primary'} BlockColor */
+  /** @typedef {'body' | 'display'} BlockFont */
+  /** @typedef {'none' | 'muted' | 'accent-soft' | 'accent' | 'primary' | 'surface'} SectionBackground */
 
-  /** @typedef {{ type: 'heading', text: string, level: 2 | 3 | 4, align: TextAlign }} HeadingBlock */
-  /** @typedef {{ type: 'text', body: string, align?: TextAlign }} TextBlock */
+  /** @typedef {{ type: 'heading', text: string, level: 2 | 3 | 4, align: TextAlign, color?: BlockColor, font?: BlockFont }} HeadingBlock */
+  /** @typedef {{ type: 'text', body: string, align?: TextAlign, color?: BlockColor, font?: BlockFont }} TextBlock */
   /** @typedef {{ type: 'list', ordered: boolean, items: string[] }} ListBlock */
   /** @typedef {{ type: 'callout', title?: string, body: string, style: 'default' | 'muted' | 'accent' }} CalloutBlock */
-  /** @typedef {{ type: 'section', title?: string, muted?: boolean, blocks: PageBlock[] }} SectionBlock */
-  /** @typedef {HeadingBlock | TextBlock | ListBlock | CalloutBlock | SectionBlock} PageBlock */
+  /** @typedef {{ type: 'section', title?: string, muted?: boolean, background?: SectionBackground, blocks: PageBlock[] }} SectionBlock */
+  /** @typedef {{ type: 'calendar', title?: string, view: 'list' | 'week' | 'month', committee_keys: string[] }} CalendarBlock */
+  /** @typedef {{ type: 'hero', eyebrow: string, title: string, lead: string, cta_primary_label: string, cta_primary_href: string, cta_secondary_label: string, cta_secondary_href: string }} HeroBlock */
+  /** @typedef {{ type: 'events_feed', title: string, lead: string, limit: number }} EventsFeedBlock */
+  /** @typedef {{ type: 'dirt_feed', title: string, lead: string, limit: number }} DirtFeedBlock */
+  /** @typedef {HeadingBlock | TextBlock | ListBlock | CalloutBlock | SectionBlock | CalendarBlock | HeroBlock | EventsFeedBlock | DirtFeedBlock} PageBlock */
 
   /** @type {PageBlock[]} */
   let blocks = []
+  let previewTimer = 0
+  let previewRequestId = 0
+  const pageSlug = root.dataset.pageSlug || ''
+  const isHomePage = pageSlug === 'home'
+
+  /** @type {{ key: string, name: string }[]} */
+  let committees = []
+  try {
+    committees = JSON.parse(root.dataset.committees || '[]')
+  } catch {
+    committees = []
+  }
+
+  const COLOR_OPTIONS = [
+    ['default', 'Default'],
+    ['muted', 'Muted'],
+    ['accent', 'Accent'],
+    ['primary', 'Primary'],
+  ]
+
+  const FONT_OPTIONS = [
+    ['body', 'Body'],
+    ['display', 'Display (serif)'],
+  ]
+
+  const SECTION_BG_OPTIONS = [
+    ['none', 'None'],
+    ['muted', 'Muted gray'],
+    ['surface', 'White card'],
+    ['accent-soft', 'Accent soft'],
+    ['accent', 'Accent bold'],
+    ['primary', 'Primary blue'],
+  ]
 
   function parseInitial() {
     const raw = root.dataset.initial || '[]'
@@ -25,8 +72,48 @@
     }
   }
 
+  function sectionBackground(block) {
+    if (block.background) return block.background
+    return block.muted === true ? 'muted' : 'none'
+  }
+
   function syncHidden() {
     hiddenInput.value = JSON.stringify(blocks)
+    schedulePreview()
+  }
+
+  function schedulePreview() {
+    if (!(previewFrame instanceof HTMLIFrameElement) || !previewDraftUrl) return
+    window.clearTimeout(previewTimer)
+    previewTimer = window.setTimeout(updatePreview, 450)
+  }
+
+  async function updatePreview() {
+    if (!(previewFrame instanceof HTMLIFrameElement) || !previewDraftUrl) return
+
+    const requestId = ++previewRequestId
+    const title = titleInput instanceof HTMLInputElement ? titleInput.value : ''
+    const meta_description = metaInput instanceof HTMLInputElement ? metaInput.value : ''
+
+    try {
+      const response = await fetch(previewDraftUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          title,
+          meta_description,
+          body_json: hiddenInput.value,
+        }),
+      })
+
+      if (!response.ok || requestId !== previewRequestId) return
+      const html = await response.text()
+      if (requestId !== previewRequestId) return
+      previewFrame.srcdoc = html
+    } catch {
+      // Ignore transient preview errors while typing.
+    }
   }
 
   function defaultBlock(type) {
@@ -40,7 +127,45 @@
       case 'callout':
         return { type: 'callout', title: 'Callout title', body: '', style: 'default' }
       case 'section':
-        return { type: 'section', title: 'Section', muted: false, blocks: [{ type: 'text', body: '' }] }
+        return {
+          type: 'section',
+          title: 'Section',
+          background: 'none',
+          muted: false,
+          blocks: [{ type: 'text', body: '' }],
+        }
+      case 'calendar':
+        return {
+          type: 'calendar',
+          title: 'Upcoming events',
+          view: 'month',
+          committee_keys: [],
+        }
+      case 'hero':
+        return {
+          type: 'hero',
+          eyebrow: 'National Utility Contractors Association',
+          title: 'Page headline',
+          lead: 'Short introduction for the home page.',
+          cta_primary_label: 'Primary button',
+          cta_primary_href: '/join',
+          cta_secondary_label: 'Secondary button',
+          cta_secondary_href: '/members',
+        }
+      case 'events_feed':
+        return {
+          type: 'events_feed',
+          title: 'Calendar events',
+          lead: 'Upcoming chapter meetings and gatherings.',
+          limit: 3,
+        }
+      case 'dirt_feed':
+        return {
+          type: 'dirt_feed',
+          title: 'THE DIRT',
+          lead: 'News, policy, and chapter announcements.',
+          limit: 3,
+        }
       default:
         return { type: 'text', body: '' }
     }
@@ -69,13 +194,21 @@
   function renderToolbar() {
     const toolbar = document.createElement('div')
     toolbar.className = 'page-blocks-toolbar'
-    ;[
-      ['heading', 'Heading'],
-      ['text', 'Paragraph'],
-      ['list', 'List'],
-      ['callout', 'Callout box'],
-      ['section', 'Section'],
-    ].forEach(([type, label]) => {
+    const blockTypes = isHomePage
+      ? [
+          ['hero', 'Hero banner'],
+          ['events_feed', 'Events list'],
+          ['dirt_feed', 'THE DIRT feed'],
+        ]
+      : [
+          ['heading', 'Heading'],
+          ['text', 'Paragraph'],
+          ['list', 'List'],
+          ['callout', 'Callout box'],
+          ['section', 'Section'],
+          ['calendar', 'Events calendar'],
+        ]
+    blockTypes.forEach(([type, label]) => {
       const btn = document.createElement('button')
       btn.type = 'button'
       btn.className = 'btn btn-secondary btn-sm'
@@ -117,14 +250,10 @@
     return actions
   }
 
-  function alignSelect(value, onChange) {
+  function selectField(options, value, onChange) {
     const select = document.createElement('select')
     select.className = 'page-block-select'
-    ;[
-      ['left', 'Left'],
-      ['center', 'Center'],
-      ['right', 'Right'],
-    ].forEach(([val, label]) => {
+    options.forEach(([val, label]) => {
       const option = document.createElement('option')
       option.value = val
       option.textContent = label
@@ -133,6 +262,34 @@
     })
     select.addEventListener('change', () => onChange(select.value))
     return select
+  }
+
+  function alignSelect(value, onChange) {
+    return selectField(
+      [
+        ['left', 'Left'],
+        ['center', 'Center'],
+        ['right', 'Right'],
+      ],
+      value,
+      onChange,
+    )
+  }
+
+  function colorSelect(value, onChange) {
+    return selectField(COLOR_OPTIONS, value || 'default', (color) =>
+      onChange(color === 'default' ? undefined : color),
+    )
+  }
+
+  function fontSelect(value, onChange) {
+    return selectField(FONT_OPTIONS, value || 'body', (font) =>
+      onChange(font === 'body' ? undefined : font),
+    )
+  }
+
+  function sectionBackgroundSelect(value, onChange) {
+    return selectField(SECTION_BG_OPTIONS, value || 'none', onChange)
   }
 
   function field(labelText, control) {
@@ -161,6 +318,13 @@
     textarea.value = value
     textarea.addEventListener('input', () => onInput(textarea.value))
     return textarea
+  }
+
+  function applyTextStyleFields(wrap, block, update) {
+    wrap.append(
+      field('Text color', colorSelect(block.color, (color) => update({ ...block, color }))),
+      field('Font', fontSelect(block.font, (font) => update({ ...block, font }))),
+    )
   }
 
   function renderNestedBlocks(sectionBlock, sectionIndex) {
@@ -235,27 +399,19 @@
         field('Text', textInput(block.text, (text) => updateChild({ ...block, text }))),
         field(
           'Level',
-          (() => {
-            const select = document.createElement('select')
-            select.className = 'page-block-select'
-            ;[2, 3, 4].forEach((level) => {
-              const option = document.createElement('option')
-              option.value = String(level)
-              option.textContent = `H${level}`
-              if (block.level === level) option.selected = true
-              select.append(option)
-            })
-            select.addEventListener('change', () =>
-              updateChild({ ...block, level: Number(select.value) }),
-            )
-            return select
-          })(),
+          selectField(
+            [
+              ['2', 'H2'],
+              ['3', 'H3'],
+              ['4', 'H4'],
+            ],
+            String(block.level),
+            (level) => updateChild({ ...block, level: Number(level) }),
+          ),
         ),
-        field(
-          'Alignment',
-          alignSelect(block.align, (align) => updateChild({ ...block, align })),
-        ),
+        field('Alignment', alignSelect(block.align, (align) => updateChild({ ...block, align }))),
       )
+      applyTextStyleFields(wrap, block, updateChild)
     } else if (block.type === 'text') {
       wrap.append(
         field('Paragraph', textArea(block.body, (body) => updateChild({ ...block, body }), 4)),
@@ -264,6 +420,7 @@
           alignSelect(block.align || 'left', (align) => updateChild({ ...block, align })),
         ),
       )
+      applyTextStyleFields(wrap, block, updateChild)
     } else if (block.type === 'list') {
       const itemsArea = textArea(block.items.join('\n'), (value) => {
         const items = value
@@ -276,24 +433,14 @@
         field('List items (one per line)', itemsArea),
         field(
           'Style',
-          (() => {
-            const select = document.createElement('select')
-            select.className = 'page-block-select'
-            ;[
+          selectField(
+            [
               ['false', 'Bulleted'],
               ['true', 'Numbered'],
-            ].forEach(([val, label]) => {
-              const option = document.createElement('option')
-              option.value = val
-              option.textContent = label
-              if (String(block.ordered) === val) option.selected = true
-              select.append(option)
-            })
-            select.addEventListener('change', () =>
-              updateChild({ ...block, ordered: select.value === 'true' }),
-            )
-            return select
-          })(),
+            ],
+            String(block.ordered),
+            (val) => updateChild({ ...block, ordered: val === 'true' }),
+          ),
         ),
       )
     } else if (block.type === 'callout') {
@@ -302,28 +449,95 @@
         field('Body', textArea(block.body, (body) => updateChild({ ...block, body }), 4)),
         field(
           'Style',
-          (() => {
-            const select = document.createElement('select')
-            select.className = 'page-block-select'
-            ;[
+          selectField(
+            [
               ['default', 'Default'],
               ['muted', 'Muted'],
               ['accent', 'Accent'],
-            ].forEach(([val, label]) => {
-              const option = document.createElement('option')
-              option.value = val
-              option.textContent = label
-              if (block.style === val) option.selected = true
-              select.append(option)
-            })
-            select.addEventListener('change', () =>
-              updateChild({ ...block, style: select.value }),
-            )
-            return select
-          })(),
+            ],
+            block.style,
+            (style) => updateChild({ ...block, style }),
+          ),
         ),
       )
     }
+
+    return wrap
+  }
+
+  function renderCalendarCommitteeField(block, update) {
+    const wrap = document.createElement('div')
+    wrap.className = 'page-block-field'
+
+    const label = document.createElement('label')
+    label.textContent = 'Committee filter'
+    wrap.append(label)
+
+    const allMode = document.createElement('label')
+    allMode.className = 'admin-check page-block-check'
+    const allInput = document.createElement('input')
+    allInput.type = 'radio'
+    allInput.name = `calendar-filter-${Math.random().toString(36).slice(2)}`
+    allInput.checked = block.committee_keys.length === 0
+    allInput.addEventListener('change', () => {
+      if (allInput.checked) update({ ...block, committee_keys: [] })
+    })
+    allMode.append(allInput, document.createTextNode(' All events'))
+    wrap.append(allMode)
+
+    const selectedMode = document.createElement('label')
+    selectedMode.className = 'admin-check page-block-check'
+    const selectedInput = document.createElement('input')
+    selectedInput.type = 'radio'
+    selectedInput.name = allInput.name
+    selectedInput.checked = block.committee_keys.length > 0
+    selectedMode.append(selectedInput, document.createTextNode(' Selected committees'))
+    wrap.append(selectedMode)
+
+    const checklist = document.createElement('div')
+    checklist.className = 'page-block-committee-list'
+
+    committees.forEach((committee) => {
+      const row = document.createElement('label')
+      row.className = 'admin-check page-block-check'
+      const input = document.createElement('input')
+      input.type = 'checkbox'
+      input.value = committee.key
+      input.checked = block.committee_keys.includes(committee.key)
+      input.disabled = block.committee_keys.length === 0
+      input.addEventListener('change', () => {
+        const keys = committees
+          .map((item) => item.key)
+          .filter((key) => {
+            const cb = checklist.querySelector(`input[value="${key}"]`)
+            return cb instanceof HTMLInputElement && cb.checked
+          })
+        update({ ...block, committee_keys: keys })
+      })
+      row.append(input, document.createTextNode(` ${committee.name}`))
+      checklist.append(row)
+    })
+
+    selectedInput.addEventListener('change', () => {
+      if (!selectedInput.checked) return
+      const keys = committees.length > 0 ? [committees[0].key] : []
+      update({ ...block, committee_keys: keys })
+      render()
+    })
+
+    allInput.addEventListener('change', () => {
+      if (!allInput.checked) return
+      update({ ...block, committee_keys: [] })
+      render()
+    })
+
+    wrap.append(checklist)
+
+    const hint = document.createElement('p')
+    hint.className = 'form-hint'
+    hint.textContent =
+      'Choose all events or limit the calendar to one or more committees. Chapter-wide events (no committee) appear only when showing all events.'
+    wrap.append(hint)
 
     return wrap
   }
@@ -344,27 +558,22 @@
         field('Text', textInput(block.text, (text) => updateBlock(index, { ...block, text }))),
         field(
           'Level',
-          (() => {
-            const select = document.createElement('select')
-            select.className = 'page-block-select'
-            ;[2, 3, 4].forEach((level) => {
-              const option = document.createElement('option')
-              option.value = String(level)
-              option.textContent = `H${level}`
-              if (block.level === level) option.selected = true
-              select.append(option)
-            })
-            select.addEventListener('change', () =>
-              updateBlock(index, { ...block, level: Number(select.value) }),
-            )
-            return select
-          })(),
+          selectField(
+            [
+              ['2', 'H2'],
+              ['3', 'H3'],
+              ['4', 'H4'],
+            ],
+            String(block.level),
+            (level) => updateBlock(index, { ...block, level: Number(level) }),
+          ),
         ),
         field(
           'Alignment',
           alignSelect(block.align, (align) => updateBlock(index, { ...block, align })),
         ),
       )
+      applyTextStyleFields(card, block, (next) => updateBlock(index, next))
     } else if (block.type === 'text') {
       card.append(
         field('Paragraph', textArea(block.body, (body) => updateBlock(index, { ...block, body }), 5)),
@@ -373,6 +582,7 @@
           alignSelect(block.align || 'left', (align) => updateBlock(index, { ...block, align })),
         ),
       )
+      applyTextStyleFields(card, block, (next) => updateBlock(index, next))
     } else if (block.type === 'list') {
       const itemsArea = textArea(block.items.join('\n'), (value) => {
         const items = value
@@ -385,24 +595,14 @@
         field('List items (one per line)', itemsArea),
         field(
           'Style',
-          (() => {
-            const select = document.createElement('select')
-            select.className = 'page-block-select'
-            ;[
+          selectField(
+            [
               ['false', 'Bulleted'],
               ['true', 'Numbered'],
-            ].forEach(([val, label]) => {
-              const option = document.createElement('option')
-              option.value = val
-              option.textContent = label
-              if (String(block.ordered) === val) option.selected = true
-              select.append(option)
-            })
-            select.addEventListener('change', () =>
-              updateBlock(index, { ...block, ordered: select.value === 'true' }),
-            )
-            return select
-          })(),
+            ],
+            String(block.ordered),
+            (val) => updateBlock(index, { ...block, ordered: val === 'true' }),
+          ),
         ),
       )
     } else if (block.type === 'callout') {
@@ -411,46 +611,98 @@
         field('Body', textArea(block.body, (body) => updateBlock(index, { ...block, body }), 5)),
         field(
           'Style',
-          (() => {
-            const select = document.createElement('select')
-            select.className = 'page-block-select'
-            ;[
+          selectField(
+            [
               ['default', 'Default'],
               ['muted', 'Muted'],
               ['accent', 'Accent'],
-            ].forEach(([val, label]) => {
-              const option = document.createElement('option')
-              option.value = val
-              option.textContent = label
-              if (block.style === val) option.selected = true
-              select.append(option)
-            })
-            select.addEventListener('change', () =>
-              updateBlock(index, { ...block, style: select.value }),
-            )
-            return select
-          })(),
+            ],
+            block.style,
+            (style) => updateBlock(index, { ...block, style }),
+          ),
         ),
       )
-    } else if (block.type === 'section') {
+    } else if (block.type === 'calendar') {
       card.append(
-        field('Section title', textInput(block.title || '', (title) => updateBlock(index, { ...block, title }))),
+        field(
+          'Title (optional)',
+          textInput(block.title || '', (title) => updateBlock(index, { ...block, title })),
+        ),
+        field(
+          'Default view',
+          selectField(
+            [
+              ['list', 'List'],
+              ['week', 'Week'],
+              ['month', 'Month'],
+            ],
+            block.view,
+            (view) => updateBlock(index, { ...block, view }),
+          ),
+        ),
+        renderCalendarCommitteeField(block, (next) => updateBlock(index, next)),
+      )
+    } else if (block.type === 'section') {
+      const bg = sectionBackground(block)
+      card.append(
+        field(
+          'Section title',
+          textInput(block.title || '', (title) => updateBlock(index, { ...block, title })),
+        ),
         field(
           'Background',
-          (() => {
-            const label = document.createElement('label')
-            label.className = 'admin-check'
-            const input = document.createElement('input')
-            input.type = 'checkbox'
-            input.checked = block.muted === true
-            input.addEventListener('change', () =>
-              updateBlock(index, { ...block, muted: input.checked }),
-            )
-            label.append(input, ' Muted background')
-            return label
-          })(),
+          sectionBackgroundSelect(bg, (background) =>
+            updateBlock(index, {
+              ...block,
+              background,
+              muted: background === 'muted',
+            }),
+          ),
         ),
         renderNestedBlocks(block, index),
+      )
+    } else if (block.type === 'hero') {
+      card.append(
+        field('Eyebrow', textInput(block.eyebrow, (eyebrow) => updateBlock(index, { ...block, eyebrow }))),
+        field('Headline', textInput(block.title, (title) => updateBlock(index, { ...block, title }))),
+        field('Lead paragraph', textArea(block.lead, (lead) => updateBlock(index, { ...block, lead }), 4)),
+        field(
+          'Primary button label',
+          textInput(block.cta_primary_label, (cta_primary_label) =>
+            updateBlock(index, { ...block, cta_primary_label }),
+          ),
+        ),
+        field(
+          'Primary button link',
+          textInput(block.cta_primary_href, (cta_primary_href) =>
+            updateBlock(index, { ...block, cta_primary_href }),
+          ),
+        ),
+        field(
+          'Secondary button label',
+          textInput(block.cta_secondary_label, (cta_secondary_label) =>
+            updateBlock(index, { ...block, cta_secondary_label }),
+          ),
+        ),
+        field(
+          'Secondary button link',
+          textInput(block.cta_secondary_href, (cta_secondary_href) =>
+            updateBlock(index, { ...block, cta_secondary_href }),
+          ),
+        ),
+      )
+    } else if (block.type === 'events_feed' || block.type === 'dirt_feed') {
+      const feedLabel = block.type === 'events_feed' ? 'events' : 'THE DIRT items'
+      card.append(
+        field('Section title', textInput(block.title, (title) => updateBlock(index, { ...block, title }))),
+        field('Lead paragraph', textArea(block.lead, (lead) => updateBlock(index, { ...block, lead }), 3)),
+        field(
+          `Number of ${feedLabel} to show`,
+          textInput(String(block.limit), (value) => {
+            const limit = Math.max(1, Number.parseInt(value, 10) || 3)
+            updateBlock(index, { ...block, limit })
+          }),
+        ),
       )
     }
 
@@ -464,7 +716,9 @@
     if (blocks.length === 0) {
       const empty = document.createElement('p')
       empty.className = 'admin-help'
-      empty.textContent = 'No content blocks yet. Add a heading, paragraph, list, callout, or section.'
+      empty.textContent = isHomePage
+        ? 'No home page blocks yet. Add a hero banner, events list, or THE DIRT feed.'
+        : 'No content blocks yet. Add a heading, paragraph, list, callout, section, or events calendar.'
       root.append(empty)
     } else {
       blocks.forEach((block, index) => {
@@ -478,6 +732,7 @@
   parseInitial()
   render()
 
-  const form = hiddenInput.closest('form')
   form?.addEventListener('submit', syncHidden)
+  titleInput?.addEventListener('input', schedulePreview)
+  metaInput?.addEventListener('input', schedulePreview)
 })()

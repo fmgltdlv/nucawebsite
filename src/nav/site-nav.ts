@@ -2,7 +2,6 @@
  * Site navigation — see TODO.md for structure decisions.
  * `status` tracks copy progress (shown in the nav during demo).
  */
-import { CHAPTER_COMMITTEES } from '../data/committees'
 export type PageStatus = 'demo' | 'stub' | 'todo'
 
 export type NavLink = {
@@ -43,8 +42,8 @@ export const siteNavigation: NavEntry[] = [
     legacyUrl: 'https://nucalasvegas.com/about-us/',
     children: [
       {
-        label: 'Q & A',
-        href: '/about/q-and-a',
+        label: 'FAQ',
+        href: '/about/faq',
         status: 'stub',
       },
       {
@@ -84,12 +83,6 @@ export const siteNavigation: NavEntry[] = [
     status: 'stub',
     legacyUrl: 'https://nucalasvegas.com/advocacy/',
     children: [
-      ...CHAPTER_COMMITTEES.map((committee) => ({
-        label: committee.name,
-        href: `/about/committees/${committee.key}`,
-        status: 'stub' as const,
-        indent: true,
-      })),
       {
         label: 'NUCA Las Vegas Scholarships',
         href: '/scholarships',

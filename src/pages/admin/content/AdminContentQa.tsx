@@ -95,13 +95,14 @@ export function AdminContentQaPage({
       theme={theme}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
-      title="Q & A"
+      inboxCounts={ctx.inboxCounts}
+      title="FAQ"
       activePath="/admin/content"
     >
       <AdminCrudSections
         breadcrumb={
           <p class="admin-note">
-            <a href="/admin/content">← Content</a> · <a href="/about/q-and-a">View public page</a>
+            <a href="/admin/content">← Content</a> · <a href="/about/faq">View public page</a>
           </p>
         }
         flash={flash}

@@ -179,6 +179,7 @@ export function AdminContentLeadershipPage({
       theme={theme}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
+      inboxCounts={ctx.inboxCounts}
       title="Leadership"
       activePath="/admin/content"
     >

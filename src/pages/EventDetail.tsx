@@ -29,6 +29,7 @@ export function EventDetailPage({
   breakingNews,
   logoUrl,
   navigation,
+  staffInboxCount,
   occurrence,
 }: PageProps & { occurrence: EventOccurrenceView }) {
   const { master, starts_at, ends_at } = occurrence
@@ -37,7 +38,7 @@ export function EventDetailPage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })}
       title={master.title}
       description={master.description ?? undefined}
     >

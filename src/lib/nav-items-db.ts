@@ -1,4 +1,5 @@
-import { isNavGroup, siteNavigation, type NavEntry } from '../nav/site-nav'
+import { isNavGroup, siteNavigation, type NavEntry, type NavLink } from '../nav/site-nav'
+import { listCommittees } from './committees-db'
 
 export type NavItemRecord = {
   id: string
@@ -145,13 +146,40 @@ export async function deleteNavItem(db: D1Database, id: string): Promise<void> {
 
 export async function getPublishedSiteNavigation(db: D1Database): Promise<NavEntry[]> {
   const items = await listNavItems(db, true)
-  if (items.length === 0) return siteNavigation
-  return buildSiteNavigation(items)
+  if (items.length > 0) return buildSiteNavigation(items)
+
+  const committees = await listCommittees(db, true)
+  return buildFallbackSiteNavigation(committees)
+}
+
+function buildFallbackSiteNavigation(committees: { key: string; name: string }[]): NavEntry[] {
+  const committeeLinks: NavLink[] = committees.map((committee) => ({
+    label: committee.name,
+    href: `/about/committees/${committee.key}`,
+    status: 'stub',
+    indent: true,
+  }))
+
+  return siteNavigation.map((entry) => {
+    if (!isNavGroup(entry) || entry.href !== '/about/committees') return entry
+    const scholarships = entry.children.filter((child) => child.href === '/scholarships')
+    return {
+      ...entry,
+      children: [...committeeLinks, ...scholarships],
+    }
+  })
 }
 
 export async function seedNavItemsIfEmpty(db: D1Database): Promise<void> {
   const row = await db.prepare('SELECT COUNT(*) as c FROM nav_items').first<{ c: number }>()
   if ((row?.c ?? 0) > 0) return
+
+  const committees = await listCommittees(db, true)
+  const committeeLinks: NavLink[] = committees.map((committee) => ({
+    label: committee.name,
+    href: `/about/committees/${committee.key}`,
+    indent: true,
+  }))
 
   let sortOrder = 0
   for (const entry of siteNavigation) {
@@ -165,7 +193,11 @@ export async function seedNavItemsIfEmpty(db: D1Database): Promise<void> {
         published: true,
       })
       let childOrder = 0
-      for (const child of entry.children) {
+      const children =
+        entry.href === '/about/committees'
+          ? [...committeeLinks, ...entry.children.filter((child) => child.href === '/scholarships')]
+          : entry.children
+      for (const child of children) {
         await createNavItem(db, {
           parent_id: id,
           label: child.label,

@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import type { ThemeId } from '../config/themes'
-import { COMMITTEE_KEYS, USER_ROLES, type UserRole } from '../config/roles'
+import { committeeAssignmentKeys, USER_ROLES, type UserRole } from '../config/roles'
 import { MEMBER_TYPES, type MemberType } from '../data/demo'
 import type { Env } from '../env'
 import { assignChairCommittees, approveMemberLink, createUser, listUsersWithMemberInfo, rejectMemberLink, requestMemberLink, verifyUserLogin } from '../lib/auth'
@@ -16,8 +16,9 @@ import {
   parseManualCoordinates,
   resolveEventFormCoordinates,
   updateEvent,
-  parseEventCommitteeKey,
+  resolveEventCommitteeKey,
 } from '../lib/events'
+import { listCommittees } from '../lib/committees-db'
 import { geocodeClarkCountyAddress } from '../lib/geocode'
 import { parseDatetimeLocal } from '../lib/datetime'
 import { registerAdminContentRoutes } from './admin-content'
@@ -186,6 +187,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     if (!canAccessRole(ctx.user, ['admin'])) return c.redirect('/admin', 303)
     const users = await listUsersWithMemberInfo(c.env.DB)
     const members = await listActiveMembers(c.env.DB)
+    const committees = await listCommittees(c.env.DB)
     const ok = c.req.query('ok')
     const message =
       ok === '1'
@@ -196,7 +198,14 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
             ? 'Company link rejected.'
             : undefined
     return c.html(
-      <AdminUsersPage theme={c.get('theme')} ctx={ctx} users={users} members={members} message={message} />,
+      <AdminUsersPage
+        theme={c.get('theme')}
+        ctx={ctx}
+        users={users}
+        members={members}
+        committees={committees}
+        message={message}
+      />,
     )
   })
 
@@ -216,12 +225,14 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     if (!email || password.length < 10) {
       const users = await listUsersWithMemberInfo(c.env.DB)
       const members = await listActiveMembers(c.env.DB)
+      const committees = await listCommittees(c.env.DB)
       return c.html(
         <AdminUsersPage
           theme={c.get('theme')}
           ctx={ctx}
           users={users}
           members={members}
+          committees={committees}
           message="Email and password (10+ characters) are required."
         />,
       )
@@ -233,7 +244,8 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     })
 
     if (role === 'chair') {
-      const keys = COMMITTEE_KEYS.filter((key) => body[`committee_${key}`] === '1')
+      const assignmentKeys = committeeAssignmentKeys(await listCommittees(c.env.DB))
+      const keys = assignmentKeys.filter((key) => body[`committee_${key}`] === '1')
       await assignChairCommittees(c.env.DB, userId, keys)
     }
 
@@ -364,6 +376,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     if (!ctx) return c.redirect('/admin/login', 303)
     if (!canAccessRole(ctx.user, ['admin', 'chair'])) return c.redirect('/admin', 303)
     const events = await listAllEventsForAdmin(c.env.DB)
+    const committees = await listCommittees(c.env.DB)
     const flash =
       c.req.query('ok') === '1'
         ? 'Event saved.'
@@ -371,7 +384,13 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
           ? 'Event published.'
           : undefined
     return c.html(
-      <AdminEventsPage theme={c.get('theme')} ctx={ctx} events={events} flash={flash} />,
+      <AdminEventsPage
+        theme={c.get('theme')}
+        ctx={ctx}
+        events={events}
+        committees={committees}
+        flash={flash}
+      />,
     )
   })
 
@@ -394,7 +413,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       typeof body.registration_url === 'string' ? body.registration_url.trim() : ''
     const repeat_rule = parseRepeatRule(typeof body.repeat_rule === 'string' ? body.repeat_rule : '')
     const repeat_until = parseRepeatUntil(typeof body.repeat_until === 'string' ? body.repeat_until : '')
-    const committee_key = parseEventCommitteeKey(body.committee_key)
+    const committee_key = await resolveEventCommitteeKey(c.env.DB, body.committee_key)
     const coords = await resolveEventFormCoordinates(location || null, {
       manual: parseManualCoordinates(body.latitude, body.longitude),
       skipMap: body.map_skip === '1',
@@ -463,7 +482,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       typeof body.registration_url === 'string' ? body.registration_url.trim() : ''
     const repeat_rule = parseRepeatRule(typeof body.repeat_rule === 'string' ? body.repeat_rule : '')
     const repeat_until = parseRepeatUntil(typeof body.repeat_until === 'string' ? body.repeat_until : '')
-    const committee_key = parseEventCommitteeKey(body.committee_key)
+    const committee_key = await resolveEventCommitteeKey(c.env.DB, body.committee_key)
     const coords = await resolveEventFormCoordinates(location || null, {
       existing,
       manual: parseManualCoordinates(body.latitude, body.longitude),
@@ -509,7 +528,8 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const ctx = await resolveAdminContext(c)
     if (!ctx) return c.redirect('/admin/login', 303)
     if (!canAccessRole(ctx.user, ['chair'])) return c.redirect('/admin', 303)
-    return c.html(<AdminCommitteesPage theme={c.get('theme')} ctx={ctx} />)
+    const committees = await listCommittees(c.env.DB)
+    return c.html(<AdminCommitteesPage theme={c.get('theme')} ctx={ctx} committees={committees} />)
   })
 
   app.get('/admin/profile', async (c) => {

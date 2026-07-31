@@ -40,6 +40,14 @@ export async function updateApplicationStatus(
   await db.prepare('UPDATE applications SET status = ? WHERE id = ?').bind(status, id).run()
 }
 
+export async function deleteApplication(db: D1Database, id: string): Promise<void> {
+  await db.prepare('DELETE FROM applications WHERE id = ?').bind(id).run()
+}
+
+export async function acknowledgeAllApplications(db: D1Database): Promise<void> {
+  await db.prepare(`UPDATE applications SET status = 'reviewed' WHERE status = 'new'`).run()
+}
+
 export function parseApplicationPayload(json: string): ApplicationPayload {
   try {
     const parsed = JSON.parse(json)

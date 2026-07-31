@@ -1,26 +1,12 @@
 import type { ExpandedEventRecord } from '../lib/event-repeat'
+import type { CommitteeRecord } from '../lib/committees-db'
 import type { PageProps } from '../types/page'
-import { CHAPTER_COMMITTEES } from '../data/committees'
+import { EVENTS_LIST_PAGE_SIZE } from '../lib/events'
 import { EventCard, EventMapThumbAssets } from '../views/EventCard'
 import { JsonScript } from '../views/JsonScript'
 import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 
 export type EventsView = 'list' | 'week' | 'month'
-
-function eventsViewHref(
-  view: EventsView,
-  focusDate: string,
-  page = 1,
-  committeeKey?: string | null,
-): string {
-  const params = new URLSearchParams()
-  if (view !== 'list') params.set('view', view)
-  if (view === 'list' && page > 1) params.set('page', String(page))
-  if (view !== 'list') params.set('date', focusDate)
-  if (committeeKey) params.set('committee', committeeKey)
-  const qs = params.toString()
-  return qs ? `/events?${qs}` : '/events'
-}
 
 export function EventsPage({
   theme,
@@ -29,6 +15,7 @@ export function EventsPage({
   breakingNews,
   logoUrl,
   navigation,
+  staffInboxCount,
   events,
   calendarEvents,
   view,
@@ -37,6 +24,7 @@ export function EventsPage({
   totalEvents,
   focusDate,
   committeeKey,
+  committees,
 }: PageProps & {
   events: ExpandedEventRecord[]
   calendarEvents: ExpandedEventRecord[]
@@ -46,6 +34,7 @@ export function EventsPage({
   totalEvents: number
   focusDate: string
   committeeKey: string | null
+  committees: CommitteeRecord[]
 }) {
   const views: { id: EventsView; label: string }[] = [
     { id: 'list', label: 'List' },
@@ -54,7 +43,7 @@ export function EventsPage({
   ]
 
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })} title="Events">
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })} title="Events">
       <PageHeader
         title="Events"
         lead="Chapter meetings, training, and member gatherings across Las Vegas."
@@ -65,42 +54,51 @@ export function EventsPage({
         data-view={view}
         data-focus-date={focusDate}
         data-committee={committeeKey ?? ''}
+        data-list-page-size={EVENTS_LIST_PAGE_SIZE}
       >
         <div class="container">
           <div class="events-toolbar">
-            <div class="filter-pills" role="tablist" aria-label="Events view">
+            <div class="filter-pills" id="events-view-tabs" role="tablist" aria-label="Events view">
               {views.map((item) => {
                 const active = view === item.id
                 return (
-                  <a
+                  <button
+                    type="button"
                     key={item.id}
                     class={`pill ${active ? 'pill-active' : ''}`}
-                    href={eventsViewHref(item.id, focusDate, page, committeeKey)}
+                    data-view={item.id}
                     role="tab"
                     aria-selected={active}
                   >
                     {item.label}
-                  </a>
+                  </button>
                 )
               })}
             </div>
-            <div class="filter-pills events-committee-filters" role="group" aria-label="Filter by committee">
-              <a
+            <div
+              class="filter-pills events-committee-filters"
+              id="events-committee-filters"
+              role="group"
+              aria-label="Filter by committee"
+            >
+              <button
+                type="button"
                 class={`pill ${!committeeKey ? 'pill-active' : ''}`}
-                href={eventsViewHref(view, focusDate, 1)}
+                data-committee=""
               >
                 All committees
-              </a>
-              {CHAPTER_COMMITTEES.map((committee) => {
+              </button>
+              {committees.map((committee) => {
                 const active = committeeKey === committee.key
                 return (
-                  <a
+                  <button
+                    type="button"
                     key={committee.key}
                     class={`pill ${active ? 'pill-active' : ''}`}
-                    href={eventsViewHref(view, focusDate, 1, committee.key)}
+                    data-committee={committee.key}
                   >
                     {committee.name.replace(' Committee', '')}
-                  </a>
+                  </button>
                 )
               })}
             </div>
@@ -112,46 +110,41 @@ export function EventsPage({
             hidden={view !== 'list' ? true : undefined}
             role="tabpanel"
           >
-            <div class="event-list">
+            <div class="event-list" id="events-list">
               {events.map((event) => (
                 <EventCard event={event} key={event.id} />
               ))}
-              {events.length === 0 && <p class="prose">No upcoming events scheduled.</p>}
             </div>
+            <p class="prose" id="events-list-empty" hidden={events.length > 0 ? true : undefined}>
+              No upcoming events scheduled.
+            </p>
 
-            {totalPages > 1 && (
-              <nav class="events-pagination" aria-label="Events list pagination">
-                {page > 1 ? (
-                  <a
-                    class="btn btn-secondary btn-sm"
-                    href={eventsViewHref('list', focusDate, page - 1, committeeKey)}
-                    rel="prev"
-                  >
-                    Previous
-                  </a>
-                ) : (
-                  <span class="btn btn-secondary btn-sm" aria-disabled="true">
-                    Previous
-                  </span>
-                )}
-                <span class="events-page-info">
-                  Page {page} of {totalPages} ({totalEvents} upcoming)
-                </span>
-                {page < totalPages ? (
-                  <a
-                    class="btn btn-secondary btn-sm"
-                    href={eventsViewHref('list', focusDate, page + 1, committeeKey)}
-                    rel="next"
-                  >
-                    Next
-                  </a>
-                ) : (
-                  <span class="btn btn-secondary btn-sm" aria-disabled="true">
-                    Next
-                  </span>
-                )}
-              </nav>
-            )}
+            <nav
+              class="events-pagination"
+              id="events-pagination"
+              aria-label="Events list pagination"
+              hidden={totalPages <= 1 ? true : undefined}
+            >
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                id="events-page-prev"
+                disabled={page <= 1 ? true : undefined}
+              >
+                Previous
+              </button>
+              <span class="events-page-info" id="events-page-info">
+                Page {page} of {totalPages} ({totalEvents} upcoming)
+              </span>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                id="events-page-next"
+                disabled={page >= totalPages ? true : undefined}
+              >
+                Next
+              </button>
+            </nav>
           </div>
 
           <div

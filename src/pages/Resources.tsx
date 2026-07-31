@@ -1,4 +1,5 @@
 import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
+import type { ExpandedEventRecord } from '../lib/event-repeat'
 import { renderPageContent } from '../lib/page-blocks'
 import { groupResourceItems, type ResourceItemRecord } from '../lib/resource-items-db'
 import type { PageRecord } from '../lib/pages-db'
@@ -11,15 +12,21 @@ export function ResourcesPage({
   breakingNews,
   logoUrl,
   navigation,
+  staffInboxCount,
   page,
   items,
-}: PageProps & { page: PageRecord | null; items: ResourceItemRecord[] }) {
+  calendarEvents,
+}: PageProps & {
+  page: PageRecord | null
+  items: ResourceItemRecord[]
+  calendarEvents?: ExpandedEventRecord[]
+}) {
   const groups = groupResourceItems(items)
   const intro = page?.body_json || page?.body_md?.trim()
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })}
       title="Resources"
       description={page?.meta_description ?? undefined}
     >
@@ -29,7 +36,7 @@ export function ResourcesPage({
       />
       <section class="section">
         <div class="container prose">
-          {intro && <div>{renderPageContent(page?.body_md ?? '', page?.body_json)}</div>}
+          {intro && <div>{renderPageContent(page?.body_md ?? '', page?.body_json, { calendarEvents })}</div>}
           {groups.map((group) => (
             <div class="resource-section" key={group.category}>
               <h3>{group.category}</h3>

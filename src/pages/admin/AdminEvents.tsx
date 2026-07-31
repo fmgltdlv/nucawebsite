@@ -3,7 +3,7 @@ import { eventFlyerUrl, eventThumbnailUrl } from '../../lib/events'
 import { repeatRuleLabel } from '../../lib/event-repeat'
 import { toDateInputValue, toDatetimeLocalValue } from '../../lib/datetime'
 import { formatArchiveDate } from '../../lib/format'
-import { CHAPTER_COMMITTEES, CHAPTER_COMMITTEE_BY_KEY, type ChapterCommitteeKey } from '../../data/committees'
+import type { CommitteeRecord } from '../../lib/committees-db'
 import { AdminShell } from '../../views/AdminShell'
 import { AdminAssetPickerField } from '../../views/admin/AdminAssetPickerField'
 import { AdminCrudSections } from '../../views/admin/AdminCrudSections'
@@ -14,7 +14,7 @@ import { EventLocationFields, EventLocationPickerDialog } from '../../views/admi
 import type { AdminContext } from '../../lib/admin-context'
 import type { PageProps } from '../../types/page'
 
-function eventSearchText(event: EventRecord): string {
+function eventSearchText(event: EventRecord, committees: CommitteeRecord[]): string {
   return [
     event.title,
     event.location,
@@ -22,24 +22,26 @@ function eventSearchText(event: EventRecord): string {
     event.published ? 'published' : 'draft',
     formatArchiveDate(event.starts_at),
     repeatRuleLabel(event.repeat_rule),
-    committeeLabel(event.committee_key),
+    committeeLabel(event.committee_key, committees),
   ]
     .filter(Boolean)
     .join(' ')
     .toLowerCase()
 }
 
-function committeeLabel(key: string | null | undefined): string {
+function committeeLabel(key: string | null | undefined, committees: CommitteeRecord[]): string {
   if (!key) return '—'
-  return CHAPTER_COMMITTEE_BY_KEY[key as ChapterCommitteeKey] ?? '—'
+  return committees.find((committee) => committee.key === key)?.name ?? '—'
 }
 
 function EventCommitteeField({
   formId,
   committeeKey,
+  committees,
 }: {
   formId?: string
   committeeKey?: string | null
+  committees: CommitteeRecord[]
 }) {
   const id = formId ? `${formId}-committee_key` : 'committee_key'
   const selected = committeeKey ?? ''
@@ -51,7 +53,7 @@ function EventCommitteeField({
         <option value="" selected={!selected}>
           Chapter-wide (no committee)
         </option>
-        {CHAPTER_COMMITTEES.map((committee) => (
+        {committees.map((committee) => (
           <option value={committee.key} selected={selected === committee.key}>
             {committee.name}
           </option>
@@ -153,15 +155,21 @@ function EventRepeatFields({
   )
 }
 
-function EventListRow({ event }: { event: EventRecord }) {
+function EventListRow({
+  event,
+  committees,
+}: {
+  event: EventRecord
+  committees: CommitteeRecord[]
+}) {
   const editModalId = `edit-event-${event.id}`
 
   return (
-    <tr data-admin-list-row data-search={eventSearchText(event)}>
+    <tr data-admin-list-row data-search={eventSearchText(event, committees)}>
       <td><strong>{event.title}</strong></td>
       <td>{formatArchiveDate(event.starts_at)}</td>
       <td>{repeatRuleLabel(event.repeat_rule)}</td>
-      <td>{committeeLabel(event.committee_key)}</td>
+      <td>{committeeLabel(event.committee_key, committees)}</td>
       <td>{event.location ?? '—'}</td>
       <td>
         {event.published === 1 ? (
@@ -177,7 +185,13 @@ function EventListRow({ event }: { event: EventRecord }) {
   )
 }
 
-function EventEditModal({ event }: { event: EventRecord }) {
+function EventEditModal({
+  event,
+  committees,
+}: {
+  event: EventRecord
+  committees: CommitteeRecord[]
+}) {
   const modalId = `edit-event-${event.id}`
   const formId = `form-event-${event.id}`
 
@@ -226,7 +240,7 @@ function EventEditModal({ event }: { event: EventRecord }) {
         repeatRule={event.repeat_rule}
         repeatUntil={event.repeat_until}
       />
-      <EventCommitteeField formId={formId} committeeKey={event.committee_key} />
+      <EventCommitteeField formId={formId} committeeKey={event.committee_key} committees={committees} />
       <EventLocationFields
         formId={formId}
         location={event.location}
@@ -261,13 +275,15 @@ export function AdminEventsPage({
   theme,
   ctx,
   events,
+  committees,
   flash,
-}: PageProps & { ctx: AdminContext; events: EventRecord[]; flash?: string }) {
+}: PageProps & { ctx: AdminContext; events: EventRecord[]; committees: CommitteeRecord[]; flash?: string }) {
   return (
     <AdminShell
       theme={theme}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
+      inboxCounts={ctx.inboxCounts}
       title="Events"
       activePath="/admin/events"
     >
@@ -297,7 +313,7 @@ export function AdminEventsPage({
               </div>
             </div>
             <EventRepeatFields />
-            <EventCommitteeField />
+            <EventCommitteeField committees={committees} />
             <EventLocationFields />
             <EventImageFields />
             <div class="form-field">
@@ -325,8 +341,12 @@ export function AdminEventsPage({
             <th></th>
           </tr>
         }
-        tableBody={events.map((event) => <EventListRow event={event} key={event.id} />)}
-        afterTable={events.map((event) => <EventEditModal event={event} key={event.id} />)}
+        tableBody={events.map((event) => (
+          <EventListRow event={event} committees={committees} key={event.id} />
+        ))}
+        afterTable={events.map((event) => (
+          <EventEditModal event={event} committees={committees} key={event.id} />
+        ))}
       />
       <EventLocationPickerDialog />
       <link

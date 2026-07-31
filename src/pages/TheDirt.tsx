@@ -13,6 +13,7 @@ export function TheDirtArchivePage({
   breakingNews,
   logoUrl,
   navigation,
+  staffInboxCount,
   posts,
   releases,
 }: PageProps & { posts: PostRecord[]; releases: DirtReleaseRecord[] }) {
@@ -20,7 +21,7 @@ export function TheDirtArchivePage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })}
       title="THE DIRT"
       description="News, policy, and chapter announcements from NUCA of Las Vegas."
     >

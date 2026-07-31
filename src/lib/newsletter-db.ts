@@ -1,3 +1,11 @@
+export type NewsletterSubscriber = {
+  id: string
+  email: string
+  subscribed_at: string
+  source: string | null
+  status: string
+}
+
 export async function subscribeNewsletter(
   db: D1Database,
   email: string,
@@ -11,7 +19,7 @@ export async function subscribeNewsletter(
   try {
     await db
       .prepare(
-        `INSERT INTO newsletter_subscribers (id, email, source) VALUES (?, ?, ?)`,
+        `INSERT INTO newsletter_subscribers (id, email, source, status) VALUES (?, ?, ?, 'new')`,
       )
       .bind(crypto.randomUUID(), normalized, source ?? 'contact')
       .run()
@@ -21,13 +29,30 @@ export async function subscribeNewsletter(
   }
 }
 
-export async function listNewsletterSubscribers(db: D1Database): Promise<
-  { id: string; email: string; subscribed_at: string; source: string | null }[]
-> {
+export async function listNewsletterSubscribers(db: D1Database): Promise<NewsletterSubscriber[]> {
   const { results } = await db
     .prepare(
-      `SELECT id, email, subscribed_at, source FROM newsletter_subscribers ORDER BY subscribed_at DESC LIMIT 500`,
+      `SELECT id, email, subscribed_at, source, status
+       FROM newsletter_subscribers ORDER BY subscribed_at DESC LIMIT 500`,
     )
-    .all<{ id: string; email: string; subscribed_at: string; source: string | null }>()
+    .all<NewsletterSubscriber>()
   return results ?? []
+}
+
+export async function updateNewsletterSubscriberStatus(
+  db: D1Database,
+  id: string,
+  status: string,
+): Promise<void> {
+  await db.prepare('UPDATE newsletter_subscribers SET status = ? WHERE id = ?').bind(status, id).run()
+}
+
+export async function deleteNewsletterSubscriber(db: D1Database, id: string): Promise<void> {
+  await db.prepare('DELETE FROM newsletter_subscribers WHERE id = ?').bind(id).run()
+}
+
+export async function acknowledgeAllNewsletterSubscribers(db: D1Database): Promise<void> {
+  await db
+    .prepare(`UPDATE newsletter_subscribers SET status = 'acknowledged' WHERE status = 'new'`)
+    .run()
 }

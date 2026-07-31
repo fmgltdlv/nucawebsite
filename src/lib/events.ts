@@ -1,6 +1,6 @@
-import type { ChapterCommitteeKey } from '../data/committees'
-import { expandEventOccurrences, type ExpandedEventRecord } from './event-repeat'
 import { parseCommitteeKey } from './committee-pages'
+import { getCommitteeByKey } from './committees-db'
+import { expandEventOccurrences, type ExpandedEventRecord } from './event-repeat'
 import { geocodeClarkCountyAddress } from './geocode'
 import { resolveExistingImageKey } from './asset-select'
 import {
@@ -39,11 +39,15 @@ export const EVENTS_LIST_PAGE_SIZE = 5
 
 const EVENT_COLUMNS = `id, title, starts_at, ends_at, location, description, registration_url, published, repeat_rule, repeat_until, thumbnail_r2_key, flyer_r2_key, latitude, longitude, committee_key`
 
-export function parseEventCommitteeKey(value: unknown): ChapterCommitteeKey | null {
+export async function resolveEventCommitteeKey(
+  db: D1Database,
+  value: unknown,
+): Promise<string | null> {
   if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  if (!trimmed) return null
-  return parseCommitteeKey(trimmed)
+  const key = parseCommitteeKey(value.trim())
+  if (!key) return null
+  const committee = await getCommitteeByKey(db, key)
+  return committee ? committee.key : null
 }
 
 function filterEventsByCommittee(
@@ -52,6 +56,15 @@ function filterEventsByCommittee(
 ): EventRecord[] {
   if (!committeeKey) return events
   return events.filter((event) => event.committee_key === committeeKey)
+}
+
+export function filterEventsByCommitteeKeys(
+  events: EventRecord[],
+  committeeKeys: string[],
+): EventRecord[] {
+  if (committeeKeys.length === 0) return events
+  const allowed = new Set(committeeKeys)
+  return events.filter((event) => event.committee_key != null && allowed.has(event.committee_key))
 }
 
 async function listPublishedMasterEvents(db: D1Database): Promise<EventRecord[]> {

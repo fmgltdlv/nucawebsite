@@ -109,6 +109,7 @@ export function AdminContentPostsPage({
       theme={theme}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
+      inboxCounts={ctx.inboxCounts}
       title="THE DIRT — web posts"
       activePath="/admin/content"
     >

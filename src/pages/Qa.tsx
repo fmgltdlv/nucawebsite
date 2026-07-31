@@ -4,11 +4,11 @@ import type { QaRecord } from '../lib/qa-db'
 import type { PageProps } from '../types/page'
 
 export function QaPage({ theme, contact, footer, breakingNews, logoUrl,
-  navigation, items }: PageProps & { items: QaRecord[] }) {
+  navigation, staffInboxCount, items }: PageProps & { items: QaRecord[] }) {
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })} title="Q & A">
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })} title="FAQ">
       <PageHeader
-        title="Q & A"
+        title="FAQ"
         lead="Frequently asked questions about NUCA and the Las Vegas chapter."
       />
       <section class="section">

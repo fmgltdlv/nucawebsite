@@ -1,4 +1,4 @@
-import { PAGE_LABELS, type PageRecord } from '../../../lib/pages-db'
+import type { PageRecord } from '../../../lib/pages-db'
 import { pagePreviewPath, pagePublicPath } from '../../../lib/page-paths'
 import { AdminShell } from '../../../views/AdminShell'
 import type { AdminContext } from '../../../lib/admin-context'
@@ -8,7 +8,8 @@ export function AdminContentPagesPage({
   theme,
   ctx,
   pages,
-}: PageProps & { ctx: AdminContext; pages: PageRecord[] }) {
+  pageLabels,
+}: PageProps & { ctx: AdminContext; pages: PageRecord[]; pageLabels: Record<string, string> }) {
   const bySlug = Object.fromEntries(pages.map((p) => [p.slug, p]))
 
   return (
@@ -16,6 +17,7 @@ export function AdminContentPagesPage({
       theme={theme}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
+      inboxCounts={ctx.inboxCounts}
       title="Editable pages"
       activePath="/admin/content"
     >
@@ -23,7 +25,7 @@ export function AdminContentPagesPage({
         <a href="/admin/content">← Content</a>
       </p>
       <ul class="admin-link-list">
-        {Object.entries(PAGE_LABELS).map(([slug, label]) => {
+        {Object.entries(pageLabels).map(([slug, label]) => {
           const page = bySlug[slug]
           const publicPath = pagePublicPath(slug)
           const previewPath = pagePreviewPath(slug)

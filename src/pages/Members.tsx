@@ -72,6 +72,7 @@ export function MembersPage({
   breakingNews,
   logoUrl,
   navigation,
+  staffInboxCount,
   filter,
   members,
 }: PageProps & { filter?: MemberType; members: MemberSummary[] }) {
@@ -87,7 +88,7 @@ export function MembersPage({
   ]
 
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })} title="Members">
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })} title="Members">
       <PageHeader title="Members" />
       <section class="section">
         <div class="container">

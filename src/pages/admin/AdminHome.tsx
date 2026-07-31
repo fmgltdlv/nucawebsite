@@ -1,12 +1,15 @@
 import { AdminShell } from '../../views/AdminShell'
+import { AdminCountBadge } from '../../views/admin/AdminCountBadge'
+import { inboxCardBadge } from '../../views/admin/AdminInboxToolbar'
 import type { AdminContext } from '../../lib/admin-context'
 import type { PageProps } from '../../types/page'
 
 export function AdminHomePage({ theme, ctx }: PageProps & { ctx: AdminContext }) {
   const { user } = ctx
+  const counts = ctx.inboxCounts
 
   return (
-    <AdminShell theme={theme} user={user} chairCommittees={ctx.chairCommittees} title="Dashboard" activePath="/admin">
+    <AdminShell theme={theme} user={user} chairCommittees={ctx.chairCommittees} inboxCounts={counts} title="Dashboard" activePath="/admin">
       <div class="admin-cards">
         {user.role === 'admin' && (
           <>
@@ -20,18 +23,37 @@ export function AdminHomePage({ theme, ctx }: PageProps & { ctx: AdminContext })
             </a>
             <a class="admin-card" href="/admin/content">
               <h2>Content</h2>
-              <p>Q & A, THE DIRT PDFs, editable pages, and site settings.</p>
+              <p>FAQ, THE DIRT PDFs, editable pages, and site settings.</p>
             </a>
             <a class="admin-card" href="/admin/assets">
               <h2>Assets</h2>
               <p>Browse uploaded logos, photos, and PDFs stored for the public site.</p>
             </a>
+            <a class="admin-card" href="/admin/applications">
+              <h2 class="admin-card-title-row">
+                Join applications
+                {inboxCardBadge(counts, 'applications') != null && (
+                  <AdminCountBadge count={inboxCardBadge(counts, 'applications')!} />
+                )}
+              </h2>
+              <p>Review membership applications submitted through the public Join form.</p>
+            </a>
             <a class="admin-card" href="/admin/contact-messages">
-              <h2>Contact messages</h2>
+              <h2 class="admin-card-title-row">
+                Contact messages
+                {inboxCardBadge(counts, 'contactMessages') != null && (
+                  <AdminCountBadge count={inboxCardBadge(counts, 'contactMessages')!} />
+                )}
+              </h2>
               <p>Read and manage messages submitted through the public Contact form.</p>
             </a>
             <a class="admin-card" href="/admin/newsletter">
-              <h2>Newsletter</h2>
+              <h2 class="admin-card-title-row">
+                Newsletter
+                {inboxCardBadge(counts, 'newsletter') != null && (
+                  <AdminCountBadge count={inboxCardBadge(counts, 'newsletter')!} />
+                )}
+              </h2>
               <p>View THE DIRT mailing list signups from the Contact page.</p>
             </a>
           </>

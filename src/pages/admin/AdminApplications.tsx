@@ -1,7 +1,9 @@
 import { parseApplicationPayload, type ApplicationRecord } from '../../lib/applications-db'
 import { AdminShell } from '../../views/AdminShell'
 import { AdminEditButton, AdminListSection, AdminListSearch } from '../../views/admin/AdminListSection'
-import { AdminModal, AdminModalCancelButton } from '../../views/admin/AdminModal'
+import { AdminInboxToolbar } from '../../views/admin/AdminInboxToolbar'
+import { AdminEditModalFooter } from '../../views/admin/AdminEditActions'
+import { AdminModal } from '../../views/admin/AdminModal'
 import type { AdminContext } from '../../lib/admin-context'
 import type { PageProps } from '../../types/page'
 
@@ -40,6 +42,12 @@ function ApplicationListRow({ app }: { app: ApplicationRecord }) {
         <span class={`admin-status-badge admin-status-app-${app.status}`}>{app.status}</span>
       </td>
       <td class="admin-list-actions">
+        {app.status === 'new' && (
+          <form method="post" action={`/admin/applications/${app.id}`} class="admin-inline-form">
+            <input type="hidden" name="status" value="reviewed" />
+            <button type="submit" class="btn btn-secondary btn-sm">Acknowledge</button>
+          </form>
+        )}
         <AdminEditButton modalId={editModalId} label="Review" />
       </td>
     </tr>
@@ -58,10 +66,13 @@ function ApplicationEditModal({ app }: { app: ApplicationRecord }) {
       formAction={`/admin/applications/${app.id}`}
       formId={formId}
       footer={
-        <>
-          <AdminModalCancelButton />
-          <button type="submit" class="btn btn-primary" form={formId}>Update status</button>
-        </>
+        <AdminEditModalFooter
+          formId={formId}
+          saveAction={`/admin/applications/${app.id}`}
+          deleteAction={`/admin/applications/${app.id}/delete`}
+          saveLabel="Update status"
+          deleteLabel="Delete"
+        />
       }
     >
       <dl class="admin-detail-list admin-detail-list-modal">
@@ -92,11 +103,14 @@ export function AdminApplicationsPage({
   applications,
   flash,
 }: PageProps & { ctx: AdminContext; applications: ApplicationRecord[]; flash?: string }) {
+  const newCount = applications.filter((app) => app.status === 'new').length
+
   return (
     <AdminShell
       theme={theme}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
+      inboxCounts={ctx.inboxCounts}
       title="Join applications"
       activePath="/admin/applications"
     >
@@ -104,6 +118,12 @@ export function AdminApplicationsPage({
         <a href="/admin/content">← Content</a>
       </p>
       {flash && <p class="admin-flash">{flash}</p>}
+
+      <AdminInboxToolbar
+        newCount={newCount}
+        acknowledgeAction="/admin/applications/acknowledge-all"
+        acknowledgeLabel="Mark all as reviewed"
+      />
 
       <AdminListSection
         title="Queue"

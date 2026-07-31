@@ -1,4 +1,4 @@
-/** Chapter standing committees — single source for public pages, nav, and chair assignments */
+/** Default chapter committees — seeded into D1 on first run; managed in admin thereafter. */
 export const CHAPTER_COMMITTEES = [
   { key: 'legislative', name: 'Legislative Committee' },
   { key: 'safety', name: 'Safety Committee' },

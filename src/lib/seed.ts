@@ -10,10 +10,8 @@ import { seedNavItemsIfEmpty } from './nav-items-db'
 import { upsertPage } from './pages-db'
 import { createLeadership } from './leadership-db'
 import { createResourceItem } from './resource-items-db'
-import { CHAPTER_COMMITTEES } from '../data/committees'
-import { defaultCommitteeBlocks } from './committee-pages'
-import { blocksToMarkdown, serializePageBlocks } from './page-blocks'
-import { committeePageSlug } from './chair-pages'
+import { seedCommitteesIfEmpty } from './committees-db'
+import { defaultHomePageSeed } from './home-page'
 
 /** Seed first admin from Worker secrets when no users exist. */
 export async function seedAdminIfNeeded(env: Env): Promise<void> {
@@ -42,12 +40,13 @@ export async function seedDemoMembersIfEmpty(env: Env): Promise<void> {
 /** Seed Q&A, events, site settings, pages, and leadership from demo data when tables are empty. */
 export async function seedContentIfEmpty(env: Env): Promise<void> {
   await seedSiteSettingsIfEmpty(env)
+  await seedCommitteesIfEmpty(env.DB)
   await seedNavItemsIfEmpty(env.DB)
   await seedQaIfEmpty(env)
   await seedEventsIfEmpty(env)
   await seedPagesIfEmpty(env)
+  await seedHomePageIfMissing(env)
   await seedTrainingPageIfMissing(env)
-  await seedCommitteePagesIfMissing(env)
   await seedResourcesIfEmpty(env)
   await seedLeadershipIfEmpty(env)
 }
@@ -103,7 +102,7 @@ async function seedPagesIfEmpty(env: Env): Promise<void> {
 
 Under **About** in the menu:
 
-- [Q & A](/about/q-and-a) — including "What is NUCA?"
+- [FAQ](/about/faq) — including "What is NUCA?"
 - [Leadership](/about/leadership)
 - [Member List](/members)
 - [Events](/events)
@@ -172,6 +171,15 @@ NUCA's Confined Space Entry course is intended to provide construction managers,
 For questions about training dates or registration, [contact the chapter](/contact).`
 }
 
+async function seedHomePageIfMissing(env: Env): Promise<void> {
+  const existing = await env.DB.prepare('SELECT slug FROM pages WHERE slug = ?')
+    .bind('home')
+    .first<{ slug: string }>()
+  if (existing) return
+
+  await upsertPage(env.DB, defaultHomePageSeed())
+}
+
 async function seedTrainingPageIfMissing(env: Env): Promise<void> {
   const existing = await env.DB.prepare('SELECT slug FROM pages WHERE slug = ?')
     .bind('training')
@@ -186,29 +194,6 @@ async function seedTrainingPageIfMissing(env: Env): Promise<void> {
       'NUCA excavation safety competent person and confined space entry training for utility construction professionals.',
     published: true,
   })
-}
-
-async function seedCommitteePagesIfMissing(env: Env): Promise<void> {
-  for (const committee of CHAPTER_COMMITTEES) {
-    const slug = committeePageSlug(committee.key)
-    const existing = await env.DB.prepare('SELECT slug FROM pages WHERE slug = ?')
-      .bind(slug)
-      .first<{ slug: string }>()
-    if (existing) continue
-
-    const blocks = defaultCommitteeBlocks(committee.name)
-    const body_json = serializePageBlocks(blocks)
-    const body_md = blocksToMarkdown(blocks)
-
-    await upsertPage(env.DB, {
-      slug,
-      title: committee.name,
-      body_md,
-      body_json,
-      meta_description: `${committee.name} — NUCA of Las Vegas`,
-      published: true,
-    })
-  }
 }
 
 async function seedResourcesIfEmpty(env: Env): Promise<void> {

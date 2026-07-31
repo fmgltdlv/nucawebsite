@@ -8,29 +8,38 @@ export type PageRecord = {
 }
 
 export const PAGE_SLUGS = [
+  'home',
   'about',
   'training',
   'resources',
   'scholarships',
   'committees',
-  'committee-legislative',
-  'committee-safety',
-  'committee-standards',
-  'committee-damage_prevention',
 ] as const
 
 export type PageSlug = (typeof PAGE_SLUGS)[number]
 
 export const PAGE_LABELS: Record<PageSlug, string> = {
+  home: 'Home page',
   about: 'About',
   training: 'Training',
   resources: 'Resources',
   scholarships: 'NUCA Las Vegas Scholarships',
   committees: 'Committees',
-  'committee-legislative': 'Legislative Committee',
-  'committee-safety': 'Safety Committee',
-  'committee-standards': 'Standards Committee',
-  'committee-damage_prevention': 'Damage Prevention Committee',
+}
+
+export function isCommitteePageSlug(slug: string): boolean {
+  return slug.startsWith('committee-')
+}
+
+export function isKnownPageSlug(slug: string): boolean {
+  return isPageSlug(slug) || isCommitteePageSlug(slug)
+}
+
+export function buildPageLabels(committees: { key: string; name: string }[]): Record<string, string> {
+  return {
+    ...PAGE_LABELS,
+    ...Object.fromEntries(committees.map((committee) => [`committee-${committee.key}`, committee.name])),
+  }
 }
 
 export function isPageSlug(slug: string): slug is PageSlug {

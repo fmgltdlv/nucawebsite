@@ -59,7 +59,6 @@ export function EventCard({ event }: { event: ExpandedEventRecord }) {
           </div>
           <h2>{event.title}</h2>
           {event.description && <p>{event.description}</p>}
-          <span class="event-card-cta">View event →</span>
         </div>
       </a>
     </article>

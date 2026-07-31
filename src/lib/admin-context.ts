@@ -5,10 +5,12 @@ import type { Env } from '../env'
 import { getUserById, listChairCommittees } from './auth'
 import type { User } from '../config/roles'
 import { readSessionCookie, verifySessionToken } from './session'
+import { getAdminInboxCounts, type AdminInboxCounts } from './admin-inbox-counts'
 
 export type AdminContext = {
   user: User
   chairCommittees: string[]
+  inboxCounts?: AdminInboxCounts
 }
 
 export async function resolveAdminContext(
@@ -24,7 +26,9 @@ export async function resolveAdminContext(
   const chairCommittees =
     user.role === 'chair' ? await listChairCommittees(c.env.DB, user.id) : []
 
-  return { user, chairCommittees }
+  const inboxCounts = user.role === 'admin' ? await getAdminInboxCounts(c.env.DB) : undefined
+
+  return { user, chairCommittees, inboxCounts }
 }
 
 export function canAccessRole(user: User, allowed: UserRole[]): boolean {

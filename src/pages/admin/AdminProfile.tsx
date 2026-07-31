@@ -32,6 +32,7 @@ export function AdminProfilePage({
       theme={theme}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
+      inboxCounts={ctx.inboxCounts}
       title="My listing"
       activePath="/admin/profile"
     >

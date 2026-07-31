@@ -113,6 +113,7 @@ export function AdminAssetsPage({
       theme={theme}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
+      inboxCounts={ctx.inboxCounts}
       title="Assets"
       activePath="/admin/assets"
     >

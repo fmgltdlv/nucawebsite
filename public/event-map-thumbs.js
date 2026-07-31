@@ -72,4 +72,6 @@
   window.addEventListener('load', () => {
     scan(document)
   })
+
+  window.initEventMapThumbs = scan
 })()
