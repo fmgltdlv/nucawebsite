@@ -3,9 +3,11 @@ import type { AdminMember } from '../../lib/members-db'
 import { AdminShell } from '../../views/AdminShell'
 import { AdminModal, AdminModalCancelButton } from '../../views/admin/AdminModal'
 import { AdminAssetPickerField } from '../../views/admin/AdminAssetPickerField'
+import { MemberPointsOfContactFields } from '../../views/admin/MemberPointsOfContactFields'
 import { AdminCrudSections } from '../../views/admin/AdminCrudSections'
 import { AdminEditButton } from '../../views/admin/AdminListSection'
 import type { AdminContext } from '../../lib/admin-context'
+import { padPointsOfContact } from '../../lib/member-contacts'
 import type { PageProps } from '../../types/page'
 
 function memberSearchText(member: AdminMember): string {
@@ -126,6 +128,10 @@ function MemberEditModal({ member }: { member: AdminMember }) {
         <label for={`${formId}-email`}>Email</label>
         <input type="email" name="email" id={`${formId}-email`} value={member.email ?? ''} />
       </div>
+      <MemberPointsOfContactFields
+        formIdPrefix={`${formId}-`}
+        contacts={padPointsOfContact(member.contacts ?? [])}
+      />
       <AdminAssetPickerField
         label="Company logo"
         kind="image"
@@ -217,6 +223,7 @@ export function AdminMembersPage({
               <label for="email">Email</label>
               <input type="email" name="email" id="email" />
             </div>
+            <MemberPointsOfContactFields />
             <AdminAssetPickerField
               label="Company logo"
               kind="image"

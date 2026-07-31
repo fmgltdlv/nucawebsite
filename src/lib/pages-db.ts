@@ -9,6 +9,7 @@ export type PageRecord = {
 
 export const PAGE_SLUGS = [
   'about',
+  'training',
   'resources',
   'scholarships',
   'committees',
@@ -22,6 +23,7 @@ export type PageSlug = (typeof PAGE_SLUGS)[number]
 
 export const PAGE_LABELS: Record<PageSlug, string> = {
   about: 'About',
+  training: 'Training',
   resources: 'Resources',
   scholarships: 'NUCA Las Vegas Scholarships',
   committees: 'Committees',

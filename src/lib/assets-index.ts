@@ -187,3 +187,21 @@ export function countAssetsByType(assets: AssetIndexEntry[]): Record<AssetType, 
   }
   return counts
 }
+
+export function filterAssetsByKind(
+  assets: AssetIndexEntry[],
+  kind: AssetContentKind,
+): AssetIndexEntry[] {
+  return assets.filter((asset) => asset.contentKind === kind)
+}
+
+export function dedupeAssetsByKey(assets: AssetIndexEntry[]): AssetIndexEntry[] {
+  const seen = new Set<string>()
+  const result: AssetIndexEntry[] = []
+  for (const asset of assets) {
+    if (seen.has(asset.key)) continue
+    seen.add(asset.key)
+    result.push(asset)
+  }
+  return result
+}

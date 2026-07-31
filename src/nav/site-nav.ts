@@ -74,6 +74,11 @@ export const siteNavigation: NavEntry[] = [
     ],
   },
   {
+    label: 'Training',
+    href: '/training',
+    status: 'stub',
+  },
+  {
     label: 'Committees',
     href: '/about/committees',
     status: 'stub',
@@ -95,18 +100,10 @@ export const siteNavigation: NavEntry[] = [
     ],
   },
   {
-    label: 'Industry Updates',
-    href: '/industry-updates',
-    status: 'todo',
+    label: 'THE DIRT',
+    href: '/the-dirt',
+    status: 'demo',
     legacyUrl: 'https://nucalasvegas.com/industry-updates/',
-    children: [
-      {
-        label: 'THE DIRT',
-        href: '/about/the-dirt',
-        status: 'demo',
-        indent: true,
-      },
-    ],
   },
   {
     label: 'Join NUCA of Las Vegas Today!',

@@ -11,7 +11,7 @@ export function NewsletterThanksPage(props: PageProps) {
       prose
     >
       <p>
-        <a href="/about/the-dirt">Browse THE DIRT archive</a> or return <a href="/">home</a>.
+        <a href="/the-dirt">Browse THE DIRT</a> or return <a href="/">home</a>.
       </p>
     </StatusPage>
   )

@@ -32,6 +32,7 @@ export function AdminShell({
       { href: '/admin/content', label: 'Content' },
       { href: '/admin/assets', label: 'Assets' },
       { href: '/admin/applications', label: 'Applications' },
+      { href: '/admin/contact-messages', label: 'Contact messages' },
       { href: '/admin/newsletter', label: 'Newsletter' },
     )
   } else if (user.role === 'chair') {

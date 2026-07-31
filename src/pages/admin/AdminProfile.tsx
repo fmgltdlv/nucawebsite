@@ -1,6 +1,8 @@
 import type { Member } from '../../data/demo'
 import { memberTypeLabel } from '../../data/demo'
+import { padPointsOfContact } from '../../lib/member-contacts'
 import { AdminShell } from '../../views/AdminShell'
+import { MemberPointsOfContactFields } from '../../views/admin/MemberPointsOfContactFields'
 import { MemberLinkStatusDot } from '../../views/MemberLinkStatus'
 import type { AdminContext } from '../../lib/admin-context'
 import type { PageProps } from '../../types/page'
@@ -97,7 +99,7 @@ export function AdminProfilePage({
         <section class="admin-form-section">
           <h2>Listing contact info</h2>
           <p class="section-lead">
-            Company name and type are managed by staff. You can update website, phone, and email for your approved listing.
+            Company name and type are managed by staff. You can update website, phone, email, and points of contact for your approved listing.
           </p>
           <form class="form" method="post" action="/admin/profile">
             <div class="form-field">
@@ -112,6 +114,7 @@ export function AdminProfilePage({
               <label for="email">Public email</label>
               <input type="email" name="email" id="email" value={member.email ?? ''} />
             </div>
+            <MemberPointsOfContactFields contacts={padPointsOfContact(member.contacts ?? [])} />
             <button type="submit" class="btn btn-primary">Save changes</button>
           </form>
         </section>

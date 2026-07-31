@@ -21,7 +21,7 @@ export function TheDirtViewerPage({
       <section class="section">
         <div class="container">
           <p>
-            <a class="btn btn-secondary btn-sm" href="/about/the-dirt">← Back to archive</a>
+            <a class="btn btn-secondary btn-sm" href="/the-dirt">← Back to THE DIRT</a>
           </p>
           {release.summary && <p class="section-lead">{release.summary}</p>}
           <div class="pdf-toolbar">
@@ -51,8 +51,8 @@ export function TheDirtNotFoundPage(props: PageProps) {
       title="Release not found"
       heading="Release not found"
       lead="That issue is not in the archive."
-      ctaHref="/about/the-dirt"
-      ctaLabel="Back to THE DIRT archive"
+      ctaHref="/the-dirt"
+      ctaLabel="Back to THE DIRT"
     />
   )
 }

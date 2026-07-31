@@ -970,20 +970,27 @@
       if (contactsEl instanceof HTMLElement && contactsListEl instanceof HTMLUListElement) {
         contactsListEl.replaceChildren()
         const contacts = Array.isArray(member.contacts) ? member.contacts : []
+        let visibleCount = 0
         contacts.forEach((contact) => {
-          if (!contact?.email) return
+          const name = contact?.name?.trim() ?? ''
+          const email = contact?.email?.trim() ?? ''
+          if (!name && !email) return
+          visibleCount += 1
           const item = document.createElement('li')
-          const name = document.createElement('span')
-          name.className = 'member-dialog-contact-name'
-          name.textContent = contact.name?.trim() || contact.email
-          const email = document.createElement('a')
-          email.className = 'member-dialog-contact-email'
-          email.href = `mailto:${contact.email}`
-          email.textContent = contact.email
-          item.append(name, email)
+          const nameEl = document.createElement('span')
+          nameEl.className = 'member-dialog-contact-name'
+          nameEl.textContent = name || email
+          item.append(nameEl)
+          if (email) {
+            const emailEl = document.createElement('a')
+            emailEl.className = 'member-dialog-contact-email'
+            emailEl.href = `mailto:${email}`
+            emailEl.textContent = email
+            item.append(emailEl)
+          }
           contactsListEl.append(item)
         })
-        contactsEl.hidden = contacts.length === 0
+        contactsEl.hidden = visibleCount === 0
       }
 
       setMemberDialogState('ready')
@@ -1173,6 +1180,10 @@
   let focusDate = parseDateParam(
     new URLSearchParams(window.location.search).get('date') ?? page.getAttribute('data-focus-date'),
   )
+  let activeCommittee =
+    new URLSearchParams(window.location.search).get('committee') ??
+    page.getAttribute('data-committee') ??
+    ''
   let activeView = readView()
 
   function updateUrl() {
@@ -1181,11 +1192,13 @@
       params.set('view', activeView)
       params.set('date', toDateParam(focusDate))
     }
+    if (activeCommittee) params.set('committee', activeCommittee)
     const qs = params.toString()
     const next = qs ? `/events?${qs}` : '/events'
     window.history.replaceState(null, '', next)
     page.setAttribute('data-view', activeView)
     page.setAttribute('data-focus-date', toDateParam(focusDate))
+    page.setAttribute('data-committee', activeCommittee)
   }
 
   function setViewVisibility() {

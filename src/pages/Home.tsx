@@ -2,6 +2,7 @@ import { Layout, pickLayoutSite } from '../views/Layout'
 import { ArchiveCard, ArchiveCardList } from '../views/ArchiveCard'
 import { EventCard } from '../views/EventCard'
 import type { DirtReleaseRecord } from '../lib/dirt-db'
+import { mergeDirtFeed } from '../lib/dirt-feed'
 import type { ExpandedEventRecord } from '../lib/event-repeat'
 import type { PostRecord } from '../lib/posts-db'
 import type { PageProps } from '../types/page'
@@ -20,7 +21,7 @@ export function HomePage({
   dirtReleases: DirtReleaseRecord[]
   posts: PostRecord[]
 }) {
-  const industryUpdates = posts.length > 0 ? posts.slice(0, 3) : dirtReleases.slice(0, 3)
+  const dirtItems = mergeDirtFeed(posts, dirtReleases).slice(0, 3)
 
   return (
     <Layout
@@ -58,31 +59,35 @@ export function HomePage({
         </div>
       </section>
 
-      <section class="section section-muted" id="industry-updates">
+      <section class="section section-muted" id="the-dirt">
         <div class="container">
-          <h2>Industry updates</h2>
-          <p class="section-lead">
-            News, policy, and chapter announcements. See also{' '}
-            <a href="/about/the-dirt">THE DIRT</a> archive.
-          </p>
+          <h2>THE DIRT</h2>
+          <p class="section-lead">News, policy, and chapter announcements.</p>
           <ArchiveCardList>
-            {industryUpdates.map((item) => {
-              const isPost = 'slug' in item
-              const href = isPost
-                ? `/industry-updates/${(item as PostRecord).slug}`
-                : `/about/the-dirt/${item.id}`
-              const date = isPost
-                ? (item as PostRecord).published_at ?? ''
-                : (item as DirtReleaseRecord).published_at
-              const title = item.title
-              const summary = isPost ? (item as PostRecord).excerpt : (item as DirtReleaseRecord).summary
+            {dirtItems.map((item) => {
+              if (item.kind === 'post') {
+                const post = item.post
+                return (
+                  <li key={`post-${post.id}`}>
+                    <ArchiveCard
+                      href={`/industry-updates/${post.slug}`}
+                      date={post.published_at ?? ''}
+                      title={post.title}
+                      summary={post.excerpt}
+                      ctaLabel="Read update →"
+                    />
+                  </li>
+                )
+              }
+
+              const release = item.release
               return (
-                <li key={item.id}>
+                <li key={`release-${release.id}`}>
                   <ArchiveCard
-                    href={href}
-                    date={date}
-                    title={title}
-                    summary={summary}
+                    href={`/about/the-dirt/${release.id}`}
+                    date={release.published_at}
+                    title={release.title}
+                    summary={release.summary}
                     ctaLabel="Read update →"
                   />
                 </li>
@@ -90,7 +95,7 @@ export function HomePage({
             })}
           </ArchiveCardList>
           <p class="section-footer-link">
-            <a class="text-link" href="/industry-updates">All industry updates →</a>
+            <a class="text-link" href="/the-dirt">All THE DIRT →</a>
           </p>
         </div>
       </section>

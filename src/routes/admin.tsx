@@ -15,6 +15,7 @@ import {
   listAllEventsForAdmin,
   resolveEventCoordinates,
   updateEvent,
+  parseEventCommitteeKey,
 } from '../lib/events'
 import { parseDatetimeLocal } from '../lib/datetime'
 import { registerAdminContentRoutes } from './admin-content'
@@ -29,6 +30,7 @@ import {
   updateMemberProfile,
 } from '../lib/members-db'
 import { applyMemberLogoChange } from '../lib/member-logos'
+import { parsePointsOfContactFromForm } from '../lib/member-contacts'
 import { countAssetsByType, dedupeAssetsByKey, filterAssetsByKind, listIndexedAssets, parseAssetType } from '../lib/assets-index'
 import { getAssetUrl } from '../lib/r2-assets'
 import { seedAdminIfNeeded } from '../lib/seed'
@@ -62,6 +64,7 @@ function parseMemberFormBody(body: Record<string, File | string>) {
   const email = typeof body.email === 'string' ? body.email.trim() : ''
   const description = typeof body.description === 'string' ? body.description.trim() : ''
   const active = body.active === '1'
+  const contacts = parsePointsOfContactFromForm(body)
 
   return {
     company_name,
@@ -70,6 +73,7 @@ function parseMemberFormBody(body: Record<string, File | string>) {
     website: website || undefined,
     phone: phone || undefined,
     email: email || undefined,
+    contacts,
     active,
   }
 }
@@ -369,6 +373,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       typeof body.registration_url === 'string' ? body.registration_url.trim() : ''
     const repeat_rule = parseRepeatRule(typeof body.repeat_rule === 'string' ? body.repeat_rule : '')
     const repeat_until = parseRepeatUntil(typeof body.repeat_until === 'string' ? body.repeat_until : '')
+    const committee_key = parseEventCommitteeKey(body.committee_key)
     const coords = await resolveEventCoordinates(location || null)
 
     const id = await createEvent(c.env.DB, {
@@ -380,6 +385,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       registration_url: registration_url || undefined,
       repeat_rule,
       repeat_until,
+      committee_key,
       latitude: coords.latitude,
       longitude: coords.longitude,
     })
@@ -399,6 +405,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
         published: true,
         repeat_rule,
         repeat_until,
+        committee_key,
         thumbnail_r2_key: images.thumbnail_r2_key,
         flyer_r2_key: images.flyer_r2_key,
         latitude: coords.latitude,
@@ -432,6 +439,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       typeof body.registration_url === 'string' ? body.registration_url.trim() : ''
     const repeat_rule = parseRepeatRule(typeof body.repeat_rule === 'string' ? body.repeat_rule : '')
     const repeat_until = parseRepeatUntil(typeof body.repeat_until === 'string' ? body.repeat_until : '')
+    const committee_key = parseEventCommitteeKey(body.committee_key)
     const coords = await resolveEventCoordinates(location || null, existing)
     const images = await applyEventImageUploads(c.env.R2, id, body, existing)
     if (images.error) {
@@ -448,6 +456,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       published: body.published === '1',
       repeat_rule,
       repeat_until,
+      committee_key,
       thumbnail_r2_key: images.thumbnail_r2_key,
       flyer_r2_key: images.flyer_r2_key,
       latitude: coords.latitude,
@@ -551,11 +560,13 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const website = typeof body.website === 'string' ? body.website.trim() : ''
     const phone = typeof body.phone === 'string' ? body.phone.trim() : ''
     const email = typeof body.email === 'string' ? body.email.trim() : ''
+    const contacts = parsePointsOfContactFromForm(body)
 
     await updateMemberProfile(c.env.DB, ctx.user.member_id, {
       website: website || undefined,
       phone: phone || undefined,
       email: email || undefined,
+      contacts,
     })
 
     return c.redirect('/admin/profile?ok=1', 303)

@@ -44,6 +44,7 @@ export async function seedContentIfEmpty(env: Env): Promise<void> {
   await seedQaIfEmpty(env)
   await seedEventsIfEmpty(env)
   await seedPagesIfEmpty(env)
+  await seedTrainingPageIfMissing(env)
   await seedCommitteePagesIfMissing(env)
   await seedResourcesIfEmpty(env)
   await seedLeadershipIfEmpty(env)
@@ -105,8 +106,9 @@ Under **About** in the menu:
 - [Member List](/members)
 - [Events](/events)
 - [Resources](/resources)
+- [Training](/training)
 
-Other main menu items: [Committees](/about/committees), [Industry Updates](/industry-updates) ([THE DIRT](/about/the-dirt)).`,
+Other main menu items: [Committees](/about/committees), [THE DIRT](/the-dirt).`,
     meta_description:
       'The local chapter of the National Utility Contractors Association serves utility construction professionals across Southern Nevada.',
     published: true,
@@ -135,6 +137,51 @@ Contact the chapter for current criteria, deadlines, and application materials.`
     title: 'Resources',
     body_md: '',
     meta_description: 'Reference links for local utilities, national organizations, and Southern Nevada municipalities.',
+    published: true,
+  })
+
+  await upsertPage(env.DB, {
+    slug: 'training',
+    title: 'Training',
+    body_md: trainingPageBodyMd(),
+    meta_description:
+      'NUCA excavation safety competent person and confined space entry training for utility construction professionals.',
+    published: true,
+  })
+}
+
+function trainingPageBodyMd(): string {
+  return `NUCA of Las Vegas offers safety training programs for utility contractors, competent persons, and field crews. See [upcoming events](/events) for scheduled classes.
+
+## NUCA Competent Person Class
+
+Excavation is the most dangerous of all construction operations. More workers are killed or seriously injured in and around excavations than in other phases of construction work, and that's why the Occupational Safety and Health Administration (OSHA) requires a competent person to oversee all excavation and trenching jobsites. The competent person must have specific training in, and be knowledgeable about, soil analysis, the use of protective systems, and the requirements of OSHA Subpart P.
+
+NUCA's Excavation Safety Competent Person Training program helps contractors train the competent person and workers. Although the responsibility for designating a competent person is the sole responsibility of the contractor, this program is designed to simplify the task by providing participants with the information and training needed to become a competent person.
+
+The program includes the scope and application of Subpart P—Excavation Standard; definitions; general requirements; requirements for protective systems; soil classification; and handling an OSHA inspection. Each participant receives a training manual that includes a complete copy of the Excavation Standard.
+
+## NUCA Confined Space Training
+
+Millions of employees who enter into confined spaces each year face a significant risk of injury or death. Many of these same employees do not recognize that they may be facing serious unforeseen hazards by working in a confined space.
+
+NUCA's Confined Space Entry course is intended to provide construction managers, competent persons, and workers with basic information regarding entry into confined spaces. Its purpose is to create an awareness of the hazards associated with confined spaces and to provide managers with basic information necessary to establish a confined space entry program. Every confined space is unique. Therefore, each confined space must be carefully evaluated, and hazards must be eliminated or controlled before a confined space entry supervisor issues an entry permit.
+
+For questions about training dates or registration, [contact the chapter](/contact).`
+}
+
+async function seedTrainingPageIfMissing(env: Env): Promise<void> {
+  const existing = await env.DB.prepare('SELECT slug FROM pages WHERE slug = ?')
+    .bind('training')
+    .first<{ slug: string }>()
+  if (existing) return
+
+  await upsertPage(env.DB, {
+    slug: 'training',
+    title: 'Training',
+    body_md: trainingPageBodyMd(),
+    meta_description:
+      'NUCA excavation safety competent person and confined space entry training for utility construction professionals.',
     published: true,
   })
 }

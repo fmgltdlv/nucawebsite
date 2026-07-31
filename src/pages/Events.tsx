@@ -1,16 +1,23 @@
 import type { ExpandedEventRecord } from '../lib/event-repeat'
 import type { PageProps } from '../types/page'
+import { CHAPTER_COMMITTEES } from '../data/committees'
 import { EventCard } from '../views/EventCard'
 import { JsonScript } from '../views/JsonScript'
 import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 
 export type EventsView = 'list' | 'week' | 'month'
 
-function eventsViewHref(view: EventsView, focusDate: string, page = 1): string {
+function eventsViewHref(
+  view: EventsView,
+  focusDate: string,
+  page = 1,
+  committeeKey?: string | null,
+): string {
   const params = new URLSearchParams()
   if (view !== 'list') params.set('view', view)
   if (view === 'list' && page > 1) params.set('page', String(page))
   if (view !== 'list') params.set('date', focusDate)
+  if (committeeKey) params.set('committee', committeeKey)
   const qs = params.toString()
   return qs ? `/events?${qs}` : '/events'
 }
@@ -28,6 +35,7 @@ export function EventsPage({
   totalPages,
   totalEvents,
   focusDate,
+  committeeKey,
 }: PageProps & {
   events: ExpandedEventRecord[]
   calendarEvents: ExpandedEventRecord[]
@@ -36,6 +44,7 @@ export function EventsPage({
   totalPages: number
   totalEvents: number
   focusDate: string
+  committeeKey: string | null
 }) {
   const views: { id: EventsView; label: string }[] = [
     { id: 'list', label: 'List' },
@@ -49,7 +58,13 @@ export function EventsPage({
         title="Events"
         lead="Chapter meetings, training, and member gatherings across Las Vegas."
       />
-      <section class="section" id="events-page" data-view={view} data-focus-date={focusDate}>
+      <section
+        class="section"
+        id="events-page"
+        data-view={view}
+        data-focus-date={focusDate}
+        data-committee={committeeKey ?? ''}
+      >
         <div class="container">
           <div class="events-toolbar">
             <div class="filter-pills" role="tablist" aria-label="Events view">
@@ -59,11 +74,31 @@ export function EventsPage({
                   <a
                     key={item.id}
                     class={`pill ${active ? 'pill-active' : ''}`}
-                    href={eventsViewHref(item.id, focusDate)}
+                    href={eventsViewHref(item.id, focusDate, page, committeeKey)}
                     role="tab"
                     aria-selected={active}
                   >
                     {item.label}
+                  </a>
+                )
+              })}
+            </div>
+            <div class="filter-pills events-committee-filters" role="group" aria-label="Filter by committee">
+              <a
+                class={`pill ${!committeeKey ? 'pill-active' : ''}`}
+                href={eventsViewHref(view, focusDate, 1)}
+              >
+                All committees
+              </a>
+              {CHAPTER_COMMITTEES.map((committee) => {
+                const active = committeeKey === committee.key
+                return (
+                  <a
+                    key={committee.key}
+                    class={`pill ${active ? 'pill-active' : ''}`}
+                    href={eventsViewHref(view, focusDate, 1, committee.key)}
+                  >
+                    {committee.name.replace(' Committee', '')}
                   </a>
                 )
               })}
@@ -88,7 +123,7 @@ export function EventsPage({
                 {page > 1 ? (
                   <a
                     class="btn btn-secondary btn-sm"
-                    href={eventsViewHref('list', focusDate, page - 1)}
+                    href={eventsViewHref('list', focusDate, page - 1, committeeKey)}
                     rel="prev"
                   >
                     Previous
@@ -104,7 +139,7 @@ export function EventsPage({
                 {page < totalPages ? (
                   <a
                     class="btn btn-secondary btn-sm"
-                    href={eventsViewHref('list', focusDate, page + 1)}
+                    href={eventsViewHref('list', focusDate, page + 1, committeeKey)}
                     rel="next"
                   >
                     Next

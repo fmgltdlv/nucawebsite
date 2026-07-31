@@ -1,4 +1,6 @@
+import type { ChapterCommitteeKey } from '../data/committees'
 import { expandEventOccurrences, type ExpandedEventRecord } from './event-repeat'
+import { parseCommitteeKey } from './committee-pages'
 import { geocodeClarkCountyAddress } from './geocode'
 import { resolveExistingImageKey } from './asset-select'
 import {
@@ -24,6 +26,7 @@ export type EventRecord = {
   flyer_r2_key: string | null
   latitude: number | null
   longitude: number | null
+  committee_key: string | null
 }
 
 export type EventOccurrenceView = {
@@ -34,7 +37,22 @@ export type EventOccurrenceView = {
 
 export const EVENTS_LIST_PAGE_SIZE = 5
 
-const EVENT_COLUMNS = `id, title, starts_at, ends_at, location, description, registration_url, published, repeat_rule, repeat_until, thumbnail_r2_key, flyer_r2_key, latitude, longitude`
+const EVENT_COLUMNS = `id, title, starts_at, ends_at, location, description, registration_url, published, repeat_rule, repeat_until, thumbnail_r2_key, flyer_r2_key, latitude, longitude, committee_key`
+
+export function parseEventCommitteeKey(value: unknown): ChapterCommitteeKey | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  return parseCommitteeKey(trimmed)
+}
+
+function filterEventsByCommittee(
+  events: EventRecord[],
+  committeeKey?: string | null,
+): EventRecord[] {
+  if (!committeeKey) return events
+  return events.filter((event) => event.committee_key === committeeKey)
+}
 
 async function listPublishedMasterEvents(db: D1Database): Promise<EventRecord[]> {
   const { results } = await db
@@ -59,8 +77,11 @@ export function eventPublicHref(event: Pick<ExpandedEventRecord, 'series_id' | '
   return `/events/${event.series_id}?at=${encodeURIComponent(event.starts_at)}`
 }
 
-export async function countUpcomingEvents(db: D1Database): Promise<number> {
-  const events = await listPublishedMasterEvents(db)
+export async function countUpcomingEvents(
+  db: D1Database,
+  committeeKey?: string | null,
+): Promise<number> {
+  const events = filterEventsByCommittee(await listPublishedMasterEvents(db), committeeKey)
   return upcomingOccurrences(events).length
 }
 
@@ -68,19 +89,27 @@ export async function listUpcomingEventsPage(
   db: D1Database,
   page: number,
   pageSize = EVENTS_LIST_PAGE_SIZE,
+  committeeKey?: string | null,
 ): Promise<ExpandedEventRecord[]> {
-  const events = await listPublishedMasterEvents(db)
+  const events = filterEventsByCommittee(await listPublishedMasterEvents(db), committeeKey)
   const offset = Math.max(0, (Math.max(1, page) - 1) * pageSize)
   return upcomingOccurrences(events).slice(offset, offset + pageSize)
 }
 
-export async function listPublishedEventsForCalendar(db: D1Database): Promise<ExpandedEventRecord[]> {
-  const events = await listPublishedMasterEvents(db)
+export async function listPublishedEventsForCalendar(
+  db: D1Database,
+  committeeKey?: string | null,
+): Promise<ExpandedEventRecord[]> {
+  const events = filterEventsByCommittee(await listPublishedMasterEvents(db), committeeKey)
   return expandEventOccurrences(events)
 }
 
-export async function listUpcomingEvents(db: D1Database, limit = 50): Promise<ExpandedEventRecord[]> {
-  const events = await listPublishedMasterEvents(db)
+export async function listUpcomingEvents(
+  db: D1Database,
+  limit = 50,
+  committeeKey?: string | null,
+): Promise<ExpandedEventRecord[]> {
+  const events = filterEventsByCommittee(await listPublishedMasterEvents(db), committeeKey)
   return upcomingOccurrences(events).slice(0, limit)
 }
 
@@ -224,13 +253,14 @@ export async function createEvent(
     flyer_r2_key?: string | null
     latitude?: number | null
     longitude?: number | null
+    committee_key?: string | null
   },
 ): Promise<string> {
   const id = crypto.randomUUID()
   await db
     .prepare(
-      `INSERT INTO events (id, title, starts_at, ends_at, location, description, registration_url, published, repeat_rule, repeat_until, thumbnail_r2_key, flyer_r2_key, latitude, longitude)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO events (id, title, starts_at, ends_at, location, description, registration_url, published, repeat_rule, repeat_until, thumbnail_r2_key, flyer_r2_key, latitude, longitude, committee_key)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       id,
@@ -246,6 +276,7 @@ export async function createEvent(
       data.flyer_r2_key ?? null,
       data.latitude ?? null,
       data.longitude ?? null,
+      data.committee_key ?? null,
     )
     .run()
   return id
@@ -268,13 +299,14 @@ export async function updateEvent(
     flyer_r2_key?: string | null
     latitude?: number | null
     longitude?: number | null
+    committee_key?: string | null
   },
 ): Promise<void> {
   await db
     .prepare(
       `UPDATE events SET title = ?, starts_at = ?, ends_at = ?, location = ?, description = ?,
        registration_url = ?, published = ?, repeat_rule = ?, repeat_until = ?,
-       thumbnail_r2_key = ?, flyer_r2_key = ?, latitude = ?, longitude = ?,
+       thumbnail_r2_key = ?, flyer_r2_key = ?, latitude = ?, longitude = ?, committee_key = ?,
        updated_at = datetime('now') WHERE id = ?`,
     )
     .bind(
@@ -291,6 +323,7 @@ export async function updateEvent(
       data.flyer_r2_key ?? null,
       data.latitude ?? null,
       data.longitude ?? null,
+      data.committee_key ?? null,
       id,
     )
     .run()

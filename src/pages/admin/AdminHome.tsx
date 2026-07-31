@@ -26,6 +26,10 @@ export function AdminHomePage({ theme, ctx }: PageProps & { ctx: AdminContext })
               <h2>Assets</h2>
               <p>Browse uploaded logos, photos, and PDFs stored for the public site.</p>
             </a>
+            <a class="admin-card" href="/admin/contact-messages">
+              <h2>Contact messages</h2>
+              <p>Read and manage messages submitted through the public Contact form.</p>
+            </a>
             <a class="admin-card" href="/admin/newsletter">
               <h2>Newsletter</h2>
               <p>View THE DIRT mailing list signups from the Contact page.</p>

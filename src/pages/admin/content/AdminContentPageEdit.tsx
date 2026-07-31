@@ -1,20 +1,9 @@
 import { PAGE_LABELS, type PageRecord } from '../../../lib/pages-db'
 import { blocksFromMarkdown, parsePageBlocks, serializePageBlocks } from '../../../lib/page-blocks'
-import { committeeKeyFromSlug, committeePublicPath } from '../../../lib/committee-pages'
+import { pagePreviewPath, pagePublicPath } from '../../../lib/page-paths'
 import { AdminShell } from '../../../views/AdminShell'
 import type { AdminContext } from '../../../lib/admin-context'
 import type { PageProps } from '../../../types/page'
-
-const publicPaths: Record<string, string> = {
-  about: '/about',
-  resources: '/resources',
-  scholarships: '/scholarships',
-  committees: '/about/committees',
-  'committee-legislative': '/about/committees/legislative',
-  'committee-safety': '/about/committees/safety',
-  'committee-standards': '/about/committees/standards',
-  'committee-damage_prevention': '/about/committees/damage_prevention',
-}
 
 function initialBlocksJson(page: PageRecord | null): string {
   const fromJson = parsePageBlocks(page?.body_json ?? null)
@@ -37,9 +26,8 @@ export function AdminContentPageEditPage({
   flash?: string
 }) {
   const label = PAGE_LABELS[slug as keyof typeof PAGE_LABELS] ?? slug
-  const publicPath =
-    publicPaths[slug] ??
-    (committeeKeyFromSlug(slug) ? committeePublicPath(committeeKeyFromSlug(slug)!) : `/${slug}`)
+  const publicPath = pagePublicPath(slug)
+  const previewPath = pagePreviewPath(slug)
   const blocksJson = initialBlocksJson(page)
 
   return (
@@ -53,7 +41,15 @@ export function AdminContentPageEditPage({
       <p class="admin-note">
         <a href="/admin/content/pages">← Pages</a>
         {' · '}
-        <a href={publicPath}>View public page</a>
+        <a href={previewPath} target="_blank" rel="noopener noreferrer">
+          Preview
+        </a>
+        {page?.published !== 0 && (
+          <>
+            {' · '}
+            <a href={publicPath}>View public page</a>
+          </>
+        )}
       </p>
       {flash && <p class="admin-flash">{flash}</p>}
       <form class="form admin-form-section" method="post" action={`/admin/content/pages/${slug}`}>

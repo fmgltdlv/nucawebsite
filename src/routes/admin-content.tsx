@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { getCookie } from 'hono/cookie'
 import type { ThemeId } from '../config/themes'
 import { parseThemeId } from '../config/themes'
 import type { Env } from '../env'
@@ -21,6 +22,7 @@ import {
 import { createPost, deletePost, getPostById, listAllPosts, updatePost } from '../lib/posts-db'
 import { getPageBySlug, isPageSlug, listPages, upsertPage } from '../lib/pages-db'
 import { blocksToMarkdown, parsePageBlocks } from '../lib/page-blocks'
+import { renderCmsPage } from '../lib/render-cms-page'
 import { createQaItem, deleteQaItem, listQaItems, updateQaItem } from '../lib/qa-db'
 import {
   createResourceItem,
@@ -49,10 +51,14 @@ import {
   setThemeId,
   type BreakingNews,
 } from '../lib/site-settings'
-import { listApplications, updateApplicationStatus } from '../lib/applications-db'
+import { loadPublicSiteContext } from '../lib/site-context'
+import { seedContentIfEmpty } from '../lib/seed'
+import { THEME_COOKIE } from '../lib/theme'
 import { listNewsletterSubscribers } from '../lib/newsletter-db'
+import { listContactSubmissions, updateContactSubmissionStatus } from '../lib/contact-db'
 import { parseDatetimeLocal } from '../lib/datetime'
 import { AdminApplicationsPage } from '../pages/admin/AdminApplications'
+import { AdminContactMessagesPage } from '../pages/admin/AdminContactMessages'
 import { AdminNewsletterSubscribersPage } from '../pages/admin/AdminNewsletterSubscribers'
 import { AdminContentPage } from '../pages/admin/AdminContent'
 import { AdminContentDirtPage } from '../pages/admin/content/AdminContentDirt'
@@ -63,6 +69,8 @@ import { AdminContentPostsPage } from '../pages/admin/content/AdminContentPosts'
 import { AdminContentQaPage } from '../pages/admin/content/AdminContentQa'
 import { AdminContentResourcesPage } from '../pages/admin/content/AdminContentResources'
 import { AdminContentSettingsPage } from '../pages/admin/content/AdminContentSettings'
+import { PagePreviewFrame } from '../views/PagePreviewBanner'
+import { listApplications, updateApplicationStatus } from '../lib/applications-db'
 
 type AdminVariables = { theme: ThemeId }
 
@@ -352,6 +360,28 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     return c.html(<AdminContentPagesPage theme={c.get('theme')} ctx={auth.ctx} pages={pages} />)
   })
 
+  app.get('/admin/content/pages/:slug/preview', async (c) => {
+    const ctx = await resolveAdminContext(c)
+    if (!ctx) return c.redirect('/admin/login', 303)
+    const slug = c.req.param('slug')
+    if (!chairCanEditPage(ctx, slug)) return c.redirect('/admin', 303)
+    if (ctx.user.role !== 'admin' && !isPageSlug(slug)) return c.redirect('/admin', 303)
+
+    await seedContentIfEmpty(c.env)
+    const page = await getPageBySlug(c.env.DB, slug)
+    if (!page) return c.redirect(`/admin/content/pages/${slug}`, 303)
+
+    const site = await loadPublicSiteContext(c.env, getCookie(c, THEME_COOKIE))
+    const resourceItems =
+      slug === 'resources' ? await listResourceItems(c.env.DB, true) : undefined
+
+    return c.html(
+      <PagePreviewFrame slug={slug} published={page.published === 1}>
+        {renderCmsPage(site, slug, page, { resourceItems })}
+      </PagePreviewFrame>,
+    )
+  })
+
   app.get('/admin/content/pages/:slug', async (c) => {
     const ctx = await resolveAdminContext(c)
     if (!ctx) return c.redirect('/admin/login', 303)
@@ -524,6 +554,29 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     return c.html(
       <AdminNewsletterSubscribersPage theme={c.get('theme')} ctx={auth.ctx} subscribers={subscribers} />,
     )
+  })
+
+  app.get('/admin/contact-messages', async (c) => {
+    const auth = await requireAdmin(c)
+    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const submissions = await listContactSubmissions(c.env.DB)
+    return c.html(
+      <AdminContactMessagesPage
+        theme={c.get('theme')}
+        ctx={auth.ctx}
+        submissions={submissions}
+        flash={flashMessage(c, '1')}
+      />,
+    )
+  })
+
+  app.post('/admin/contact-messages/:id', async (c) => {
+    const auth = await requireAdmin(c)
+    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const body = await c.req.parseBody()
+    const status = typeof body.status === 'string' ? body.status : 'new'
+    await updateContactSubmissionStatus(c.env.DB, c.req.param('id'), status)
+    return c.redirect('/admin/contact-messages?ok=1', 303)
   })
 
   app.get('/admin/applications', async (c) => {

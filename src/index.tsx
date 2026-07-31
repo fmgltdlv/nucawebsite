@@ -4,6 +4,7 @@ import type { MemberType } from './data/demo'
 import { parseThemeId, type ThemeId } from './config/themes'
 import type { Env } from './env'
 import { createApplication } from './lib/applications-db'
+import { createContactSubmission } from './lib/contact-db'
 import { getDirtRelease, listDirtReleases } from './lib/dirt-db'
 import { sendContactMessage, notifyStaffOfApplication } from './lib/email'
 import {
@@ -39,7 +40,7 @@ import { ContactPage, ContactErrorPage, ContactThanksPage } from './pages/Contac
 import { EventDetailPage, EventNotFoundPage } from './pages/EventDetail'
 import { EventsPage, type EventsView } from './pages/Events'
 import { HomePage } from './pages/Home'
-import { IndustryUpdateDetailPage, IndustryUpdatesPage } from './pages/IndustryUpdates'
+import { IndustryUpdateDetailPage } from './pages/IndustryUpdates'
 import { JoinPage, JoinThanksPage } from './pages/Join'
 import { MembersPage } from './pages/Members'
 import { LeadershipPage } from './pages/Leadership'
@@ -141,11 +142,16 @@ app.get('/about/committees/:key', async (c) => {
   return c.html(<CommitteeDetailPage {...site} committeeKey={committeeKey} page={page} />)
 })
 
-app.get('/about/the-dirt', async (c) => {
+app.get('/the-dirt', async (c) => {
   const site = await siteProps(c)
-  const releases = await listDirtReleases(c.env.DB, true)
-  return c.html(<TheDirtArchivePage {...site} releases={releases} />)
+  const [posts, releases] = await Promise.all([
+    listPublishedPosts(c.env.DB),
+    listDirtReleases(c.env.DB, true),
+  ])
+  return c.html(<TheDirtArchivePage {...site} posts={posts} releases={releases} />)
 })
+
+app.get('/about/the-dirt', (c) => c.redirect('/the-dirt', 301))
 
 app.get('/about/the-dirt/:id', async (c) => {
   const site = await siteProps(c)
@@ -156,6 +162,13 @@ app.get('/about/the-dirt/:id', async (c) => {
   return c.html(<TheDirtViewerPage {...site} release={release} />)
 })
 
+app.get('/training', async (c) => {
+  const site = await siteProps(c)
+  const page = await getPageBySlug(c.env.DB, 'training', true)
+  if (!page) return c.html(<NotFoundPage {...site} />, 404)
+  return c.html(<ContentPage {...site} page={page} />)
+})
+
 app.get('/scholarships', async (c) => {
   const site = await siteProps(c)
   const page = await getPageBySlug(c.env.DB, 'scholarships', true)
@@ -163,11 +176,7 @@ app.get('/scholarships', async (c) => {
   return c.html(<ContentPage {...site} page={page} />)
 })
 
-app.get('/industry-updates', async (c) => {
-  const site = await siteProps(c)
-  const posts = await listPublishedPosts(c.env.DB)
-  return c.html(<IndustryUpdatesPage {...site} posts={posts} />)
-})
+app.get('/industry-updates', (c) => c.redirect('/the-dirt', 301))
 
 app.get('/industry-updates/:slug', async (c) => {
   const site = await siteProps(c)
@@ -218,14 +227,15 @@ app.get('/events', async (c) => {
   const view = parseEventsView(c.req.query('view'))
   const focusDate = parseEventsFocusDate(c.req.query('date'))
   const page = Math.max(1, Number.parseInt(c.req.query('page') ?? '1', 10) || 1)
+  const committeeKey = parseCommitteeKey(c.req.query('committee') ?? '') ?? null
 
   const [totalEvents, calendarEvents] = await Promise.all([
-    countUpcomingEvents(c.env.DB),
-    listPublishedEventsForCalendar(c.env.DB),
+    countUpcomingEvents(c.env.DB, committeeKey),
+    listPublishedEventsForCalendar(c.env.DB, committeeKey),
   ])
   const totalPages = Math.max(1, Math.ceil(totalEvents / EVENTS_LIST_PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
-  const events = await listUpcomingEventsPage(c.env.DB, safePage)
+  const events = await listUpcomingEventsPage(c.env.DB, safePage, EVENTS_LIST_PAGE_SIZE, committeeKey)
 
   return c.html(
     <EventsPage
@@ -237,6 +247,7 @@ app.get('/events', async (c) => {
       totalPages={totalPages}
       totalEvents={totalEvents}
       focusDate={focusDate}
+      committeeKey={committeeKey}
     />,
   )
 })
@@ -288,8 +299,14 @@ app.post('/contact', async (c) => {
   if (!name || !email || !message) {
     return c.html(<ContactErrorPage {...site} error="Name, email, and message are required." />)
   }
-  const result = await sendContactMessage(c.env, { name, email, message })
-  if (!result.ok) return c.html(<ContactErrorPage {...site} error={result.error} />)
+  try {
+    await createContactSubmission(c.env.DB, { name, email, message })
+  } catch {
+    return c.html(
+      <ContactErrorPage {...site} error="Could not save your message. Please try calling the chapter." />,
+    )
+  }
+  await sendContactMessage(c.env, { name, email, message })
   return c.html(<ContactThanksPage {...site} />)
 })
 

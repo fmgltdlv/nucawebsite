@@ -94,7 +94,7 @@ function DirtEditModal({ release }: { release: DirtReleaseRecord }) {
       />
       <label class="admin-check">
         <input type="checkbox" name="published" value="1" checked={release.published === 1} />
-        Published in THE DIRT archive
+        Published in THE DIRT
       </label>
     </AdminModal>
   )
@@ -123,7 +123,7 @@ export function AdminContentDirtPage({
       <AdminCrudSections
         breadcrumb={
           <p class="admin-note">
-            <a href="/admin/content">← Content</a> · <a href="/about/the-dirt">View archive</a>
+            <a href="/admin/content">← Content</a> · <a href="/the-dirt">View public listing</a>
           </p>
         }
         flash={flash}

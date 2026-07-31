@@ -92,7 +92,7 @@ function PostEditModal({ post }: { post: PostRecord }) {
       </div>
       <label class="admin-check">
         <input type="checkbox" name="published" value="1" checked={post.published === 1} />
-        Published on industry updates
+        Published on THE DIRT
       </label>
     </AdminModal>
   )
@@ -109,13 +109,13 @@ export function AdminContentPostsPage({
       theme={theme}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
-      title="Industry updates"
+      title="THE DIRT — web posts"
       activePath="/admin/content"
     >
       <AdminCrudSections
         breadcrumb={
           <p class="admin-note">
-            <a href="/admin/content">← Content</a> · <a href="/industry-updates">View public listing</a>
+            <a href="/admin/content">← Content</a> · <a href="/the-dirt">View public listing</a>
           </p>
         }
         flash={flash}

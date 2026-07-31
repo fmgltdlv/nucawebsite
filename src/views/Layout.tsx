@@ -118,7 +118,7 @@ export function Layout({
             <div>
               <p class="footer-title">THE DIRT</p>
               <p class="footer-muted">{dirtBlurb}</p>
-              <a class="footer-link" href="/about/the-dirt">Browse the archive</a>
+              <a class="footer-link" href="/the-dirt">Browse THE DIRT</a>
               <br />
               <a class="footer-link" href="/contact#newsletter">Subscribe by email</a>
             </div>

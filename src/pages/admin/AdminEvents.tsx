@@ -3,6 +3,7 @@ import { eventFlyerUrl, eventThumbnailUrl } from '../../lib/events'
 import { repeatRuleLabel } from '../../lib/event-repeat'
 import { toDateInputValue, toDatetimeLocalValue } from '../../lib/datetime'
 import { formatArchiveDate } from '../../lib/format'
+import { CHAPTER_COMMITTEES, CHAPTER_COMMITTEE_BY_KEY, type ChapterCommitteeKey } from '../../data/committees'
 import { AdminShell } from '../../views/AdminShell'
 import { AdminAssetPickerField } from '../../views/admin/AdminAssetPickerField'
 import { AdminCrudSections } from '../../views/admin/AdminCrudSections'
@@ -20,10 +21,44 @@ function eventSearchText(event: EventRecord): string {
     event.published ? 'published' : 'draft',
     formatArchiveDate(event.starts_at),
     repeatRuleLabel(event.repeat_rule),
+    committeeLabel(event.committee_key),
   ]
     .filter(Boolean)
     .join(' ')
     .toLowerCase()
+}
+
+function committeeLabel(key: string | null | undefined): string {
+  if (!key) return '—'
+  return CHAPTER_COMMITTEE_BY_KEY[key as ChapterCommitteeKey] ?? '—'
+}
+
+function EventCommitteeField({
+  formId,
+  committeeKey,
+}: {
+  formId?: string
+  committeeKey?: string | null
+}) {
+  const id = formId ? `${formId}-committee_key` : 'committee_key'
+  const selected = committeeKey ?? ''
+
+  return (
+    <div class="form-field">
+      <label for={id}>Committee (optional)</label>
+      <select name="committee_key" id={id}>
+        <option value="" selected={!selected}>
+          Chapter-wide (no committee)
+        </option>
+        {CHAPTER_COMMITTEES.map((committee) => (
+          <option value={committee.key} selected={selected === committee.key}>
+            {committee.name}
+          </option>
+        ))}
+      </select>
+      <p class="form-hint">Associates this event with a committee for filtering on the public events calendar.</p>
+    </div>
+  )
 }
 
 function EventImageFields({
@@ -125,6 +160,7 @@ function EventListRow({ event }: { event: EventRecord }) {
       <td><strong>{event.title}</strong></td>
       <td>{formatArchiveDate(event.starts_at)}</td>
       <td>{repeatRuleLabel(event.repeat_rule)}</td>
+      <td>{committeeLabel(event.committee_key)}</td>
       <td>{event.location ?? '—'}</td>
       <td>
         {event.published === 1 ? (
@@ -189,6 +225,7 @@ function EventEditModal({ event }: { event: EventRecord }) {
         repeatRule={event.repeat_rule}
         repeatUntil={event.repeat_until}
       />
+      <EventCommitteeField formId={formId} committeeKey={event.committee_key} />
       <div class="form-field">
         <label for={`${formId}-location`}>Location</label>
         <input type="text" name="location" id={`${formId}-location`} value={event.location ?? ''} />
@@ -263,6 +300,7 @@ export function AdminEventsPage({
               </div>
             </div>
             <EventRepeatFields />
+            <EventCommitteeField />
             <div class="form-field">
               <label for="location">Location</label>
               <input type="text" name="location" id="location" />
@@ -290,6 +328,7 @@ export function AdminEventsPage({
             <th>Title</th>
             <th>Starts</th>
             <th>Repeats</th>
+            <th>Committee</th>
             <th>Location</th>
             <th>Status</th>
             <th></th>

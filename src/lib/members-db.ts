@@ -1,5 +1,6 @@
-import type { Member } from '../data/demo'
+import type { Member, MemberContact } from '../data/demo'
 import type { MemberType } from '../data/demo'
+import { parsePointsOfContactJson, serializePointsOfContact } from './member-contacts'
 import { memberLogoUrl } from './member-logos'
 
 export type AdminMember = Member & {
@@ -16,6 +17,7 @@ type MemberRow = {
   phone: string | null
   email: string | null
   logo_r2_key: string | null
+  points_of_contact_json: string | null
 }
 
 function mapMemberRow(row: MemberRow): Member {
@@ -28,13 +30,15 @@ function mapMemberRow(row: MemberRow): Member {
     phone: row.phone ?? undefined,
     email: row.email ?? undefined,
     logoUrl: memberLogoUrl(row.logo_r2_key),
+    contacts: parsePointsOfContactJson(row.points_of_contact_json),
   }
 }
 
 export async function getMemberById(db: D1Database, id: string): Promise<Member | null> {
   const row = await db
     .prepare(
-      `SELECT id, company_name, member_type, description, website, phone, email, logo_r2_key
+      `SELECT id, company_name, member_type, description, website, phone, email, logo_r2_key,
+              points_of_contact_json
        FROM members WHERE id = ? AND active = 1`,
     )
     .bind(id)
@@ -54,7 +58,8 @@ export async function getMemberLogoR2Key(db: D1Database, id: string): Promise<st
 export async function listMembersForAdmin(db: D1Database): Promise<AdminMember[]> {
   const { results } = await db
     .prepare(
-      `SELECT id, company_name, member_type, description, website, phone, email, active, logo_r2_key
+      `SELECT id, company_name, member_type, description, website, phone, email, active, logo_r2_key,
+              points_of_contact_json
        FROM members ORDER BY company_name ASC`,
     )
     .all<MemberRow & { active: number }>()
@@ -75,6 +80,7 @@ export async function createMember(
     website?: string
     phone?: string
     email?: string
+    contacts?: MemberContact[]
     active?: boolean
     logo_r2_key?: string
   },
@@ -82,8 +88,9 @@ export async function createMember(
   const id = crypto.randomUUID()
   await db
     .prepare(
-      `INSERT INTO members (id, company_name, member_type, description, website, phone, email, active, logo_r2_key)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO members (id, company_name, member_type, description, website, phone, email,
+                            points_of_contact_json, active, logo_r2_key)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       id,
@@ -93,6 +100,7 @@ export async function createMember(
       data.website ?? null,
       data.phone ?? null,
       data.email ?? null,
+      serializePointsOfContact(data.contacts ?? []),
       data.active ? 1 : 0,
       data.logo_r2_key ?? null,
     )
@@ -110,6 +118,7 @@ export async function updateMember(
     website?: string
     phone?: string
     email?: string
+    contacts?: MemberContact[]
     active: boolean
   },
 ): Promise<void> {
@@ -117,7 +126,7 @@ export async function updateMember(
     .prepare(
       `UPDATE members
        SET company_name = ?, member_type = ?, description = ?, website = ?, phone = ?, email = ?,
-           active = ?, updated_at = datetime('now')
+           points_of_contact_json = ?, active = ?, updated_at = datetime('now')
        WHERE id = ?`,
     )
     .bind(
@@ -127,6 +136,7 @@ export async function updateMember(
       data.website ?? null,
       data.phone ?? null,
       data.email ?? null,
+      serializePointsOfContact(data.contacts ?? []),
       data.active ? 1 : 0,
       id,
     )
@@ -147,12 +157,20 @@ export async function updateMemberLogoKey(
 export async function updateMemberProfile(
   db: D1Database,
   id: string,
-  data: { website?: string; phone?: string; email?: string },
+  data: { website?: string; phone?: string; email?: string; contacts?: MemberContact[] },
 ): Promise<void> {
   await db
     .prepare(
-      `UPDATE members SET website = ?, phone = ?, email = ?, updated_at = datetime('now') WHERE id = ?`,
+      `UPDATE members
+       SET website = ?, phone = ?, email = ?, points_of_contact_json = ?, updated_at = datetime('now')
+       WHERE id = ?`,
     )
-    .bind(data.website ?? null, data.phone ?? null, data.email ?? null, id)
+    .bind(
+      data.website ?? null,
+      data.phone ?? null,
+      data.email ?? null,
+      serializePointsOfContact(data.contacts ?? []),
+      id,
+    )
     .run()
 }
