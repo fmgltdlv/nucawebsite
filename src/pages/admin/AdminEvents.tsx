@@ -86,7 +86,7 @@ function EventImageFields({
           currentKey={event?.thumbnail_r2_key}
           currentUrl={thumbnailUrl}
           removeCheckboxName="remove_thumbnail"
-          hint="Shown on the events list and home page. PNG or JPEG recommended."
+          hint="Shown on the events list and home page. Square images (~400×400 px) work best."
         />
         <AdminAssetPickerField
           label="Flyer (event page)"

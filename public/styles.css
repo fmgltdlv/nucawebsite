@@ -1424,17 +1424,19 @@ button.pill {
 }
 
 .event-card-link {
+  --event-card-thumb-size: 7rem;
   display: grid;
-  grid-template-columns: 7rem 1fr;
+  grid-template-columns: var(--event-card-thumb-size) 1fr;
   gap: 1rem;
+  align-items: start;
   color: inherit;
   text-decoration: none;
 }
 
 .event-card-thumb {
-  width: 100%;
-  height: 100%;
-  min-height: 7rem;
+  width: var(--event-card-thumb-size);
+  height: var(--event-card-thumb-size);
+  flex-shrink: 0;
   object-fit: cover;
   background: var(--color-bg);
 }
@@ -1444,6 +1446,9 @@ button.pill {
 }
 
 .event-card-map-thumb {
+  width: var(--event-card-thumb-size);
+  height: var(--event-card-thumb-size);
+  flex-shrink: 0;
   position: relative;
   overflow: hidden;
   background: var(--color-bg);
@@ -1475,7 +1480,6 @@ button.pill {
 .event-card-map-thumb .leaflet-container {
   width: 100%;
   height: 100%;
-  min-height: 7rem;
   background: var(--color-bg);
 }
 
@@ -1526,8 +1530,12 @@ button.pill {
   }
 
   .event-card-thumb,
-  .event-card-thumb-fallback {
-    min-height: 10rem;
+  .event-card-thumb-fallback,
+  .event-card-map-thumb {
+    width: 100%;
+    height: auto;
+    max-height: 10rem;
+    aspect-ratio: 16 / 9;
   }
 
   .event-card-body {
