@@ -1,7 +1,7 @@
 import type { ExpandedEventRecord } from '../lib/event-repeat'
 import type { PageProps } from '../types/page'
 import { CHAPTER_COMMITTEES } from '../data/committees'
-import { EventCard } from '../views/EventCard'
+import { EventCard, EventMapThumbAssets } from '../views/EventCard'
 import { JsonScript } from '../views/JsonScript'
 import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 
@@ -28,6 +28,7 @@ export function EventsPage({
   footer,
   breakingNews,
   logoUrl,
+  navigation,
   events,
   calendarEvents,
   view,
@@ -53,7 +54,7 @@ export function EventsPage({
   ]
 
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title="Events">
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })} title="Events">
       <PageHeader
         title="Events"
         lead="Chapter meetings, training, and member gatherings across Las Vegas."
@@ -203,6 +204,7 @@ export function EventsPage({
           <JsonScript id="events-calendar-data" json={JSON.stringify(calendarEvents)} />
         </div>
       </section>
+      <EventMapThumbAssets />
     </Layout>
   )
 }

@@ -65,8 +65,27 @@ function upcomingOccurrences(events: EventRecord[]): ExpandedEventRecord[] {
   return expandEventOccurrences(events, { upcomingOnly: true })
 }
 
-export function eventThumbnailUrl(event: Pick<EventRecord, 'thumbnail_r2_key'>): string | undefined {
-  return event.thumbnail_r2_key ? getAssetUrl(event.thumbnail_r2_key) : undefined
+export type EventThumbnail =
+  | { kind: 'image'; url: string }
+  | { kind: 'map'; latitude: number; longitude: number }
+
+export function eventThumbnail(
+  event: Pick<EventRecord, 'thumbnail_r2_key' | 'latitude' | 'longitude'>,
+): EventThumbnail | null {
+  if (event.thumbnail_r2_key) {
+    return { kind: 'image', url: getAssetUrl(event.thumbnail_r2_key) }
+  }
+  if (event.latitude != null && event.longitude != null) {
+    return { kind: 'map', latitude: event.latitude, longitude: event.longitude }
+  }
+  return null
+}
+
+export function eventThumbnailUrl(
+  event: Pick<EventRecord, 'thumbnail_r2_key' | 'latitude' | 'longitude'>,
+): string | undefined {
+  const thumbnail = eventThumbnail(event)
+  return thumbnail?.kind === 'image' ? thumbnail.url : undefined
 }
 
 export function eventFlyerUrl(event: Pick<EventRecord, 'flyer_r2_key'>): string | undefined {
