@@ -42,14 +42,6 @@ export function EventDetailPage({
       description={master.description ?? undefined}
     >
       <article class="event-detail">
-        {flyerUrl ? (
-          <div class="event-detail-hero">
-            <img src={flyerUrl} alt="" class="event-detail-flyer" />
-          </div>
-        ) : (
-          <div class="event-detail-hero event-detail-hero-fallback" aria-hidden="true" />
-        )}
-
         <div class="container event-detail-body">
           <p class="event-detail-back">
             <a class="text-link" href="/events">
@@ -57,7 +49,7 @@ export function EventDetailPage({
             </a>
           </p>
 
-          <div class="event-detail-grid">
+          <div class={`event-detail-grid${flyerUrl ? ' event-detail-grid--with-flyer' : ''}`}>
             <div class="event-detail-main">
               <h1 class="event-detail-title">{master.title}</h1>
 
@@ -77,6 +69,17 @@ export function EventDetailPage({
                       <span>{master.location}</span>
                     )}
                   </div>
+                )}
+              </div>
+
+              <div class="event-detail-card event-detail-registration">
+                <h2 class="event-detail-card-title">Registration</h2>
+                {master.registration_url ? (
+                  <a class="btn btn-primary event-detail-register" href={master.registration_url}>
+                    Register
+                  </a>
+                ) : (
+                  <p class="event-detail-card-muted">Registration is not required for this event. Attendance is free and open!</p>
                 )}
               </div>
 
@@ -108,32 +111,11 @@ export function EventDetailPage({
               )}
             </div>
 
-            <aside class="event-detail-sidebar">
-              <div class="event-detail-card">
-                <h2 class="event-detail-card-title">Registration</h2>
-                {master.registration_url ? (
-                  <a class="btn btn-primary event-detail-register" href={master.registration_url}>
-                    Register
-                  </a>
-                ) : (
-                  <p class="event-detail-card-muted">Registration is not required for this event. Attendance is free and open!</p>
-                )}
-              </div>
-
-              <div class="event-detail-card">
-                <h2 class="event-detail-card-title">Date &amp; time</h2>
-                <p>
-                  <time dateTime={starts_at}>{formatEventDateRange(starts_at, ends_at)}</time>
-                </p>
-              </div>
-
-              {master.location && (
-                <div class="event-detail-card">
-                  <h2 class="event-detail-card-title">Address</h2>
-                  <p>{master.location}</p>
-                </div>
-              )}
-            </aside>
+            {flyerUrl && (
+              <aside class="event-detail-sidebar">
+                <img src={flyerUrl} alt="" class="event-detail-flyer" loading="lazy" decoding="async" />
+              </aside>
+            )}
           </div>
         </div>
       </article>

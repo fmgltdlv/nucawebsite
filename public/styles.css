@@ -1545,26 +1545,6 @@ button.pill {
 
 /* Event detail (Luma-style) */
 
-.event-detail-hero {
-  width: 100%;
-  max-height: 28rem;
-  overflow: hidden;
-  background: var(--color-bg);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.event-detail-hero-fallback {
-  min-height: 12rem;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 16%, var(--color-bg)), var(--color-bg));
-}
-
-.event-detail-flyer {
-  display: block;
-  width: 100%;
-  max-height: 28rem;
-  object-fit: cover;
-}
-
 .event-detail-body {
   padding-top: 1.5rem;
   padding-bottom: 3rem;
@@ -1580,9 +1560,25 @@ button.pill {
 }
 
 @media (min-width: 900px) {
-  .event-detail-grid {
-    grid-template-columns: minmax(0, 1fr) 18rem;
+  .event-detail-grid--with-flyer {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 20rem);
     align-items: start;
+  }
+}
+
+.event-detail-flyer {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+}
+
+@media (max-width: 899px) {
+  .event-detail-sidebar {
+    order: -1;
+    max-width: 22rem;
   }
 }
 
@@ -1597,7 +1593,7 @@ button.pill {
 .event-detail-meta-list {
   display: grid;
   gap: 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .event-detail-meta-item {
@@ -1658,8 +1654,12 @@ button.pill {
 }
 
 .event-detail-sidebar {
-  display: grid;
-  gap: 1rem;
+  position: sticky;
+  top: 1.5rem;
+}
+
+.event-detail-registration {
+  margin-bottom: 2rem;
 }
 
 .event-detail-card {
@@ -1689,8 +1689,7 @@ button.pill {
 }
 
 .event-detail-register {
-  width: 100%;
-  justify-content: center;
+  display: inline-flex;
 }
 
 .admin-event-image-preview {
