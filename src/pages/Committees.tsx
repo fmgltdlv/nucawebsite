@@ -11,10 +11,11 @@ export function CommitteesPage({
   footer,
   breakingNews,
   logoUrl,
+  navigation,
   page,
 }: PageProps & { page: PageRecord | null }) {
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title="Committees">
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })} title="Committees">
       <PageHeader
         title={page?.title ?? 'Committees'}
         lead={

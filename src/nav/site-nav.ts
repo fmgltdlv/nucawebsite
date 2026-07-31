@@ -8,7 +8,7 @@ export type PageStatus = 'demo' | 'stub' | 'todo'
 export type NavLink = {
   label: string
   href: string
-  status: PageStatus
+  status?: PageStatus
   /** Visual nesting under a parent nav group (e.g. Scholarships under Committees) */
   indent?: boolean
   /** Old site URL for side-by-side copy work */

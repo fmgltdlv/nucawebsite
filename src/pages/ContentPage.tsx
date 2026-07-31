@@ -9,12 +9,13 @@ export function ContentPage({
   footer,
   breakingNews,
   logoUrl,
+  navigation,
   page,
   fallbackLead,
 }: PageProps & { page: PageRecord; fallbackLead?: string }) {
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })}
       title={page.title}
       description={page.meta_description ?? undefined}
     >

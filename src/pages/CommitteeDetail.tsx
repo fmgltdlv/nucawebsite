@@ -10,6 +10,7 @@ export function CommitteeDetailPage({
   footer,
   breakingNews,
   logoUrl,
+  navigation,
   committeeKey,
   page,
 }: PageProps & { committeeKey: ChapterCommitteeKey; page: PageRecord }) {
@@ -17,7 +18,7 @@ export function CommitteeDetailPage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })}
       title={page.title}
       description={page.meta_description ?? undefined}
     >

@@ -3,9 +3,10 @@ import { markdownToSafeHtml } from '../lib/markdown'
 import type { QaRecord } from '../lib/qa-db'
 import type { PageProps } from '../types/page'
 
-export function QaPage({ theme, contact, footer, breakingNews, logoUrl, items }: PageProps & { items: QaRecord[] }) {
+export function QaPage({ theme, contact, footer, breakingNews, logoUrl,
+  navigation, items }: PageProps & { items: QaRecord[] }) {
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title="Q & A">
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })} title="Q & A">
       <PageHeader
         title="Q & A"
         lead="Frequently asked questions about NUCA and the Las Vegas chapter."

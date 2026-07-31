@@ -25,6 +25,14 @@ import { blocksToMarkdown, parsePageBlocks } from '../lib/page-blocks'
 import { renderCmsPage } from '../lib/render-cms-page'
 import { createQaItem, deleteQaItem, listQaItems, updateQaItem } from '../lib/qa-db'
 import {
+  createNavItem,
+  deleteNavItem,
+  getNavItemById,
+  listNavItems,
+  listNavParentOptions,
+  updateNavItem,
+} from '../lib/nav-items-db'
+import {
   createResourceItem,
   deleteResourceItem,
   listResourceItems,
@@ -68,6 +76,7 @@ import { AdminContentPagesPage } from '../pages/admin/content/AdminContentPages'
 import { AdminContentPostsPage } from '../pages/admin/content/AdminContentPosts'
 import { AdminContentQaPage } from '../pages/admin/content/AdminContentQa'
 import { AdminContentResourcesPage } from '../pages/admin/content/AdminContentResources'
+import { AdminContentNavigationPage } from '../pages/admin/content/AdminContentNavigation'
 import { AdminContentSettingsPage } from '../pages/admin/content/AdminContentSettings'
 import { PagePreviewFrame } from '../views/PagePreviewBanner'
 import { listApplications, updateApplicationStatus } from '../lib/applications-db'
@@ -77,6 +86,23 @@ type AdminVariables = { theme: ThemeId }
 function parseSortOrder(value: string): number {
   const n = Number.parseInt(value, 10)
   return Number.isFinite(n) ? n : 0
+}
+
+function optionalParentId(body: Record<string, unknown>): string | null {
+  const value = body.parent_id
+  if (typeof value !== 'string' || !value.trim()) return null
+  return value.trim()
+}
+
+function navItemFromBody(body: Record<string, unknown>, existing?: { sort_order: number }) {
+  return {
+    label: typeof body.label === 'string' ? body.label.trim() : '',
+    href: typeof body.href === 'string' ? body.href.trim() : '',
+    parent_id: optionalParentId(body),
+    sort_order: parseSortOrder(typeof body.sort_order === 'string' ? body.sort_order : String(existing?.sort_order ?? 0)),
+    published: body.published === '1',
+    indent: body.indent === '1',
+  }
 }
 
 function optionalText(body: Record<string, unknown>, key: string): string | null {
@@ -186,6 +212,58 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     }
     await setBreakingNews(c.env.DB, breaking)
     return c.redirect('/admin/content/settings?ok=1', 303)
+  })
+
+  app.get('/admin/content/navigation', async (c) => {
+    const auth = await requireAdmin(c)
+    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const items = await listNavItems(c.env.DB)
+    const groups = await listNavParentOptions(c.env.DB)
+    return c.html(
+      <AdminContentNavigationPage
+        theme={c.get('theme')}
+        ctx={auth.ctx}
+        items={items}
+        groups={groups}
+        flash={flashMessage(c, '1')}
+        error={c.req.query('error')}
+      />,
+    )
+  })
+
+  app.post('/admin/content/navigation', async (c) => {
+    const auth = await requireAdmin(c)
+    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const body = await c.req.parseBody()
+    const fields = navItemFromBody(body)
+    if (!fields.label) return c.redirect('/admin/content/navigation?error=Label%20required', 303)
+    await createNavItem(c.env.DB, fields)
+    return c.redirect('/admin/content/navigation?ok=1', 303)
+  })
+
+  app.post('/admin/content/navigation/:id', async (c) => {
+    const auth = await requireAdmin(c)
+    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const id = c.req.param('id')
+    const existing = await getNavItemById(c.env.DB, id)
+    if (!existing) return c.redirect('/admin/content/navigation', 303)
+    const body = await c.req.parseBody()
+    const fields = navItemFromBody(body, existing)
+    if (!fields.label) return c.redirect('/admin/content/navigation?error=Label%20required', 303)
+    try {
+      await updateNavItem(c.env.DB, id, fields)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Could not save navigation item.'
+      return c.redirect(`/admin/content/navigation?error=${encodeURIComponent(message)}`, 303)
+    }
+    return c.redirect('/admin/content/navigation?ok=1', 303)
+  })
+
+  app.post('/admin/content/navigation/:id/delete', async (c) => {
+    const auth = await requireAdmin(c)
+    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    await deleteNavItem(c.env.DB, c.req.param('id'))
+    return c.redirect('/admin/content/navigation?ok=1', 303)
   })
 
   app.get('/admin/content/qa', async (c) => {

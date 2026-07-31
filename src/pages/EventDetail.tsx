@@ -28,6 +28,7 @@ export function EventDetailPage({
   footer,
   breakingNews,
   logoUrl,
+  navigation,
   occurrence,
 }: PageProps & { occurrence: EventOccurrenceView }) {
   const { master, starts_at, ends_at } = occurrence
@@ -36,7 +37,7 @@ export function EventDetailPage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })}
       title={master.title}
       description={master.description ?? undefined}
     >
@@ -115,7 +116,7 @@ export function EventDetailPage({
                     Register
                   </a>
                 ) : (
-                  <p class="event-detail-card-muted">Registration is not required for this event.</p>
+                  <p class="event-detail-card-muted">Registration is not required for this event. Attendance is free and open!</p>
                 )}
               </div>
 

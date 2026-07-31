@@ -3,6 +3,7 @@ import { DEFAULT_THEME, layoutForTheme } from '../config/themes'
 import { site as defaultSite } from '../data/demo'
 import { DEFAULT_SITE_LOGO_URL } from '../lib/site-logo'
 import { phoneTelHref } from '../lib/site-settings'
+import { siteNavigation } from '../nav/site-nav'
 import { BreakingNewsBanner } from './BreakingNewsBanner'
 import { SiteNav } from './SiteNav'
 import { StaffPortalLink } from './StaffPortalLink'
@@ -22,6 +23,7 @@ export function pickLayoutSite(props: SiteLayoutProps): SiteLayoutProps {
     footer: props.footer,
     breakingNews: props.breakingNews,
     logoUrl: props.logoUrl,
+    navigation: props.navigation,
   }
 }
 
@@ -34,6 +36,7 @@ export function Layout({
   footer,
   breakingNews,
   logoUrl = DEFAULT_SITE_LOGO_URL,
+  navigation = siteNavigation,
 }: LayoutProps) {
   const layout = layoutForTheme(theme)
   const fullTitle = title === 'Home' ? 'NUCA of Las Vegas' : `${title} · NUCA of Las Vegas`
@@ -59,7 +62,7 @@ export function Layout({
           href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap"
           rel="stylesheet"
         />
-        <link rel="stylesheet" href="/styles.css?v=10" />
+        <link rel="stylesheet" href="/styles.css?v=11" />
       </head>
       <body>
         <a class="skip-link" href="#main">Skip to content</a>
@@ -89,7 +92,7 @@ export function Layout({
             >
               Menu
             </button>
-            <SiteNav />
+            <SiteNav navigation={navigation} />
             </div>
           </div>
         </header>

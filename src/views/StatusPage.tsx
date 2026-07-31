@@ -17,6 +17,7 @@ export function StatusPage({
   footer,
   breakingNews,
   logoUrl,
+  navigation,
   title,
   heading,
   lead,
@@ -26,7 +27,7 @@ export function StatusPage({
   children,
 }: StatusPageProps) {
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title={title}>
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })} title={title}>
       <PageHeader title={heading} lead={lead} />
       <section class="section">
         <div class={`container${prose ? ' prose' : ''}`}>

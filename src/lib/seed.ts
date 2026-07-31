@@ -6,6 +6,7 @@ import { demoResourceItems } from '../data/resources'
 import { countUsers, createUser } from './auth'
 import { createEvent } from './events'
 import { setContactInfo, setFooterInfo, setThemeId } from './site-settings'
+import { seedNavItemsIfEmpty } from './nav-items-db'
 import { upsertPage } from './pages-db'
 import { createLeadership } from './leadership-db'
 import { createResourceItem } from './resource-items-db'
@@ -41,6 +42,7 @@ export async function seedDemoMembersIfEmpty(env: Env): Promise<void> {
 /** Seed Q&A, events, site settings, pages, and leadership from demo data when tables are empty. */
 export async function seedContentIfEmpty(env: Env): Promise<void> {
   await seedSiteSettingsIfEmpty(env)
+  await seedNavItemsIfEmpty(env.DB)
   await seedQaIfEmpty(env)
   await seedEventsIfEmpty(env)
   await seedPagesIfEmpty(env)

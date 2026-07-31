@@ -10,9 +10,10 @@ export function ContactPage({
   footer,
   breakingNews,
   logoUrl,
+  navigation,
 }: PageProps & { contact: ContactInfo }) {
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title="Contact">
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })} title="Contact">
       <PageHeader title="Contact us" lead="Reach the Las Vegas chapter by phone, email, or the form below." />
       <section class="section">
         <div class="container contact-layout">

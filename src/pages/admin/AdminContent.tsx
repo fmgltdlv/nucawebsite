@@ -4,6 +4,7 @@ import type { PageProps } from '../../types/page'
 
 const contentSections = [
   { href: '/admin/content/settings', title: 'Site settings', desc: 'Contact info, footer copy, theme, breaking news' },
+  { href: '/admin/content/navigation', title: 'Navigation', desc: 'Header menu links and dropdowns' },
   { href: '/admin/content/qa', title: 'Q & A', desc: 'Frequently asked questions' },
   { href: '/admin/content/the-dirt', title: 'THE DIRT — PDF releases', desc: 'PDF news release archive' },
   { href: '/admin/content/posts', title: 'THE DIRT — web posts', desc: 'Blog posts and announcements' },

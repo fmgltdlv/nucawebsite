@@ -108,6 +108,7 @@ export function LeadershipPage({
   footer,
   breakingNews,
   logoUrl,
+  navigation,
   leaders,
 }: PageProps & { contact: ContactInfo; leaders: LeadershipRecord[] }) {
   const groups = groupLeadership(leaders)
@@ -115,7 +116,7 @@ export function LeadershipPage({
   const rosterJson = serializeLeadershipRoster(leaders.map(toLeadershipPublicProfile))
 
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title="Leadership">
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })} title="Leadership">
       <PageHeader title="Leadership" lead="Chapter officers and leadership team." />
       <section class="section">
         <div class="container">

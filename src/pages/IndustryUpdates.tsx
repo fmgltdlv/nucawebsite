@@ -10,10 +10,11 @@ export function IndustryUpdateDetailPage({
   footer,
   breakingNews,
   logoUrl,
+  navigation,
   post,
 }: PageProps & { post: PostRecord }) {
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title={post.title}>
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })} title={post.title}>
       <PageHeader
         title={post.title}
         lead={post.excerpt ?? formatArchiveDate(post.published_at)}

@@ -1,5 +1,7 @@
 import type { Env } from '../env'
 import { parseThemeId, type ThemeId } from '../config/themes'
+import type { NavEntry } from '../nav/site-nav'
+import { getPublishedSiteNavigation } from './nav-items-db'
 import { resolveSiteLogoUrl } from './site-logo'
 import {
   getBreakingNews,
@@ -18,6 +20,7 @@ export type PublicSiteContext = {
   footer: FooterInfo
   breakingNews: BreakingNews | null
   logoUrl: string
+  navigation: NavEntry[]
 }
 
 export async function loadPublicSiteContext(
@@ -25,11 +28,12 @@ export async function loadPublicSiteContext(
   cookieTheme?: string | null,
 ): Promise<PublicSiteContext> {
   const theme = cookieTheme ? parseThemeId(cookieTheme) : await getThemeId(env.DB)
-  const [contact, footer, breakingNews, logoR2Key] = await Promise.all([
+  const [contact, footer, breakingNews, logoR2Key, navigation] = await Promise.all([
     getContactInfo(env.DB),
     getFooterInfo(env.DB),
     getBreakingNews(env.DB),
     getSiteLogoR2Key(env.DB),
+    getPublishedSiteNavigation(env.DB),
   ])
-  return { theme, contact, footer, breakingNews, logoUrl: resolveSiteLogoUrl(logoR2Key) }
+  return { theme, contact, footer, breakingNews, logoUrl: resolveSiteLogoUrl(logoR2Key), navigation }
 }

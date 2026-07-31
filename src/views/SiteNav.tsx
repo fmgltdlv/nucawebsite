@@ -1,7 +1,7 @@
 import {
   isNavGroup,
-  siteNavigation,
   statusLegend,
+  type NavEntry,
   type NavLink,
   type PageStatus,
 } from '../nav/site-nav'
@@ -23,17 +23,28 @@ function NavAnchor({ link, nested }: { link: NavLink; nested?: boolean }) {
 
   return (
     <a href={link.href} class={classes || undefined}>
-      <StatusMark status={link.status} />
+      {link.status && <StatusMark status={link.status} />}
       <span>{link.label}</span>
     </a>
   )
 }
 
-export function SiteNav() {
+function navHasStatus(entries: NavEntry[]): boolean {
+  return entries.some((entry) => {
+    if (isNavGroup(entry)) {
+      return Boolean(entry.status) || entry.children.some((child) => Boolean(child.status))
+    }
+    return Boolean(entry.status)
+  })
+}
+
+export function SiteNav({ navigation }: { navigation: NavEntry[] }) {
+  const showStatusLegend = navHasStatus(navigation)
+
   return (
     <nav class="site-nav" id="site-nav" aria-label="Primary">
       <ul class="nav-root">
-        {siteNavigation.map((entry) => {
+        {navigation.map((entry) => {
           if (isNavGroup(entry)) {
             return (
               <li class="nav-item has-submenu" key={entry.label}>
@@ -76,18 +87,20 @@ export function SiteNav() {
           )
         })}
       </ul>
-      <p class="nav-legend" id="nav-legend">
-        <span class="nav-legend-title">Copy status</span>
-        <span class="nav-legend-item">
-          <span class="nav-status nav-status-demo" /> Demo
-        </span>
-        <span class="nav-legend-item">
-          <span class="nav-status nav-status-stub" /> Stub
-        </span>
-        <span class="nav-legend-item">
-          <span class="nav-status nav-status-todo" /> To copy
-        </span>
-      </p>
+      {showStatusLegend && (
+        <p class="nav-legend" id="nav-legend">
+          <span class="nav-legend-title">Copy status</span>
+          <span class="nav-legend-item">
+            <span class="nav-status nav-status-demo" /> Demo
+          </span>
+          <span class="nav-legend-item">
+            <span class="nav-status nav-status-stub" /> Stub
+          </span>
+          <span class="nav-legend-item">
+            <span class="nav-status nav-status-todo" /> To copy
+          </span>
+        </p>
+      )}
     </nav>
   )
 }

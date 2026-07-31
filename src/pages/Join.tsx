@@ -5,9 +5,9 @@ import { joinBenefits, memberTypes } from '../data/demo'
 
 import type { PageProps } from '../types/page'
 
-export function JoinPage({ theme, contact, footer, breakingNews, logoUrl }: PageProps) {
+export function JoinPage({ theme, contact, footer, breakingNews, logoUrl, navigation }: PageProps) {
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })} title="Join">
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })} title="Join">
       <PageHeader
         title="Join NUCA of Las Vegas"
         lead="Membership connects your firm to advocacy, safety resources, events, and a network of industry peers."

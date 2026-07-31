@@ -99,7 +99,7 @@ registerAdminRoutes(app)
 app.get('/', async (c) => {
   const site = await siteProps(c)
   const [events, dirtReleases, posts] = await Promise.all([
-    listUpcomingEvents(c.env.DB),
+    listUpcomingEvents(c.env.DB, 3),
     listDirtReleases(c.env.DB, true),
     listPublishedPosts(c.env.DB),
   ])

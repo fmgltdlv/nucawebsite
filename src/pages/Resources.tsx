@@ -10,6 +10,7 @@ export function ResourcesPage({
   footer,
   breakingNews,
   logoUrl,
+  navigation,
   page,
   items,
 }: PageProps & { page: PageRecord | null; items: ResourceItemRecord[] }) {
@@ -18,7 +19,7 @@ export function ResourcesPage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation })}
       title="Resources"
       description={page?.meta_description ?? undefined}
     >
