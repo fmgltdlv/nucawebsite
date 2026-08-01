@@ -89,14 +89,14 @@ function ResourceEditModal({ item }: { item: ResourceItemRecord }) {
 }
 
 export function AdminContentResourcesPage({
-  theme,
   ctx,
   items,
   flash,
+  ...site
 }: PageProps & { ctx: AdminContext; items: ResourceItemRecord[]; flash?: string }) {
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

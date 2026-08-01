@@ -2025,4 +2025,33 @@
       banner.remove()
     })
   }
+})();
+
+(function () {
+  const dialog = document.getElementById('breaking-news-popup')
+  if (!(dialog instanceof HTMLDialogElement)) return
+
+  const storageKey = 'nuca_breaking_popup_dismissed'
+  if (sessionStorage.getItem(storageKey) === '1') return
+
+  function dismiss() {
+    sessionStorage.setItem(storageKey, '1')
+    dialog.close()
+  }
+
+  dialog.querySelectorAll('[data-breaking-popup-dismiss]').forEach((button) => {
+    button.addEventListener('click', dismiss)
+  })
+
+  dialog.addEventListener('click', (event) => {
+    const rect = dialog.getBoundingClientRect()
+    const inDialog =
+      rect.top <= event.clientY &&
+      event.clientY <= rect.top + rect.height &&
+      rect.left <= event.clientX &&
+      event.clientX <= rect.left + rect.width
+    if (!inDialog) dismiss()
+  })
+
+  dialog.showModal()
 })()

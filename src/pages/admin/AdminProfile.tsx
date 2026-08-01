@@ -8,13 +8,13 @@ import type { AdminContext } from '../../lib/admin-context'
 import type { PageProps } from '../../types/page'
 
 export function AdminProfilePage({
-  theme,
   ctx,
   member,
   pendingMember,
   companies,
   flash,
   error,
+  ...site
 }: PageProps & {
   ctx: AdminContext
   member: Member | null
@@ -29,7 +29,7 @@ export function AdminProfilePage({
 
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

@@ -5,16 +5,16 @@ import type { AdminContext } from '../../../lib/admin-context'
 import type { PageProps } from '../../../types/page'
 
 export function AdminContentPagesPage({
-  theme,
   ctx,
   pages,
   pageLabels,
+  ...site
 }: PageProps & { ctx: AdminContext; pages: PageRecord[]; pageLabels: Record<string, string> }) {
   const bySlug = Object.fromEntries(pages.map((p) => [p.slug, p]))
 
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

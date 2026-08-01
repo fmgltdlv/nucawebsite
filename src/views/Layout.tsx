@@ -1,7 +1,7 @@
 import { HtmlEscapedString } from 'hono/utils/html'
 import { DEFAULT_THEME, layoutForTheme } from '../config/themes'
 import { site as defaultSite } from '../data/demo'
-import { DEFAULT_SITE_LOGO_URL } from '../lib/site-logo'
+import { DEFAULT_SITE_LOGO_URL, logoSizeScale } from '../lib/site-logo'
 import { phoneTelHref } from '../lib/site-settings'
 import { siteNavigation } from '../nav/site-nav'
 import { BreakingNewsBanner } from './BreakingNewsBanner'
@@ -24,6 +24,7 @@ export function pickLayoutSite(props: SiteLayoutProps): SiteLayoutProps {
     footer: props.footer,
     breakingNews: props.breakingNews,
     logoUrl: props.logoUrl,
+    logoSizePercent: props.logoSizePercent,
     navigation: props.navigation,
     staffInboxCount: props.staffInboxCount,
   }
@@ -38,10 +39,12 @@ export function Layout({
   footer,
   breakingNews,
   logoUrl = DEFAULT_SITE_LOGO_URL,
+  logoSizePercent,
   navigation = siteNavigation,
   staffInboxCount,
 }: LayoutProps) {
   const layout = layoutForTheme(theme)
+  const logoScale = logoSizeScale(logoSizePercent)
   const fullTitle = title === 'Home' ? 'NUCA of Las Vegas' : `${title} · NUCA of Las Vegas`
   const metaDescription =
     description ??
@@ -65,12 +68,12 @@ export function Layout({
           href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap"
           rel="stylesheet"
         />
-        <link rel="stylesheet" href="/styles.css?v=14" />
+        <link rel="stylesheet" href="/styles.css?v=15" />
       </head>
       <body>
         <a class="skip-link" href="#main">Skip to content</a>
-        {breakingNews && <BreakingNewsBanner news={breakingNews} />}
-        <header class="site-header">
+        {breakingNews?.active ? <BreakingNewsBanner news={breakingNews} /> : null}
+        <header class="site-header" style={{ '--logo-scale': String(logoScale) }}>
           <div class="container header-inner">
             <div class="header-left">
               <StaffPortalLink inboxCount={staffInboxCount} />

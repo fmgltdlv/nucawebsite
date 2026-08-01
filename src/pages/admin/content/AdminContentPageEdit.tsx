@@ -15,13 +15,13 @@ function initialBlocksJson(page: PageRecord | null): string {
 }
 
 export function AdminContentPageEditPage({
-  theme,
   ctx,
   page,
   slug,
   pageLabel,
   committees,
   flash,
+  ...site
 }: PageProps & {
   ctx: AdminContext
   page: PageRecord | null
@@ -42,7 +42,7 @@ export function AdminContentPageEditPage({
 
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

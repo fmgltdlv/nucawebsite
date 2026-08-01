@@ -153,11 +153,11 @@ function MemberEditModal({ member }: { member: AdminMember }) {
 }
 
 export function AdminMembersPage({
-  theme,
   ctx,
   members,
   flash,
   error,
+  ...site
 }: PageProps & {
   ctx: AdminContext
   members: AdminMember[]
@@ -166,7 +166,7 @@ export function AdminMembersPage({
 }) {
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

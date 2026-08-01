@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { getCookie } from 'hono/cookie'
 import type { ThemeId } from '../config/themes'
+import type { AdminLayoutProps } from '../lib/site-context'
 import { parseThemeId } from '../config/themes'
 import type { Env } from '../env'
 import { canAccessRole, resolveAdminContext } from '../lib/admin-context'
@@ -46,24 +47,26 @@ import {
   listResourceItems,
   updateResourceItem,
 } from '../lib/resource-items-db'
+import { deleteAssetIfUnreferenced } from '../lib/asset-references'
 import {
-  deleteAsset,
   dirtPdfKey,
   leadershipPhotoKey,
   uploadImage,
   uploadPdf,
 } from '../lib/r2-assets'
-import { applySiteLogoChange, resolveSiteLogoUrl } from '../lib/site-logo'
+import { applySiteLogoChange, parseLogoSizePercent, resolveSiteLogoUrl } from '../lib/site-logo'
 import {
-  getBreakingNews,
+  getBreakingNewsSettings,
   getContactInfo,
   getFooterInfo,
   getSiteLogoR2Key,
+  getSiteLogoSizePercent,
   getThemeId,
   setBreakingNews,
   setContactInfo,
   setFooterInfo,
   setSiteLogoR2Key,
+  setSiteLogoSizePercent,
   setThemeId,
   type BreakingNews,
 } from '../lib/site-settings'
@@ -90,7 +93,7 @@ import { AdminContentSettingsPage } from '../pages/admin/content/AdminContentSet
 import { PagePreviewFrame } from '../views/PagePreviewBanner'
 import { listApplications, updateApplicationStatus, deleteApplication, acknowledgeAllApplications } from '../lib/applications-db'
 
-type AdminVariables = { theme: ThemeId }
+type AdminVariables = { theme: ThemeId; adminSite: AdminLayoutProps }
 
 function parseSortOrder(value: string): number {
   const n = Number.parseInt(value, 10)
@@ -152,7 +155,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   app.get('/admin/content', async (c) => {
     const auth = await requireAdmin(c)
     if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
-    return c.html(<AdminContentPage theme={c.get('theme')} ctx={auth.ctx} />)
+    return c.html(<AdminContentPage {...c.get('adminSite')} ctx={auth.ctx} />)
   })
 
   app.get('/admin/content/settings', async (c) => {
@@ -162,20 +165,18 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const footer = await getFooterInfo(c.env.DB)
     const themeId = await getThemeId(c.env.DB)
     const logoR2Key = await getSiteLogoR2Key(c.env.DB)
-    const breaking = (await getBreakingNews(c.env.DB)) ?? {
-      active: false,
-      title: '',
-      body: '',
-    }
+    const logoSizePercent = await getSiteLogoSizePercent(c.env.DB)
+    const breaking = await getBreakingNewsSettings(c.env.DB)
     return c.html(
       <AdminContentSettingsPage
-        theme={c.get('theme')}
+        {...c.get('adminSite')}
         ctx={auth.ctx}
         contact={contact}
         footer={footer}
         themeId={themeId}
         breakingNews={breaking}
         logoUrl={resolveSiteLogoUrl(logoR2Key)}
+        logoSizePercent={logoSizePercent}
         flash={flashMessage(c, '1')}
         error={c.req.query('error')}
       />,
@@ -189,6 +190,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const previousLogoKey = await getSiteLogoR2Key(c.env.DB)
     const logoError = await applySiteLogoChange(
       c.env.R2,
+      c.env.DB,
       (key) => setSiteLogoR2Key(c.env.DB, key),
       body,
       previousLogoKey,
@@ -196,6 +198,12 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     if (logoError) {
       return c.redirect(`/admin/content/settings?error=${encodeURIComponent(logoError)}`, 303)
     }
+    await setSiteLogoSizePercent(
+      c.env.DB,
+      parseLogoSizePercent(
+        typeof body.logo_size_percent === 'string' ? body.logo_size_percent : undefined,
+      ),
+    )
     await setContactInfo(c.env.DB, {
       name: typeof body.name === 'string' ? body.name.trim() : '',
       phone: typeof body.phone === 'string' ? body.phone.trim() : '',
@@ -218,6 +226,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
         typeof body.breaking_expires === 'string' && body.breaking_expires.trim()
           ? parseDatetimeLocal(body.breaking_expires) ?? undefined
           : undefined,
+      showPopup: body.breaking_popup === '1',
     }
     await setBreakingNews(c.env.DB, breaking)
     return c.redirect('/admin/content/settings?ok=1', 303)
@@ -230,7 +239,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const groups = await listNavParentOptions(c.env.DB)
     return c.html(
       <AdminContentNavigationPage
-        theme={c.get('theme')}
+        {...c.get('adminSite')}
         ctx={auth.ctx}
         items={items}
         groups={groups}
@@ -280,7 +289,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
     const items = await listQaItems(c.env.DB)
     return c.html(
-      <AdminContentQaPage theme={c.get('theme')} ctx={auth.ctx} items={items} flash={flashMessage(c, '1')} />,
+      <AdminContentQaPage {...c.get('adminSite')} ctx={auth.ctx} items={items} flash={flashMessage(c, '1')} />,
     )
   })
 
@@ -321,7 +330,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const items = await listCommittees(c.env.DB)
     return c.html(
       <AdminContentCommitteesPage
-        theme={c.get('theme')}
+        {...c.get('adminSite')}
         ctx={auth.ctx}
         items={items}
         flash={flashMessage(c, '1')}
@@ -380,7 +389,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const releases = await listDirtReleases(c.env.DB)
     return c.html(
       <AdminContentDirtPage
-        theme={c.get('theme')}
+        {...c.get('adminSite')}
         ctx={auth.ctx}
         releases={releases}
         flash={flashMessage(c, '1')}
@@ -421,7 +430,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
       const key = dirtPdfKey(id)
       const upload = await uploadPdf(c.env.R2, pdf, key)
       if (!upload.ok) return c.redirect(`/admin/content/the-dirt?error=${encodeURIComponent(upload.error)}`, 303)
-      if (existing.pdf_r2_key !== key) await deleteAsset(c.env.R2, existing.pdf_r2_key)
+      if (existing.pdf_r2_key !== key) await deleteAssetIfUnreferenced(c.env.R2, c.env.DB, existing.pdf_r2_key)
       pdf_r2_key = key
     }
     await updateDirtRelease(c.env.DB, id, {
@@ -440,7 +449,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const id = c.req.param('id')
     const existing = await getDirtRelease(c.env.DB, id)
     if (existing) {
-      await deleteAsset(c.env.R2, existing.pdf_r2_key)
+      await deleteAssetIfUnreferenced(c.env.R2, c.env.DB, existing.pdf_r2_key)
       await deleteDirtRelease(c.env.DB, id)
     }
     return c.redirect('/admin/content/the-dirt?ok=1', 303)
@@ -451,7 +460,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
     const posts = await listAllPosts(c.env.DB)
     return c.html(
-      <AdminContentPostsPage theme={c.get('theme')} ctx={auth.ctx} posts={posts} flash={flashMessage(c, '1')} />,
+      <AdminContentPostsPage {...c.get('adminSite')} ctx={auth.ctx} posts={posts} flash={flashMessage(c, '1')} />,
     )
   })
 
@@ -505,7 +514,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const [pages, committees] = await Promise.all([listPages(c.env.DB), listCommittees(c.env.DB)])
     return c.html(
       <AdminContentPagesPage
-        theme={c.get('theme')}
+        {...c.get('adminSite')}
         ctx={auth.ctx}
         pages={pages}
         pageLabels={buildPageLabels(committees)}
@@ -588,7 +597,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const pageLabels = buildPageLabels(committees)
     return c.html(
       <AdminContentPageEditPage
-        theme={c.get('theme')}
+        {...c.get('adminSite')}
         ctx={ctx}
         page={page}
         slug={slug}
@@ -631,7 +640,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const leaders = await listLeadership(c.env.DB)
     return c.html(
       <AdminContentLeadershipPage
-        theme={c.get('theme')}
+        {...c.get('adminSite')}
         ctx={auth.ctx}
         leaders={leaders}
         flash={flashMessage(c, '1')}
@@ -675,7 +684,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
       const key = leadershipPhotoKey(id, photo.name)
       const upload = await uploadImage(c.env.R2, photo, key)
       if (upload.ok) {
-        if (existing.photo_r2_key) await deleteAsset(c.env.R2, existing.photo_r2_key)
+        if (existing.photo_r2_key) await deleteAssetIfUnreferenced(c.env.R2, c.env.DB, existing.photo_r2_key)
         photo_r2_key = key
       }
     }
@@ -695,7 +704,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
     const id = c.req.param('id')
     const existing = await getLeadershipById(c.env.DB, id)
-    if (existing?.photo_r2_key) await deleteAsset(c.env.R2, existing.photo_r2_key)
+    if (existing?.photo_r2_key) await deleteAssetIfUnreferenced(c.env.R2, c.env.DB, existing.photo_r2_key)
     await deleteLeadership(c.env.DB, id)
     return c.redirect('/admin/content/leadership?ok=1', 303)
   })
@@ -706,7 +715,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const items = await listResourceItems(c.env.DB)
     return c.html(
       <AdminContentResourcesPage
-        theme={c.get('theme')}
+        {...c.get('adminSite')}
         ctx={auth.ctx}
         items={items}
         flash={flashMessage(c, '1')}
@@ -752,7 +761,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const subscribers = await listNewsletterSubscribers(c.env.DB)
     return c.html(
       <AdminNewsletterSubscribersPage
-        theme={c.get('theme')}
+        {...c.get('adminSite')}
         ctx={auth.ctx}
         subscribers={subscribers}
         flash={flashMessage(c, '1')}
@@ -789,7 +798,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const submissions = await listContactSubmissions(c.env.DB)
     return c.html(
       <AdminContactMessagesPage
-        theme={c.get('theme')}
+        {...c.get('adminSite')}
         ctx={auth.ctx}
         submissions={submissions}
         flash={flashMessage(c, '1')}
@@ -826,7 +835,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const applications = await listApplications(c.env.DB)
     return c.html(
       <AdminApplicationsPage
-        theme={c.get('theme')}
+        {...c.get('adminSite')}
         ctx={auth.ctx}
         applications={applications}
         flash={flashMessage(c, '1')}

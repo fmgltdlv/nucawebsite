@@ -1,9 +1,9 @@
-import { Layout, PageHeader } from '../views/Layout'
+import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import type { PageProps } from '../types/page'
 
-export function AdminLoginPage({ theme, error }: PageProps & { error?: string }) {
+export function AdminLoginPage({ error, ...site }: PageProps & { error?: string }) {
   return (
-    <Layout theme={theme} title="Admin sign in">
+    <Layout {...pickLayoutSite(site)} title="Admin sign in">
       <PageHeader title="Staff sign in" lead="Secretary and authorized staff only." />
       <section class="section">
         <div class="container">

@@ -129,12 +129,12 @@ function NavEditModal({ item, groups }: { item: NavItemRecord; groups: NavItemRe
 }
 
 export function AdminContentNavigationPage({
-  theme,
   ctx,
   items,
   groups,
   flash,
   error,
+  ...site
 }: PageProps & {
   ctx: AdminContext
   items: NavItemRecord[]
@@ -144,7 +144,7 @@ export function AdminContentNavigationPage({
 }) {
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

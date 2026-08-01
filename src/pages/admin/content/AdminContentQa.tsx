@@ -85,14 +85,14 @@ function QaEditModal({ item }: { item: QaRecord }) {
 }
 
 export function AdminContentQaPage({
-  theme,
   ctx,
   items,
   flash,
+  ...site
 }: PageProps & { ctx: AdminContext; items: QaRecord[]; flash?: string }) {
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

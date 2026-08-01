@@ -1,9 +1,9 @@
 import type { User } from '../config/roles'
 import { ROLE_LABELS } from '../config/roles'
-import type { ThemeId } from '../config/themes'
 import type { AdminInboxCounts } from '../lib/admin-inbox-counts'
 import { totalInboxCount } from '../lib/admin-inbox-counts'
-import { Layout } from './Layout'
+import type { SiteLayoutProps } from '../types/page'
+import { Layout, pickLayoutSite } from './Layout'
 import { AdminAssetLibraryDialog } from './admin/AdminAssetLibraryDialog'
 import { AdminCountBadge } from './admin/AdminCountBadge'
 
@@ -11,14 +11,19 @@ type NavItem = { href: string; label: string; badge?: number }
 
 export function AdminShell({
   theme,
+  contact,
+  footer,
+  breakingNews,
+  logoUrl,
+  logoSizePercent,
+  navigation,
   user,
   chairCommittees,
   inboxCounts,
   title,
   children,
   activePath,
-}: {
-  theme: ThemeId
+}: SiteLayoutProps & {
   user: User
   chairCommittees: string[]
   inboxCounts?: AdminInboxCounts
@@ -51,7 +56,19 @@ export function AdminShell({
   }
 
   return (
-    <Layout theme={theme} title={title} staffInboxCount={totalNew > 0 ? totalNew : undefined}>
+    <Layout
+      {...pickLayoutSite({
+        theme,
+        contact,
+        footer,
+        breakingNews,
+        logoUrl,
+        logoSizePercent,
+        navigation,
+        staffInboxCount: totalNew > 0 ? totalNew : undefined,
+      })}
+      title={title}
+    >
       <div class="admin-shell">
         <aside class="admin-sidebar">
           <p class="admin-sidebar-title">Staff portal</p>

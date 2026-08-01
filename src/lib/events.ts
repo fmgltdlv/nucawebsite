@@ -3,8 +3,8 @@ import { getCommitteeByKey } from './committees-db'
 import { expandEventOccurrences, type ExpandedEventRecord } from './event-repeat'
 import { geocodeClarkCountyAddress } from './geocode'
 import { resolveExistingImageKey } from './asset-select'
+import { deleteAssetIfUnreferenced } from './asset-references'
 import {
-  deleteAsset,
   eventFlyerKey,
   eventThumbnailKey,
   getAssetUrl,
@@ -232,6 +232,7 @@ export async function resolveEventFormCoordinates(
 
 export async function applyEventImageUploads(
   r2: R2Bucket,
+  db: D1Database,
   eventId: string,
   body: Record<string, File | string>,
   existing?: EventRecord | null,
@@ -240,7 +241,7 @@ export async function applyEventImageUploads(
   let flyer_r2_key = existing?.flyer_r2_key ?? null
 
   if (body.remove_thumbnail === '1') {
-    if (thumbnail_r2_key) await deleteAsset(r2, thumbnail_r2_key)
+    if (thumbnail_r2_key) await deleteAssetIfUnreferenced(r2, db, thumbnail_r2_key)
     thumbnail_r2_key = null
   } else {
     const thumbnail = body.thumbnail
@@ -248,7 +249,9 @@ export async function applyEventImageUploads(
       const key = eventThumbnailKey(eventId, thumbnail.name)
       const upload = await uploadImage(r2, thumbnail, key)
       if (upload.ok) {
-        if (thumbnail_r2_key && thumbnail_r2_key !== key) await deleteAsset(r2, thumbnail_r2_key)
+        if (thumbnail_r2_key && thumbnail_r2_key !== key) {
+          await deleteAssetIfUnreferenced(r2, db, thumbnail_r2_key)
+        }
         thumbnail_r2_key = key
       }
     } else {
@@ -257,14 +260,16 @@ export async function applyEventImageUploads(
         return { thumbnail_r2_key, flyer_r2_key, error: existingKey.error }
       }
       if (typeof existingKey === 'string') {
-        if (thumbnail_r2_key && thumbnail_r2_key !== existingKey) await deleteAsset(r2, thumbnail_r2_key)
+        if (thumbnail_r2_key && thumbnail_r2_key !== existingKey) {
+          await deleteAssetIfUnreferenced(r2, db, thumbnail_r2_key)
+        }
         thumbnail_r2_key = existingKey
       }
     }
   }
 
   if (body.remove_flyer === '1') {
-    if (flyer_r2_key) await deleteAsset(r2, flyer_r2_key)
+    if (flyer_r2_key) await deleteAssetIfUnreferenced(r2, db, flyer_r2_key)
     flyer_r2_key = null
   } else {
     const flyer = body.flyer
@@ -272,7 +277,9 @@ export async function applyEventImageUploads(
       const key = eventFlyerKey(eventId, flyer.name)
       const upload = await uploadImage(r2, flyer, key)
       if (upload.ok) {
-        if (flyer_r2_key && flyer_r2_key !== key) await deleteAsset(r2, flyer_r2_key)
+        if (flyer_r2_key && flyer_r2_key !== key) {
+          await deleteAssetIfUnreferenced(r2, db, flyer_r2_key)
+        }
         flyer_r2_key = key
       }
     } else {
@@ -281,7 +288,9 @@ export async function applyEventImageUploads(
         return { thumbnail_r2_key, flyer_r2_key, error: existingKey.error }
       }
       if (typeof existingKey === 'string') {
-        if (flyer_r2_key && flyer_r2_key !== existingKey) await deleteAsset(r2, flyer_r2_key)
+        if (flyer_r2_key && flyer_r2_key !== existingKey) {
+          await deleteAssetIfUnreferenced(r2, db, flyer_r2_key)
+        }
         flyer_r2_key = existingKey
       }
     }
@@ -290,9 +299,13 @@ export async function applyEventImageUploads(
   return { thumbnail_r2_key, flyer_r2_key }
 }
 
-export async function deleteEventAssets(r2: R2Bucket, event: EventRecord): Promise<void> {
-  if (event.thumbnail_r2_key) await deleteAsset(r2, event.thumbnail_r2_key)
-  if (event.flyer_r2_key) await deleteAsset(r2, event.flyer_r2_key)
+export async function deleteEventAssets(
+  r2: R2Bucket,
+  db: D1Database,
+  event: EventRecord,
+): Promise<void> {
+  if (event.thumbnail_r2_key) await deleteAssetIfUnreferenced(r2, db, event.thumbnail_r2_key)
+  if (event.flyer_r2_key) await deleteAssetIfUnreferenced(r2, db, event.flyer_r2_key)
 }
 
 export async function createEvent(

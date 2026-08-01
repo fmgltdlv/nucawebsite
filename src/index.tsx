@@ -31,7 +31,7 @@ import { listQaItems } from './lib/qa-db'
 import { listResourceItems } from './lib/resource-items-db'
 import { getAssetObject } from './lib/r2-assets'
 import { subscribeNewsletter } from './lib/newsletter-db'
-import { loadPublicSiteContext } from './lib/site-context'
+import { loadAdminLayoutProps, loadPublicSiteContext, type AdminLayoutProps } from './lib/site-context'
 import { resolveAdminContext } from './lib/admin-context'
 import { totalInboxCount } from './lib/admin-inbox-counts'
 import { seedContentIfEmpty, seedDemoMembersIfEmpty, seedDirtIfEmpty } from './lib/seed'
@@ -55,7 +55,7 @@ import { TheDirtNotFoundPage, TheDirtViewerPage } from './pages/TheDirtViewer'
 import { NewsletterErrorPage, NewsletterThanksPage } from './pages/Newsletter'
 import { NotFoundPage } from './pages/NotFound'
 
-type Variables = { theme: ThemeId }
+type Variables = { theme: ThemeId; adminSite: AdminLayoutProps }
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>()
 
@@ -102,6 +102,15 @@ app.get('/assets/*', async (c) => {
   object.writeHttpMetadata(headers)
   headers.set('Cache-Control', 'public, max-age=86400')
   return new Response(object.body, { headers })
+})
+
+app.use(async (c, next) => {
+  if (!c.req.path.startsWith('/admin')) return next()
+  const ctx = await resolveAdminContext(c)
+  const adminSite = await loadAdminLayoutProps(c.env, getCookie(c, THEME_COOKIE), ctx?.inboxCounts)
+  c.set('theme', adminSite.theme)
+  c.set('adminSite', adminSite)
+  await next()
 })
 
 registerAdminRoutes(app)

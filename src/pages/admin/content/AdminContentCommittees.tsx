@@ -89,11 +89,11 @@ function CommitteeEditModal({ item }: { item: CommitteeRecord }) {
 }
 
 export function AdminContentCommitteesPage({
-  theme,
   ctx,
   items,
   flash,
   error,
+  ...site
 }: PageProps & {
   ctx: AdminContext
   items: CommitteeRecord[]
@@ -102,7 +102,7 @@ export function AdminContentCommitteesPage({
 }) {
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

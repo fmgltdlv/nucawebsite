@@ -87,8 +87,8 @@
 }
 
 [data-layout='compact'] .brand-logo {
-  max-height: 2.75rem;
-  max-width: 200px;
+  max-height: calc(2.75rem * var(--logo-scale, 1));
+  max-width: calc(200px * var(--logo-scale, 1));
 }
 
 [data-layout='spacious'] .page-header h1 {
@@ -244,16 +244,16 @@ a:hover {
   display: block;
   width: auto;
   height: auto;
-  max-height: 3.15rem;
-  max-width: min(209px, 48vw);
+  max-height: calc(3.15rem * var(--logo-scale, 1));
+  max-width: min(calc(209px * var(--logo-scale, 1)), 48vw);
   object-fit: contain;
   object-position: left center;
 }
 
 @media (min-width: 901px) {
   .brand-logo {
-    max-height: 3.45rem;
-    max-width: 231px;
+    max-height: calc(3.45rem * var(--logo-scale, 1));
+    max-width: calc(231px * var(--logo-scale, 1));
   }
 }
 
@@ -3595,6 +3595,83 @@ button.pill {
   line-height: 1;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
+}
+
+.breaking-news-popup {
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  margin: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  overflow: visible;
+}
+
+.breaking-news-popup::backdrop {
+  background: rgb(15 23 42 / 0.55);
+}
+
+.breaking-news-popup-card {
+  position: relative;
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 1.25rem;
+  padding: 1.75rem 1.5rem 1.5rem;
+  box-shadow: 0 20px 50px rgb(15 23 42 / 0.2);
+}
+
+.breaking-news-popup-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 999px;
+  background: rgb(15 23 42 / 0.06);
+  color: var(--color-text);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.breaking-news-popup-close:hover {
+  background: rgb(15 23 42 / 0.1);
+}
+
+.breaking-news-popup-eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.breaking-news-popup-title {
+  margin: 0 0 0.75rem;
+  padding-right: 2rem;
+  font-size: 1.35rem;
+  line-height: 1.3;
+}
+
+.breaking-news-popup-body {
+  margin: 0 0 1.25rem;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+.breaking-news-popup-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
 }
 
 .leader-photo {

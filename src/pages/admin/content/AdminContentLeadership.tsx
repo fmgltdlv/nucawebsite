@@ -169,14 +169,14 @@ function LeaderEditModal({ person }: { person: LeadershipRecord }) {
 }
 
 export function AdminContentLeadershipPage({
-  theme,
   ctx,
   leaders,
   flash,
+  ...site
 }: PageProps & { ctx: AdminContext; leaders: LeadershipRecord[]; flash?: string }) {
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

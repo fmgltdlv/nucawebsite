@@ -101,11 +101,11 @@ function DirtEditModal({ release }: { release: DirtReleaseRecord }) {
 }
 
 export function AdminContentDirtPage({
-  theme,
   ctx,
   releases,
   flash,
   error,
+  ...site
 }: PageProps & {
   ctx: AdminContext
   releases: DirtReleaseRecord[]
@@ -114,7 +114,7 @@ export function AdminContentDirtPage({
 }) {
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

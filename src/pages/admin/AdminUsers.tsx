@@ -28,12 +28,12 @@ function userSearchText(u: UserWithMemberInfo): string {
 }
 
 export function AdminUsersPage({
-  theme,
   ctx,
   users,
   members,
   committees,
   message,
+  ...site
 }: PageProps & {
   ctx: AdminContext
   users: UserWithMemberInfo[]
@@ -47,7 +47,7 @@ export function AdminUsersPage({
 
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

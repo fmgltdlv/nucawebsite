@@ -1,4 +1,5 @@
 import { getAssetUrl } from './r2-assets'
+import { deleteAssetIfUnreferenced } from './asset-references'
 import { resolveExistingImageKey } from './asset-select'
 
 export const MEMBER_LOGO_MAX_BYTES = 2 * 1024 * 1024
@@ -75,12 +76,13 @@ export async function uploadMemberLogo(
   return { ok: true, key }
 }
 
-export async function deleteR2Object(r2: R2Bucket, key: string): Promise<void> {
-  await r2.delete(key)
+export async function deleteR2Object(r2: R2Bucket, db: D1Database, key: string): Promise<void> {
+  await deleteAssetIfUnreferenced(r2, db, key)
 }
 
 export async function applyMemberLogoChange(
   r2: R2Bucket,
+  db: D1Database,
   updateLogoKey: (memberId: string, key: string | null) => Promise<void>,
   memberId: string,
   body: Record<string, File | string>,
@@ -88,7 +90,7 @@ export async function applyMemberLogoChange(
 ): Promise<string | undefined> {
   if (body.remove_logo === '1') {
     if (previousKey) {
-      await deleteR2Object(r2, previousKey)
+      await deleteR2Object(r2, db, previousKey)
       await updateLogoKey(memberId, null)
     }
     return undefined
@@ -101,7 +103,7 @@ export async function applyMemberLogoChange(
 
     await updateLogoKey(memberId, uploaded.key)
     if (previousKey && previousKey !== uploaded.key) {
-      await deleteR2Object(r2, previousKey)
+      await deleteR2Object(r2, db, previousKey)
     }
     return undefined
   }
@@ -111,7 +113,7 @@ export async function applyMemberLogoChange(
   if (typeof existingKey === 'string') {
     await updateLogoKey(memberId, existingKey)
     if (previousKey && previousKey !== existingKey) {
-      await deleteR2Object(r2, previousKey)
+      await deleteR2Object(r2, db, previousKey)
     }
   }
 

@@ -111,16 +111,16 @@ function ContactMessageModal({ submission }: { submission: ContactSubmission }) 
 }
 
 export function AdminContactMessagesPage({
-  theme,
   ctx,
   submissions,
   flash,
+  ...site
 }: PageProps & { ctx: AdminContext; submissions: ContactSubmission[]; flash?: string }) {
   const newCount = submissions.filter((submission) => submission.status === 'new').length
 
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

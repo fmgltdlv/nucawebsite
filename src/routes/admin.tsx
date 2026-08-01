@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import type { ThemeId } from '../config/themes'
+import type { AdminLayoutProps } from '../lib/site-context'
 import { committeeAssignmentKeys, USER_ROLES, type UserRole } from '../config/roles'
 import { MEMBER_TYPES, type MemberType } from '../data/demo'
 import type { Env } from '../env'
@@ -51,7 +52,7 @@ import { AdminMembersPage } from '../pages/admin/AdminMembers'
 import { AdminProfilePage } from '../pages/admin/AdminProfile'
 import { AdminUsersPage } from '../pages/admin/AdminUsers'
 
-type AdminVariables = { theme: ThemeId }
+type AdminVariables = { theme: ThemeId; adminSite: AdminLayoutProps }
 
 function parseMemberType(value: string): MemberType {
   return MEMBER_TYPES.includes(value as MemberType) ? (value as MemberType) : 'contractor'
@@ -87,7 +88,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     await seedAdminIfNeeded(c.env)
     const ctx = await resolveAdminContext(c)
     if (ctx) return c.redirect('/admin', 303)
-    return c.html(<AdminLoginPage theme={c.get('theme')} />)
+    return c.html(<AdminLoginPage {...c.get('adminSite')} />)
   })
 
   app.post('/admin/login', async (c) => {
@@ -98,7 +99,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const user = await verifyUserLogin(c.env, email, password)
     if (!user) {
       return c.html(
-        <AdminLoginPage theme={c.get('theme')} error="Invalid email or password." />,
+        <AdminLoginPage {...c.get('adminSite')} error="Invalid email or password." />,
         401,
       )
     }
@@ -116,7 +117,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     await seedAdminIfNeeded(c.env)
     const ctx = await resolveAdminContext(c)
     if (!ctx) return c.redirect('/admin/login', 303)
-    return c.html(<AdminHomePage theme={c.get('theme')} ctx={ctx} />)
+    return c.html(<AdminHomePage {...c.get('adminSite')} ctx={ctx} />)
   })
 
   app.get('/admin/assets', async (c) => {
@@ -131,7 +132,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
 
     return c.html(
       <AdminAssetsPage
-        theme={c.get('theme')}
+        {...c.get('adminSite')}
         ctx={ctx}
         assets={assets}
         typeCounts={typeCounts}
@@ -199,7 +200,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
             : undefined
     return c.html(
       <AdminUsersPage
-        theme={c.get('theme')}
+        {...c.get('adminSite')}
         ctx={ctx}
         users={users}
         members={members}
@@ -228,7 +229,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       const committees = await listCommittees(c.env.DB)
       return c.html(
         <AdminUsersPage
-          theme={c.get('theme')}
+          {...c.get('adminSite')}
           ctx={ctx}
           users={users}
           members={members}
@@ -282,7 +283,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
           ? 'Member added.'
           : undefined
     return c.html(
-      <AdminMembersPage theme={c.get('theme')} ctx={ctx} members={members} flash={flash} />,
+      <AdminMembersPage {...c.get('adminSite')} ctx={ctx} members={members} flash={flash} />,
     )
   })
 
@@ -297,7 +298,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       const members = await listMembersForAdmin(c.env.DB)
       return c.html(
         <AdminMembersPage
-          theme={c.get('theme')}
+          {...c.get('adminSite')}
           ctx={ctx}
           members={members}
           error="Company name is required."
@@ -308,6 +309,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const memberId = await createMember(c.env.DB, data)
     const logoError = await applyMemberLogoChange(
       c.env.R2,
+      c.env.DB,
       (id, key) => updateMemberLogoKey(c.env.DB, id, key),
       memberId,
       body,
@@ -316,7 +318,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       const members = await listMembersForAdmin(c.env.DB)
       return c.html(
         <AdminMembersPage
-          theme={c.get('theme')}
+          {...c.get('adminSite')}
           ctx={ctx}
           members={members}
           error={`Member added, but logo upload failed: ${logoError}`}
@@ -339,7 +341,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       const members = await listMembersForAdmin(c.env.DB)
       return c.html(
         <AdminMembersPage
-          theme={c.get('theme')}
+          {...c.get('adminSite')}
           ctx={ctx}
           members={members}
           error="Company name is required."
@@ -351,6 +353,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const previousKey = await getMemberLogoR2Key(c.env.DB, id)
     const logoError = await applyMemberLogoChange(
       c.env.R2,
+      c.env.DB,
       (memberId, key) => updateMemberLogoKey(c.env.DB, memberId, key),
       id,
       body,
@@ -360,7 +363,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       const members = await listMembersForAdmin(c.env.DB)
       return c.html(
         <AdminMembersPage
-          theme={c.get('theme')}
+          {...c.get('adminSite')}
           ctx={ctx}
           members={members}
           error={`Member saved, but logo upload failed: ${logoError}`}
@@ -385,7 +388,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
           : undefined
     return c.html(
       <AdminEventsPage
-        theme={c.get('theme')}
+        {...c.get('adminSite')}
         ctx={ctx}
         events={events}
         committees={committees}
@@ -433,7 +436,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       longitude: coords.longitude,
     })
 
-    const images = await applyEventImageUploads(c.env.R2, id, body)
+    const images = await applyEventImageUploads(c.env.R2, c.env.DB, id, body)
     if (images.error) {
       return c.redirect(`/admin/events?error=${encodeURIComponent(images.error)}`, 303)
     }
@@ -488,7 +491,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       manual: parseManualCoordinates(body.latitude, body.longitude),
       skipMap: body.map_skip === '1',
     })
-    const images = await applyEventImageUploads(c.env.R2, id, body, existing)
+    const images = await applyEventImageUploads(c.env.R2, c.env.DB, id, body, existing)
     if (images.error) {
       return c.redirect(`/admin/events?error=${encodeURIComponent(images.error)}`, 303)
     }
@@ -519,7 +522,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     if (!canAccessRole(ctx.user, ['admin', 'chair'])) return c.redirect('/admin', 303)
     const id = c.req.param('id')
     const existing = await getEventById(c.env.DB, id)
-    if (existing) await deleteEventAssets(c.env.R2, existing)
+    if (existing) await deleteEventAssets(c.env.R2, c.env.DB, existing)
     await deleteEvent(c.env.DB, id)
     return c.redirect('/admin/events?ok=1', 303)
   })
@@ -529,7 +532,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     if (!ctx) return c.redirect('/admin/login', 303)
     if (!canAccessRole(ctx.user, ['chair'])) return c.redirect('/admin', 303)
     const committees = await listCommittees(c.env.DB)
-    return c.html(<AdminCommitteesPage theme={c.get('theme')} ctx={ctx} committees={committees} />)
+    return c.html(<AdminCommitteesPage {...c.get('adminSite')} ctx={ctx} committees={committees} />)
   })
 
   app.get('/admin/profile', async (c) => {
@@ -553,7 +556,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
           : undefined
     return c.html(
       <AdminProfilePage
-        theme={c.get('theme')}
+        {...c.get('adminSite')}
         ctx={ctx}
         member={member}
         pendingMember={pendingMember}
@@ -583,7 +586,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
         : null
       return c.html(
         <AdminProfilePage
-          theme={c.get('theme')}
+          {...c.get('adminSite')}
           ctx={ctx}
           member={member}
           pendingMember={pendingMember}

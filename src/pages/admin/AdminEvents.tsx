@@ -272,15 +272,15 @@ function EventEditModal({
 }
 
 export function AdminEventsPage({
-  theme,
   ctx,
   events,
   committees,
   flash,
+  ...site
 }: PageProps & { ctx: AdminContext; events: EventRecord[]; committees: CommitteeRecord[]; flash?: string }) {
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

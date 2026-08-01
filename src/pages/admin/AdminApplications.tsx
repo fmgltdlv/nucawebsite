@@ -98,16 +98,16 @@ function ApplicationEditModal({ app }: { app: ApplicationRecord }) {
 }
 
 export function AdminApplicationsPage({
-  theme,
   ctx,
   applications,
   flash,
+  ...site
 }: PageProps & { ctx: AdminContext; applications: ApplicationRecord[]; flash?: string }) {
   const newCount = applications.filter((app) => app.status === 'new').length
 
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

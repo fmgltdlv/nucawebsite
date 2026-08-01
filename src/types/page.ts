@@ -8,6 +8,7 @@ export type SiteLayoutProps = {
   footer?: FooterInfo
   breakingNews?: BreakingNews | null
   logoUrl?: string
+  logoSizePercent?: number
   navigation?: NavEntry[]
   staffInboxCount?: number
 }

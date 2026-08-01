@@ -44,16 +44,16 @@ function SubscriberListRow({ subscriber }: { subscriber: NewsletterSubscriber })
 }
 
 export function AdminNewsletterSubscribersPage({
-  theme,
   ctx,
   subscribers,
   flash,
+  ...site
 }: PageProps & { ctx: AdminContext; subscribers: NewsletterSubscriber[]; flash?: string }) {
   const newCount = subscribers.filter((subscriber) => subscriber.status === 'new').length
 
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

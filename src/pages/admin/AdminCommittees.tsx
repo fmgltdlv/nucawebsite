@@ -12,15 +12,15 @@ function committeeLabel(key: string, committees: CommitteeRecord[]): string {
 }
 
 export function AdminCommitteesPage({
-  theme,
   ctx,
   committees,
+  ...site
 }: PageProps & { ctx: AdminContext; committees: CommitteeRecord[] }) {
   const keys = ctx.chairCommittees.filter(isCommitteeAssignmentKey)
 
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

@@ -13,8 +13,10 @@ export type AdminContext = {
   inboxCounts?: AdminInboxCounts
 }
 
+import type { AdminLayoutProps } from './site-context'
+
 export async function resolveAdminContext(
-  c: Context<{ Bindings: Env; Variables: { theme: ThemeId } }>,
+  c: Context<{ Bindings: Env; Variables: { theme: ThemeId; adminSite?: AdminLayoutProps } }>,
 ): Promise<AdminContext | null> {
   const token = readSessionCookie(c.req.header('Cookie'))
   const session = await verifySessionToken(token, c.env)

@@ -93,12 +93,12 @@ function AssetTypeFilters({
 }
 
 export function AdminAssetsPage({
-  theme,
   ctx,
   assets,
   typeCounts,
   totalCount,
   filterType,
+  ...site
 }: PageProps & {
   ctx: AdminContext
   assets: AssetIndexEntry[]
@@ -110,7 +110,7 @@ export function AdminAssetsPage({
 
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

@@ -1,20 +1,4 @@
-import {
-  isNavGroup,
-  statusLegend,
-  type NavEntry,
-  type NavLink,
-  type PageStatus,
-} from '../nav/site-nav'
-
-function StatusMark({ status }: { status: PageStatus }) {
-  return (
-    <span
-      class={`nav-status nav-status-${status}`}
-      title={statusLegend[status]}
-      aria-label={statusLegend[status]}
-    />
-  )
-}
+import { isNavGroup, type NavEntry, type NavLink } from '../nav/site-nav'
 
 function NavAnchor({ link, nested }: { link: NavLink; nested?: boolean }) {
   const classes = [nested ? 'submenu-link' : '', link.indent ? 'submenu-link-indent' : '']
@@ -23,24 +7,12 @@ function NavAnchor({ link, nested }: { link: NavLink; nested?: boolean }) {
 
   return (
     <a href={link.href} class={classes || undefined}>
-      {link.status && <StatusMark status={link.status} />}
       <span>{link.label}</span>
     </a>
   )
 }
 
-function navHasStatus(entries: NavEntry[]): boolean {
-  return entries.some((entry) => {
-    if (isNavGroup(entry)) {
-      return Boolean(entry.status) || entry.children.some((child) => Boolean(child.status))
-    }
-    return Boolean(entry.status)
-  })
-}
-
 export function SiteNav({ navigation }: { navigation: NavEntry[] }) {
-  const showStatusLegend = navHasStatus(navigation)
-
   return (
     <nav class="site-nav" id="site-nav" aria-label="Primary">
       <ul class="nav-root">
@@ -51,12 +23,10 @@ export function SiteNav({ navigation }: { navigation: NavEntry[] }) {
                 <div class="nav-parent-row">
                   {entry.href ? (
                     <a href={entry.href} class="nav-parent-link">
-                      {entry.status && <StatusMark status={entry.status} />}
                       <span>{entry.label}</span>
                     </a>
                   ) : (
                     <span class="nav-parent-label">
-                      {entry.status && <StatusMark status={entry.status} />}
                       <span>{entry.label}</span>
                     </span>
                   )}
@@ -87,20 +57,6 @@ export function SiteNav({ navigation }: { navigation: NavEntry[] }) {
           )
         })}
       </ul>
-      {showStatusLegend && (
-        <p class="nav-legend" id="nav-legend">
-          <span class="nav-legend-title">Copy status</span>
-          <span class="nav-legend-item">
-            <span class="nav-status nav-status-demo" /> Demo
-          </span>
-          <span class="nav-legend-item">
-            <span class="nav-status nav-status-stub" /> Stub
-          </span>
-          <span class="nav-legend-item">
-            <span class="nav-status nav-status-todo" /> To copy
-          </span>
-        </p>
-      )}
     </nav>
   )
 }

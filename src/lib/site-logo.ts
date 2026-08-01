@@ -17,6 +17,20 @@ const MIME_TO_EXT: Record<string, string> = {
 
 export const DEFAULT_SITE_LOGO_URL = '/images/nuca-logo.png'
 
+export const DEFAULT_LOGO_SIZE_PERCENT = 100
+export const LOGO_SIZE_MIN_PERCENT = 50
+export const LOGO_SIZE_MAX_PERCENT = 200
+
+export function parseLogoSizePercent(value: unknown): number {
+  const n = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(n)) return DEFAULT_LOGO_SIZE_PERCENT
+  return Math.min(LOGO_SIZE_MAX_PERCENT, Math.max(LOGO_SIZE_MIN_PERCENT, Math.round(n)))
+}
+
+export function logoSizeScale(percent?: number): number {
+  return parseLogoSizePercent(percent ?? DEFAULT_LOGO_SIZE_PERCENT) / 100
+}
+
 export function siteLogoUrl(r2Key?: string | null): string | undefined {
   return r2Key ? getAssetUrl(r2Key) : undefined
 }
@@ -81,13 +95,14 @@ export async function uploadSiteLogo(
 
 export async function applySiteLogoChange(
   r2: R2Bucket,
+  db: D1Database,
   updateLogoKey: (key: string | null) => Promise<void>,
   body: Record<string, File | string>,
   previousKey?: string | null,
 ): Promise<string | undefined> {
   if (body.remove_site_logo === '1') {
     if (previousKey) {
-      await deleteR2Object(r2, previousKey)
+      await deleteR2Object(r2, db, previousKey)
       await updateLogoKey(null)
     }
     return undefined
@@ -101,7 +116,7 @@ export async function applySiteLogoChange(
 
   await updateLogoKey(uploaded.key)
   if (previousKey && previousKey !== uploaded.key) {
-    await deleteR2Object(r2, previousKey)
+    await deleteR2Object(r2, db, previousKey)
   }
   return undefined
 }

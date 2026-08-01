@@ -1,6 +1,6 @@
 /**
  * Site navigation — see TODO.md for structure decisions.
- * `status` tracks copy progress (shown in the nav during demo).
+ * `status` is legacy metadata used only when seeding or falling back to static nav.
  */
 export type PageStatus = 'demo' | 'stub' | 'todo'
 

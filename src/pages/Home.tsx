@@ -1,3 +1,4 @@
+import { BreakingNewsPopup } from '../views/BreakingNewsPopup'
 import { Layout, pickLayoutSite } from '../views/Layout'
 import { ArchiveCard, ArchiveCardList } from '../views/ArchiveCard'
 import { EventCard, EventMapThumbAssets } from '../views/EventCard'
@@ -178,6 +179,7 @@ export function HomePage({
     >
       {blocks.map((block, index) => renderHomeBlock(block, index, { events, dirtReleases, posts }))}
       {showEventMapAssets ? <EventMapThumbAssets /> : null}
+      {breakingNews?.showPopup ? <BreakingNewsPopup news={breakingNews} /> : null}
     </Layout>
   )
 }

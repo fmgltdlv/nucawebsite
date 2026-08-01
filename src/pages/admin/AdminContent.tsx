@@ -40,10 +40,10 @@ const contentSections: Array<{
   },
 ]
 
-export function AdminContentPage({ theme, ctx }: PageProps & { ctx: AdminContext }) {
+export function AdminContentPage({ ctx, ...site }: PageProps & { ctx: AdminContext }) {
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

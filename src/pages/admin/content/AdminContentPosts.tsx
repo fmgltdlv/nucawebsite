@@ -99,14 +99,14 @@ function PostEditModal({ post }: { post: PostRecord }) {
 }
 
 export function AdminContentPostsPage({
-  theme,
   ctx,
   posts,
   flash,
+  ...site
 }: PageProps & { ctx: AdminContext; posts: PostRecord[]; flash?: string }) {
   return (
     <AdminShell
-      theme={theme}
+      {...site}
       user={ctx.user}
       chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}

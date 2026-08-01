@@ -4,12 +4,12 @@ import { inboxCardBadge } from '../../views/admin/AdminInboxToolbar'
 import type { AdminContext } from '../../lib/admin-context'
 import type { PageProps } from '../../types/page'
 
-export function AdminHomePage({ theme, ctx }: PageProps & { ctx: AdminContext }) {
+export function AdminHomePage({ ctx, ...site }: PageProps & { ctx: AdminContext }) {
   const { user } = ctx
   const counts = ctx.inboxCounts
 
   return (
-    <AdminShell theme={theme} user={user} chairCommittees={ctx.chairCommittees} inboxCounts={counts} title="Dashboard" activePath="/admin">
+    <AdminShell {...site} user={user} chairCommittees={ctx.chairCommittees} inboxCounts={counts} title="Dashboard" activePath="/admin">
       <div class="admin-cards">
         {user.role === 'admin' && (
           <>
