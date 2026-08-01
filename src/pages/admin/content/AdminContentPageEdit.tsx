@@ -218,7 +218,7 @@ export function AdminContentPageEditPage({
         </div>
       </form>
       <script src="/admin-link-picker.js" defer></script>
-      <script src="/page-blocks-editor.js?v=13" defer></script>
+      <script src="/page-blocks-editor.js?v=14" defer></script>
     </AdminShell>
   )
 }

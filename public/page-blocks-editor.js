@@ -175,18 +175,22 @@
       .replace(/"/g, '&quot;')
   }
 
+  function collapseEveryBlock() {
+    blocks.forEach((block, index) => {
+      collapsedBlocks.add(String(index))
+      if (block.type === 'section') {
+        block.blocks.forEach((_, childIndex) => {
+          collapsedBlocks.add(`${index}-${childIndex}`)
+        })
+      }
+    })
+  }
+
   function initCollapsedState() {
     collapsedBlocks.clear()
     // Keep expanded when few blocks; collapse when many to reduce scroll.
     if (blocks.length > 5) {
-      blocks.forEach((block, index) => {
-        collapsedBlocks.add(String(index))
-        if (block.type === 'section') {
-          block.blocks.forEach((_, childIndex) => {
-            collapsedBlocks.add(`${index}-${childIndex}`)
-          })
-        }
-      })
+      collapseEveryBlock()
     }
   }
 
@@ -993,7 +997,8 @@
       collapseAll.className = 'btn btn-secondary btn-sm'
       collapseAll.textContent = 'Collapse all'
       collapseAll.addEventListener('click', () => {
-        initCollapsedState()
+        collapsedBlocks.clear()
+        collapseEveryBlock()
         activeBlockIndex = null
         updateSelectionUi()
       })
