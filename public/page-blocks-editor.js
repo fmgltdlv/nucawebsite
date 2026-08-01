@@ -1112,7 +1112,7 @@
   /**
    * @param {ImageBlock} block
    * @param {string} indexKey
-   * @param {(next: ImageBlock) => void} onChange
+   * @param {(next: ImageBlock | ((block: ImageBlock) => ImageBlock)) => void} onChange
    * @param {{ nested?: boolean }} [options]
    */
   function renderImageAssetField(block, indexKey, onChange, options = {}) {
@@ -1174,8 +1174,9 @@
 
     function syncFromPicker() {
       const nextKey = hiddenInput.value
-      if (nextKey === block.asset_key) return
-      onChange({ ...block, asset_key: nextKey })
+      onChange((current) =>
+        current.asset_key === nextKey ? current : { ...current, asset_key: nextKey },
+      )
     }
 
     hiddenInput.addEventListener('change', syncFromPicker)
@@ -1228,7 +1229,7 @@
   /**
    * @param {ImageBlock} block
    * @param {string} indexKey
-   * @param {(next: ImageBlock) => void} onChange
+   * @param {(next: ImageBlock | ((block: ImageBlock) => ImageBlock)) => void} onChange
    * @param {(next: ImageBlock) => void} [onSummary]
    * @param {{ nested?: boolean }} [options]
    */
@@ -1236,9 +1237,25 @@
     const nested = options.nested === true
     const fields = [renderImageAssetField(block, indexKey, onChange, options)]
 
+    /**
+     * @param {(current: ImageBlock) => ImageBlock} patch
+     * @param {{ summary?: boolean, rerender?: boolean }} [patchOptions]
+     */
+    function patchImage(patch, patchOptions = {}) {
+      onChange((current) => {
+        const next = patch(current)
+        if (patchOptions.summary) onSummary?.(next)
+        if (patchOptions.rerender) render()
+        return next
+      })
+    }
+
     fields.push(
-      field('Alt text', textInput(block.alt || '', (alt) => onChange({ ...block, alt }))),
-      field('Caption (optional)', textInput(block.caption || '', (caption) => onChange({ ...block, caption }))),
+      field('Alt text', textInput(block.alt || '', (alt) => patchImage((b) => ({ ...b, alt })))),
+      field(
+        'Caption (optional)',
+        textInput(block.caption || '', (caption) => patchImage((b) => ({ ...b, caption }))),
+      ),
     )
 
     if (!nested) {
@@ -1253,27 +1270,30 @@
             ],
             block.layout,
             (layout) => {
-              const next = { ...block, layout }
-              if (layout === 'inline') {
-                next.width = block.width || 'large'
-                next.height = undefined
-                next.scroll = undefined
-                next.full_width = undefined
-              } else if (layout === 'section') {
-                next.width = undefined
-                next.height = block.height || 'auto'
-                next.scroll = undefined
-                next.full_width = undefined
-              } else {
-                next.width = undefined
-                next.height = block.height || 'medium'
-                next.scroll = block.scroll || 'normal'
-                next.full_width =
-                  (block.scroll || 'normal') === 'fixed' ? block.full_width === true : undefined
-              }
-              onChange(next)
-              onSummary?.(next)
-              render()
+              patchImage(
+                (b) => {
+                  const next = { ...b, layout }
+                  if (layout === 'inline') {
+                    next.width = b.width || 'large'
+                    next.height = undefined
+                    next.scroll = undefined
+                    next.full_width = undefined
+                  } else if (layout === 'section') {
+                    next.width = undefined
+                    next.height = b.height || 'auto'
+                    next.scroll = undefined
+                    next.full_width = undefined
+                  } else {
+                    next.width = undefined
+                    next.height = b.height || 'medium'
+                    next.scroll = b.scroll || 'normal'
+                    next.full_width =
+                      (b.scroll || 'normal') === 'fixed' ? b.full_width === true : undefined
+                  }
+                  return next
+                },
+                { summary: true, rerender: true },
+              )
             },
           ),
         ),
@@ -1286,7 +1306,7 @@
       fields.push(
         field(
           'Alignment',
-          alignSelect(block.align || 'center', (align) => onChange({ ...block, align })),
+          alignSelect(block.align || 'center', (align) => patchImage((b) => ({ ...b, align }))),
         ),
         field(
           'Width',
@@ -1298,7 +1318,7 @@
               ['full', 'Full width'],
             ],
             block.width || 'large',
-            (width) => onChange({ ...block, width }),
+            (width) => patchImage((b) => ({ ...b, width })),
           ),
         ),
       )
@@ -1315,7 +1335,7 @@
               ['viewport', 'Viewport (60vh)'],
             ],
             block.height || 'auto',
-            (height) => onChange({ ...block, height }),
+            (height) => patchImage((b) => ({ ...b, height })),
           ),
         ),
       )
@@ -1331,7 +1351,7 @@
               ['viewport', 'Viewport (60vh)'],
             ],
             block.height || 'medium',
-            (height) => onChange({ ...block, height }),
+            (height) => patchImage((b) => ({ ...b, height })),
           ),
         ),
         field(
@@ -1343,14 +1363,19 @@
             ],
             block.scroll || 'normal',
             (scroll) => {
-              const next = { ...block, scroll }
-              if (scroll === 'fixed') {
-                next.full_width = block.full_width === undefined ? true : block.full_width === true
-              } else {
-                next.full_width = undefined
-              }
-              onChange(next)
-              render()
+              patchImage(
+                (b) => {
+                  const next = { ...b, scroll }
+                  if (scroll === 'fixed') {
+                    next.full_width =
+                      b.full_width === undefined ? true : b.full_width === true
+                  } else {
+                    next.full_width = undefined
+                  }
+                  return next
+                },
+                { rerender: true },
+              )
             },
           ),
         ),
@@ -1358,7 +1383,7 @@
       if ((block.scroll || 'normal') === 'fixed') {
         fields.push(
           checkboxField('Full page width', block.full_width === true, (full_width) =>
-            onChange({ ...block, full_width }),
+            patchImage((b) => ({ ...b, full_width })),
           ),
         )
       }
