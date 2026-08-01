@@ -30,6 +30,7 @@ import { createQaItem, deleteQaItem, listQaItems, updateQaItem } from '../lib/qa
 import {
   createCommittee,
   deleteCommittee,
+  getCommitteeById,
   listCommittees,
   slugifyCommitteeKey,
   updateCommittee,
@@ -55,7 +56,10 @@ import {
   updateMembershipType,
 } from '../lib/membership-types-db'
 import { deleteAssetIfUnreferenced } from '../lib/asset-references'
+import { resolveExistingImageKey } from '../lib/asset-select'
 import {
+  committeePhotoKey,
+  deleteAsset,
   dirtPdfKey,
   leadershipPhotoKey,
   uploadImage,
@@ -140,6 +144,48 @@ function leadershipFromBody(body: Record<string, unknown>) {
     website: optionalText(body, 'website'),
     linkedin_url: optionalText(body, 'linkedin_url'),
     bio: optionalText(body, 'bio'),
+  }
+}
+
+async function resolveCommitteePhotoR2Key(
+  r2: R2Bucket,
+  committeeId: string,
+  existingKey: string | null,
+  body: Record<string, File | string>,
+): Promise<
+  { photo_r2_key: string | null; previousKey: string | null } | { error: string }
+> {
+  const photo = body.photo instanceof File && body.photo.size > 0 ? body.photo : null
+  if (photo) {
+    const key = committeePhotoKey(committeeId, photo.name)
+    const upload = await uploadImage(r2, photo, key)
+    if (!upload.ok) return { error: upload.error }
+    return { photo_r2_key: key, previousKey: existingKey }
+  }
+
+  const libraryKey = await resolveExistingImageKey(r2, body, 'existing_photo_key')
+  if (libraryKey && typeof libraryKey === 'object') return { error: libraryKey.error }
+  if (typeof libraryKey === 'string' && libraryKey !== existingKey) {
+    return { photo_r2_key: libraryKey, previousKey: existingKey }
+  }
+
+  const clearedKey =
+    typeof body.existing_photo_key === 'string' ? body.existing_photo_key.trim() : undefined
+  if (clearedKey === '' && existingKey) {
+    return { photo_r2_key: null, previousKey: existingKey }
+  }
+
+  return { photo_r2_key: existingKey, previousKey: null }
+}
+
+async function cleanupCommitteePhotoReplacement(
+  r2: R2Bucket,
+  db: D1Database,
+  previousKey: string | null,
+  nextKey: string | null,
+): Promise<void> {
+  if (previousKey && previousKey !== nextKey) {
+    await deleteAssetIfUnreferenced(r2, db, previousKey)
   }
 }
 
@@ -342,9 +388,24 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     if (!name || !key) {
       return c.redirect('/admin/content/committees?error=Name%20required', 303)
     }
+
+    const id = crypto.randomUUID()
+    const photoResult = await resolveCommitteePhotoR2Key(c.env.R2, id, null, body)
+    if ('error' in photoResult) {
+      return c.redirect(`/admin/content/committees?error=${encodeURIComponent(photoResult.error)}`, 303)
+    }
+
     try {
-      await createCommittee(c.env.DB, { key, name })
+      await createCommittee(c.env.DB, {
+        id,
+        key,
+        name,
+        photo_r2_key: photoResult.photo_r2_key,
+      })
     } catch (err) {
+      if (photoResult.photo_r2_key) {
+        await deleteAsset(c.env.R2, photoResult.photo_r2_key)
+      }
       const message = err instanceof Error ? err.message : 'Could not create committee.'
       return c.redirect(`/admin/content/committees?error=${encodeURIComponent(message)}`, 303)
     }
@@ -355,22 +416,53 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
     const id = c.req.param('id')
+    const existing = await getCommitteeById(c.env.DB, id)
+    if (!existing) {
+      return c.redirect('/admin/content/committees?error=Committee%20not%20found', 303)
+    }
+    const photoResult = await resolveCommitteePhotoR2Key(
+      c.env.R2,
+      id,
+      existing.photo_r2_key,
+      body,
+    )
+    if ('error' in photoResult) {
+      return c.redirect(`/admin/content/committees?error=${encodeURIComponent(photoResult.error)}`, 303)
+    }
     try {
       await updateCommittee(c.env.DB, id, {
-        name: typeof body.name === 'string' ? body.name.trim() : '',
+        name: typeof body.name === 'string' ? body.name.trim() : existing.name,
         sort_order: parseSortOrder(typeof body.sort_order === 'string' ? body.sort_order : '0'),
         published: body.published === '1',
+        photo_r2_key: photoResult.photo_r2_key,
       })
     } catch (err) {
+      if (
+        photoResult.photo_r2_key &&
+        photoResult.photo_r2_key !== existing.photo_r2_key
+      ) {
+        await deleteAsset(c.env.R2, photoResult.photo_r2_key)
+      }
       const message = err instanceof Error ? err.message : 'Could not save committee.'
       return c.redirect(`/admin/content/committees?error=${encodeURIComponent(message)}`, 303)
     }
+    await cleanupCommitteePhotoReplacement(
+      c.env.R2,
+      c.env.DB,
+      photoResult.previousKey,
+      photoResult.photo_r2_key,
+    )
     return c.redirect('/admin/content/committees?ok=1', 303)
   })
 
   app.post('/admin/content/committees/:id/delete', async (c) => {
     const ctx = getAdminCtx(c)
-    await deleteCommittee(c.env.DB, c.req.param('id'))
+    const id = c.req.param('id')
+    const existing = await getCommitteeById(c.env.DB, id)
+    await deleteCommittee(c.env.DB, id)
+    if (existing?.photo_r2_key) {
+      await deleteAssetIfUnreferenced(c.env.R2, c.env.DB, existing.photo_r2_key)
+    }
     return c.redirect('/admin/content/committees?ok=1', 303)
   })
 

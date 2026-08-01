@@ -39,6 +39,7 @@ export async function countAssetKeyReferences(db: D1Database, key: string): Prom
         (SELECT COUNT(*) FROM members WHERE logo_r2_key = ?1) +
         (SELECT COUNT(*) FROM dirt_releases WHERE pdf_r2_key = ?1) +
         (SELECT COUNT(*) FROM leadership WHERE photo_r2_key = ?1) +
+        (SELECT COUNT(*) FROM committees WHERE photo_r2_key = ?1) +
         (SELECT COUNT(*) FROM events WHERE thumbnail_r2_key = ?1) +
         (SELECT COUNT(*) FROM events WHERE flyer_r2_key = ?1) +
         (SELECT COUNT(*) FROM library_assets WHERE r2_key = ?1) +

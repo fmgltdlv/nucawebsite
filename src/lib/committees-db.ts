@@ -9,8 +9,11 @@ export type CommitteeRecord = {
   key: string
   name: string
   sort_order: number
+  photo_r2_key: string | null
   published: number
 }
+
+const COMMITTEE_COLUMNS = 'id, key, name, sort_order, photo_r2_key, published'
 
 const COMMITTEE_KEY_PATTERN = /^[a-z][a-z0-9_]*$/
 
@@ -34,10 +37,10 @@ export async function listCommittees(
   publishedOnly = false,
 ): Promise<CommitteeRecord[]> {
   const sql = publishedOnly
-    ? `SELECT id, key, name, sort_order, published
+    ? `SELECT ${COMMITTEE_COLUMNS}
        FROM committees WHERE published = 1
        ORDER BY sort_order ASC, name ASC`
-    : `SELECT id, key, name, sort_order, published
+    : `SELECT ${COMMITTEE_COLUMNS}
        FROM committees ORDER BY sort_order ASC, name ASC`
   const { results } = await db.prepare(sql).all<CommitteeRecord>()
   return results ?? []
@@ -49,7 +52,7 @@ export async function getCommitteeByKey(
   publishedOnly = false,
 ): Promise<CommitteeRecord | null> {
   const row = await db
-    .prepare(`SELECT id, key, name, sort_order, published FROM committees WHERE key = ?`)
+    .prepare(`SELECT ${COMMITTEE_COLUMNS} FROM committees WHERE key = ?`)
     .bind(key)
     .first<CommitteeRecord>()
   if (!row) return null
@@ -60,7 +63,7 @@ export async function getCommitteeByKey(
 export async function getCommitteeById(db: D1Database, id: string): Promise<CommitteeRecord | null> {
   return (
     (await db
-      .prepare(`SELECT id, key, name, sort_order, published FROM committees WHERE id = ?`)
+      .prepare(`SELECT ${COMMITTEE_COLUMNS} FROM committees WHERE id = ?`)
       .bind(id)
       .first<CommitteeRecord>()) ?? null
   )
@@ -140,7 +143,14 @@ export async function teardownCommitteeResources(db: D1Database, key: string): P
 
 export async function createCommittee(
   db: D1Database,
-  data: { key: string; name: string; sort_order?: number; published?: boolean },
+  data: {
+    id?: string
+    key: string
+    name: string
+    sort_order?: number
+    published?: boolean
+    photo_r2_key?: string | null
+  },
 ): Promise<string> {
   if (!isCommitteeKeyFormat(data.key)) {
     throw new Error('Committee key must use lowercase letters, numbers, and underscores.')
@@ -149,16 +159,17 @@ export async function createCommittee(
   const existing = await getCommitteeByKey(db, data.key)
   if (existing) throw new Error('A committee with that key already exists.')
 
-  const id = crypto.randomUUID()
+  const id = data.id ?? crypto.randomUUID()
   const sort_order = data.sort_order ?? (await nextSortOrder(db))
   const published = data.published === false ? 0 : 1
+  const photo_r2_key = data.photo_r2_key ?? null
 
   await db
     .prepare(
-      `INSERT INTO committees (id, key, name, sort_order, published, updated_at)
-       VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+      `INSERT INTO committees (id, key, name, sort_order, photo_r2_key, published, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
     )
-    .bind(id, data.key, data.name.trim(), sort_order, published)
+    .bind(id, data.key, data.name.trim(), sort_order, photo_r2_key, published)
     .run()
 
   const committee = { id, key: data.key, name: data.name.trim(), sort_order, published }
@@ -171,17 +182,20 @@ export async function createCommittee(
 export async function updateCommittee(
   db: D1Database,
   id: string,
-  data: { name: string; sort_order: number; published: boolean },
+  data: { name: string; sort_order: number; published: boolean; photo_r2_key?: string | null },
 ): Promise<void> {
   const existing = await getCommitteeById(db, id)
   if (!existing) throw new Error('Committee not found.')
 
+  const photo_r2_key =
+    data.photo_r2_key !== undefined ? data.photo_r2_key : existing.photo_r2_key
+
   await db
     .prepare(
-      `UPDATE committees SET name = ?, sort_order = ?, published = ?, updated_at = datetime('now')
+      `UPDATE committees SET name = ?, sort_order = ?, photo_r2_key = ?, published = ?, updated_at = datetime('now')
        WHERE id = ?`,
     )
-    .bind(data.name.trim(), data.sort_order, data.published ? 1 : 0, id)
+    .bind(data.name.trim(), data.sort_order, photo_r2_key, data.published ? 1 : 0, id)
     .run()
 
   const slug = committeePageSlug(existing.key)

@@ -59,6 +59,11 @@ export function leadershipPhotoKey(id: string, filename: string): string {
   return `leadership/${id}.${ext}`
 }
 
+export function committeePhotoKey(id: string, filename: string): string {
+  const ext = filename.includes('.') ? filename.split('.').pop() : 'jpg'
+  return `committees/${id}.${ext}`
+}
+
 export function eventThumbnailKey(eventId: string, filename: string): string {
   const ext = filename.includes('.') ? filename.split('.').pop() : 'jpg'
   return `events/${eventId}/thumbnail.${ext}`

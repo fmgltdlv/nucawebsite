@@ -1,6 +1,8 @@
 import type { CommitteeRecord } from '../../../lib/committees-db'
 import { committeePublicPath } from '../../../lib/committee-pages'
+import { getAssetUrl } from '../../../lib/r2-assets'
 import { AdminShell } from '../../../views/AdminShell'
+import { AdminAssetPickerField } from '../../../views/admin/AdminAssetPickerField'
 import { AdminCrudSections } from '../../../views/admin/AdminCrudSections'
 import { AdminEditModalFooter } from '../../../views/admin/AdminEditActions'
 import { AdminEditButton } from '../../../views/admin/AdminListSection'
@@ -16,9 +18,25 @@ function committeeSearchText(item: CommitteeRecord): string {
 
 function CommitteeListRow({ item }: { item: CommitteeRecord }) {
   const editModalId = `edit-committee-${item.id}`
+  const photoUrl = item.photo_r2_key ? getAssetUrl(item.photo_r2_key) : null
 
   return (
     <tr data-admin-list-row data-search={committeeSearchText(item)}>
+      <td class="admin-list-logo-cell">
+        {photoUrl ? (
+          <img
+            src={photoUrl}
+            alt=""
+            class="admin-member-logo-preview"
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <span class="admin-member-logo-placeholder" aria-hidden="true">
+            {item.name.charAt(0)}
+          </span>
+        )}
+      </td>
       <td>{item.sort_order}</td>
       <td>
         <strong>{item.name}</strong>
@@ -44,12 +62,14 @@ function CommitteeListRow({ item }: { item: CommitteeRecord }) {
 
 function CommitteeEditModal({ item }: { item: CommitteeRecord }) {
   const formId = `form-committee-${item.id}`
+  const photoUrl = item.photo_r2_key ? getAssetUrl(item.photo_r2_key) : null
 
   return (
     <AdminModal
       id={`edit-committee-${item.id}`}
       title="Edit committee"
       formAction={`/admin/content/committees/${item.id}`}
+      formEncType="multipart/form-data"
       formId={formId}
       footer={
         <AdminEditModalFooter
@@ -77,6 +97,17 @@ function CommitteeEditModal({ item }: { item: CommitteeRecord }) {
         <label for={`${formId}-name`}>Name</label>
         <input type="text" name="name" id={`${formId}-name`} value={item.name} required />
       </div>
+      <AdminAssetPickerField
+        label="Photo"
+        kind="image"
+        hiddenInputName="existing_photo_key"
+        fileInputName="photo"
+        fileInputId={`${formId}-photo`}
+        fileAccept="image/*"
+        currentKey={item.photo_r2_key}
+        currentUrl={photoUrl}
+        hint="Shown on the committees page grid. Upload a new image or choose from the library."
+      />
       <label class="admin-check">
         <input type="checkbox" name="published" value="1" checked={item.published === 1} />
         Published on committees page and navigation
@@ -121,6 +152,7 @@ export function AdminContentCommitteesPage({
         addModalId="add-committee-dialog"
         addModalTitle="Add committee"
         addFormAction="/admin/content/committees"
+        addFormEncType="multipart/form-data"
         addSubmitLabel="Add committee"
         addFormBody={
           <>
@@ -141,6 +173,15 @@ export function AdminContentCommitteesPage({
                 Lowercase letters, numbers, and underscores. Leave blank to generate from the name.
               </p>
             </div>
+            <AdminAssetPickerField
+              label="Photo (optional)"
+              kind="image"
+              hiddenInputName="existing_photo_key"
+              fileInputName="photo"
+              fileInputId="committee-photo"
+              fileAccept="image/*"
+              hint="Shown on the committees page grid."
+            />
           </>
         }
         listTitle="Committees"
@@ -149,6 +190,7 @@ export function AdminContentCommitteesPage({
         hasItems={items.length > 0}
         tableHead={
           <tr>
+            <th>Photo</th>
             <th>Order</th>
             <th>Committee</th>
             <th>Status</th>

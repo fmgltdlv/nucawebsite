@@ -3210,6 +3210,90 @@ button.pill {
   text-decoration: underline;
 }
 
+.committee-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 700px) {
+  .committee-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 960px) {
+  .committee-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.committee-card {
+  display: flex;
+  min-height: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 1.25rem;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.committee-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+}
+
+.committee-card-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  padding: 1.25rem 1rem;
+  color: inherit;
+  text-align: center;
+  text-decoration: none;
+}
+
+.committee-card-link:hover,
+.committee-card-link:focus-visible {
+  color: inherit;
+  text-decoration: none;
+  outline: none;
+}
+
+.committee-card-media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 5rem;
+  height: 5rem;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+}
+
+.committee-card-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.committee-card-initial {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.committee-card-name {
+  font-weight: 600;
+  line-height: 1.35;
+}
+
 .committee-scholarships-link {
   margin-top: 1.25rem;
 }
