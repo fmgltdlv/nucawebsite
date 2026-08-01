@@ -21,13 +21,39 @@ export async function listMembershipTypes(
   db: D1Database,
   publishedOnly = false,
 ): Promise<MembershipTypeRecord[]> {
-  const sql = publishedOnly
-    ? `SELECT key, name, description, sort_order, published
-       FROM membership_types WHERE published = 1 ORDER BY sort_order ASC, name COLLATE NOCASE ASC`
-    : `SELECT key, name, description, sort_order, published
-       FROM membership_types ORDER BY sort_order ASC, name COLLATE NOCASE ASC`
-  const { results } = await db.prepare(sql).all<MembershipTypeRecord>()
-  return results ?? []
+  try {
+    const sql = publishedOnly
+      ? `SELECT key, name, description, sort_order, published
+         FROM membership_types WHERE published = 1 ORDER BY sort_order ASC, name COLLATE NOCASE ASC`
+      : `SELECT key, name, description, sort_order, published
+         FROM membership_types ORDER BY sort_order ASC, name COLLATE NOCASE ASC`
+    const { results } = await db.prepare(sql).all<MembershipTypeRecord>()
+    return results ?? []
+  } catch {
+    return [
+      {
+        key: 'contractor',
+        name: 'Contractor Member',
+        description: '',
+        sort_order: 0,
+        published: 1,
+      },
+      {
+        key: 'associate',
+        name: 'Associate Member',
+        description: '',
+        sort_order: 1,
+        published: 1,
+      },
+      {
+        key: 'institutional',
+        name: 'Institutional Member',
+        description: '',
+        sort_order: 2,
+        published: 1,
+      },
+    ]
+  }
 }
 
 export async function getMembershipType(
@@ -123,8 +149,13 @@ export async function deleteMembershipType(
 }
 
 export async function seedMembershipTypesIfEmpty(db: D1Database): Promise<void> {
-  const row = await db.prepare('SELECT COUNT(*) as c FROM membership_types').first<{ c: number }>()
-  if ((row?.c ?? 0) > 0) return
+  try {
+    const row = await db.prepare('SELECT COUNT(*) as c FROM membership_types').first<{ c: number }>()
+    if ((row?.c ?? 0) > 0) return
+  } catch {
+    // Migration 0022 not applied yet — skip rather than crashing the whole site.
+    return
+  }
 
   const defaults = [
     {
@@ -165,8 +196,16 @@ export async function seedMembershipTypesIfEmpty(db: D1Database): Promise<void> 
 export async function membershipTypeLabelMap(
   db: D1Database,
 ): Promise<Record<string, string>> {
-  const types = await listMembershipTypes(db)
-  const map: Record<string, string> = {}
-  for (const t of types) map[t.key] = t.name
-  return map
+  try {
+    const types = await listMembershipTypes(db)
+    const map: Record<string, string> = {}
+    for (const t of types) map[t.key] = t.name
+    return map
+  } catch {
+    return {
+      contractor: 'Contractor',
+      associate: 'Associate',
+      institutional: 'Institutional',
+    }
+  }
 }
