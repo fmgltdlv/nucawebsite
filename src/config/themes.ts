@@ -1,4 +1,12 @@
-export const THEME_IDS = ['desert', 'heritage', 'corporate'] as const
+export const THEME_IDS = [
+  'desert',
+  'heritage',
+  'corporate',
+  'blueprint',
+  'neon',
+  'terracotta',
+  'quarry',
+] as const
 export type ThemeId = (typeof THEME_IDS)[number]
 
 export const LAYOUT_IDS = ['standard', 'spacious', 'compact'] as const
@@ -18,21 +26,52 @@ export type ThemeOption = {
 export const themeOptions: ThemeOption[] = [
   {
     id: 'desert',
-    label: 'Desert (default)',
-    description: 'Warm sand background with navy and copper accents. Balanced spacing.',
+    label: 'Desert Sunset',
+    description:
+      'Warm sand tones, serif headlines, and soft rounded buttons — the classic chapter look.',
     layout: 'standard',
   },
   {
     id: 'heritage',
-    label: 'Heritage',
-    description: 'Royal blue and maroon from the chapter logo. More open sections and hero.',
+    label: 'Chapter Heritage',
+    description:
+      'Royal blue and maroon with formal serif typography, sharp corners, and outlined buttons.',
     layout: 'spacious',
   },
   {
     id: 'corporate',
-    label: 'Corporate',
-    description: 'Cool gray minimal palette. Tighter header and section spacing.',
+    label: 'Clean Corporate',
+    description:
+      'Cool gray minimalism, tight Inter typography, flat buttons with subtle lift on hover.',
     layout: 'compact',
+  },
+  {
+    id: 'blueprint',
+    label: 'Blueprint',
+    description:
+      'Engineering-site aesthetic — condensed type, dashed borders, sharp corners, construction orange accents.',
+    layout: 'compact',
+  },
+  {
+    id: 'neon',
+    label: 'Neon Nights',
+    description:
+      'Dark Vegas vibe with glowing teal and pink accents, bold display type, and neon button glow.',
+    layout: 'standard',
+  },
+  {
+    id: 'terracotta',
+    label: 'Southwest Clay',
+    description:
+      'Earthy terracotta and sage, soft Fraunces headlines, pill-shaped buttons, and rounded cards.',
+    layout: 'spacious',
+  },
+  {
+    id: 'quarry',
+    label: 'Quarry Stone',
+    description:
+      'Industrial stone grays with rust accents, uppercase Oswald headings, and chunky pressed buttons.',
+    layout: 'standard',
   },
 ]
 
