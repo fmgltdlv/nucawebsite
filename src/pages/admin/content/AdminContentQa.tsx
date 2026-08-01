@@ -95,6 +95,7 @@ export function AdminContentQaPage({
       {...site}
       user={ctx.user}
       inboxCounts={ctx.inboxCounts}
+      csrfToken={ctx.csrfToken}
       title="FAQ"
       activePath="/admin/content"
     >

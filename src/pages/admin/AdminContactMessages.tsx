@@ -123,6 +123,7 @@ export function AdminContactMessagesPage({
       {...site}
       user={ctx.user}
       inboxCounts={ctx.inboxCounts}
+      csrfToken={ctx.csrfToken}
       title="Contact messages"
       activePath="/admin/contact-messages"
     >

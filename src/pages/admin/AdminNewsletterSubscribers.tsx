@@ -1,7 +1,7 @@
 import { formatEventDateShort } from '../../lib/format'
 import type { NewsletterSubscriber } from '../../lib/newsletter-db'
 import { AdminShell } from '../../views/AdminShell'
-import { AdminListSection, AdminListSearch } from '../../views/admin/AdminListSection'
+import { AdminListSection, AdminListSearch, AdminListToolbar } from '../../views/admin/AdminListSection'
 import { AdminInboxToolbar } from '../../views/admin/AdminInboxToolbar'
 import type { AdminContext } from '../../lib/admin-context'
 import type { PageProps } from '../../types/page'
@@ -56,11 +56,12 @@ export function AdminNewsletterSubscribersPage({
       {...site}
       user={ctx.user}
       inboxCounts={ctx.inboxCounts}
+      csrfToken={ctx.csrfToken}
       title="Newsletter subscribers"
       activePath="/admin/newsletter"
     >
       <p class="admin-note">
-        THE DIRT mailing list signups from the Contact page. Export from here until an email provider is connected.
+        THE DIRT mailing list signups from the Contact page. Export a CSV to import into your email provider.
       </p>
       {flash && <p class="admin-flash">{flash}</p>}
 
@@ -75,7 +76,16 @@ export function AdminNewsletterSubscribersPage({
         count={subscribers.length}
         emptyMessage="No subscribers yet."
         hasItems={subscribers.length > 0}
-        toolbar={<AdminListSearch />}
+        toolbar={
+          <AdminListToolbar>
+            <AdminListSearch />
+            {subscribers.length > 0 && (
+              <a class="btn btn-secondary btn-sm" href="/admin/newsletter/export">
+                Export CSV
+              </a>
+            )}
+          </AdminListToolbar>
+        }
         tableHead={
           <tr>
             <th>Subscribed</th>

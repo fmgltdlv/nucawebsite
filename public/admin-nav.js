@@ -69,7 +69,12 @@
 
   function loadStylesheet(href) {
     const base = href.split('?')[0]
-    if (document.querySelector(`link[rel="stylesheet"][href="${href}"], link[rel="stylesheet"][href^="${base}"]`)) {
+    // Only match stylesheets in <head> — link tags copied via innerHTML are inert until promoted.
+    if (
+      document.head.querySelector(
+        `link[rel="stylesheet"][href="${href}"], link[rel="stylesheet"][href^="${base}"]`,
+      )
+    ) {
       return Promise.resolve()
     }
 
@@ -85,7 +90,8 @@
 
   function loadScript(src) {
     const base = src.split('?')[0]
-    if (document.querySelector(`script[src^="${base}"]`)) {
+    // Only match scripts in <body> — script tags copied via innerHTML do not execute.
+    if (document.body.querySelector(`script[src^="${base}"]`)) {
       return Promise.resolve()
     }
 

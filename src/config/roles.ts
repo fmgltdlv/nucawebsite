@@ -3,4 +3,5 @@ export type User = {
   email: string
   role: 'admin'
   display_name: string | null
+  session_version: number
 }

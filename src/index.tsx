@@ -23,7 +23,7 @@ import {
 import { committeePageSlug, parseCommitteeKey } from './lib/committee-pages'
 import { getCommitteeByKey, listCommittees } from './lib/committees-db'
 import { loadPageCalendarEvents } from './lib/cms-page-extras'
-import { getPageBySlug } from './lib/pages-db'
+import { getPageBySlug, isCustomPage } from './lib/pages-db'
 import { getPostBySlug, listPublishedPosts } from './lib/posts-db'
 import { listQaItems } from './lib/qa-db'
 import { listResourceItems } from './lib/resource-items-db'
@@ -31,6 +31,9 @@ import { getAssetObject } from './lib/r2-assets'
 import { subscribeNewsletter } from './lib/newsletter-db'
 import { loadAdminLayoutProps, loadPublicSiteContext, type AdminLayoutProps } from './lib/site-context'
 import { resolveAdminContext } from './lib/admin-context'
+import { adminAuthMiddleware, adminCsrfMiddleware } from './lib/admin-guard'
+import { assertSafeSecrets, isProductionRequest } from './lib/security/env-check'
+import { applySecurityHeaders } from './lib/security/headers'
 import { totalInboxCount } from './lib/admin-inbox-counts'
 import { seedContentIfEmpty, seedDemoMembersIfEmpty, seedDirtIfEmpty } from './lib/seed'
 import { registerAdminRoutes } from './routes/admin'
@@ -52,13 +55,19 @@ import { TheDirtNotFoundPage, TheDirtViewerPage } from './pages/TheDirtViewer'
 import { NewsletterErrorPage, NewsletterThanksPage } from './pages/Newsletter'
 import { NotFoundPage } from './pages/NotFound'
 
-type Variables = { theme: ThemeId; adminSite: AdminLayoutProps }
+type Variables = { theme: ThemeId; adminSite: AdminLayoutProps; adminCtx: import('./lib/admin-context').AdminContext | null }
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>()
 
 app.onError((err, c) => {
   console.error(err)
   return c.text('Internal Server Error', 500)
+})
+
+app.use('*', async (c, next) => {
+  assertSafeSecrets(c.env, isProductionRequest(new URL(c.req.url)))
+  await next()
+  applySecurityHeaders(c, c.res.headers)
 })
 
 async function ensureSeeded(env: Env) {
@@ -96,6 +105,9 @@ app.use(async (c, next) => {
   c.set('adminSite', adminSite)
   await next()
 })
+
+app.use(adminAuthMiddleware())
+app.use(adminCsrfMiddleware())
 
 registerAdminRoutes(app)
 
@@ -305,8 +317,8 @@ app.get('/events/:id', async (c) => {
 app.get('/advocacy', (c) => c.redirect('/about/committees', 301))
 
 app.get('/join', async (c) => {
-  const site = await siteProps(c)
-  return c.html(<JoinPage {...site} />)
+  const [site, committees] = await Promise.all([siteProps(c), listCommittees(c.env.DB, true)])
+  return c.html(<JoinPage {...site} committees={committees} />)
 })
 
 app.post('/join', async (c) => {
@@ -355,6 +367,18 @@ app.post('/newsletter/subscribe', async (c) => {
   const result = await subscribeNewsletter(c.env.DB, email, 'contact')
   if (!result.ok) return c.html(<NewsletterErrorPage {...site} error={result.error} />)
   return c.html(<NewsletterThanksPage {...site} />)
+})
+
+app.get('/:slug', async (c) => {
+  const slug = c.req.param('slug')
+  const page = await getPageBySlug(c.env.DB, slug, true)
+  if (!page || !isCustomPage(page)) {
+    const site = await siteProps(c)
+    return c.html(<NotFoundPage {...site} />, 404)
+  }
+  const site = await siteProps(c)
+  const calendarEvents = await loadPageCalendarEvents(c.env.DB, page.body_json)
+  return c.html(<ContentPage {...site} page={page} calendarEvents={calendarEvents} />)
 })
 
 app.notFound(async (c) => {

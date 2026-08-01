@@ -220,6 +220,95 @@
       })
     }
   }
+
+  const joinDialog = document.getElementById('join-application-dialog')
+  if (joinDialog instanceof HTMLDialogElement) {
+    const joinWizardForm = document.getElementById('join-form')
+    if (joinWizardForm instanceof HTMLFormElement) {
+      const steps = Array.from(joinWizardForm.querySelectorAll('[data-join-step]'))
+      const indicators = joinDialog.querySelectorAll('[data-join-step-indicator]')
+      const prevBtn = joinWizardForm.querySelector('[data-join-step-prev]')
+      const nextBtn = joinWizardForm.querySelector('[data-join-step-next]')
+      const submitBtn = joinWizardForm.querySelector('[data-join-step-submit]')
+      let currentStep = 0
+
+      function showJoinStep(index, focusField = false) {
+        currentStep = index
+        steps.forEach((step, i) => {
+          const active = i === index
+          step.classList.toggle('is-active', active)
+          step.hidden = !active
+        })
+        indicators.forEach((indicator, i) => {
+          indicator.classList.toggle('is-active', i === index)
+          indicator.classList.toggle('is-complete', i < index)
+        })
+        if (prevBtn instanceof HTMLButtonElement) prevBtn.hidden = index === 0
+        if (nextBtn instanceof HTMLButtonElement) nextBtn.hidden = index === steps.length - 1
+        if (submitBtn instanceof HTMLButtonElement) submitBtn.hidden = index !== steps.length - 1
+
+        if (focusField) {
+          const activeStep = steps[index]
+          const firstField = activeStep?.querySelector('input, select, textarea')
+          if (firstField instanceof HTMLElement) firstField.focus({ preventScroll: true })
+        }
+      }
+
+      function validateJoinStep(index) {
+        const step = steps[index]
+        if (!(step instanceof HTMLElement)) return true
+        const fields = step.querySelectorAll('input, select, textarea')
+        for (const field of fields) {
+          if (
+            field instanceof HTMLInputElement ||
+            field instanceof HTMLSelectElement ||
+            field instanceof HTMLTextAreaElement
+          ) {
+            if (!field.disabled && !field.checkValidity()) {
+              field.reportValidity()
+              return false
+            }
+          }
+        }
+        return true
+      }
+
+      document.querySelectorAll('[data-join-application-open]').forEach((button) => {
+        button.addEventListener('click', () => {
+          showJoinStep(0, true)
+          joinDialog.showModal()
+        })
+      })
+
+      joinDialog.querySelectorAll('[data-modal-close]').forEach((button) => {
+        button.addEventListener('click', () => joinDialog.close())
+      })
+
+      joinDialog.addEventListener('click', (event) => {
+        const rect = joinDialog.getBoundingClientRect()
+        const inDialog =
+          event.clientX >= rect.left &&
+          event.clientX <= rect.right &&
+          event.clientY >= rect.top &&
+          event.clientY <= rect.bottom
+        if (!inDialog) joinDialog.close()
+      })
+
+      joinDialog.addEventListener('close', () => showJoinStep(0))
+
+      nextBtn?.addEventListener('click', () => {
+        if (validateJoinStep(currentStep) && currentStep < steps.length - 1) {
+          showJoinStep(currentStep + 1, true)
+        }
+      })
+
+      prevBtn?.addEventListener('click', () => {
+        if (currentStep > 0) showJoinStep(currentStep - 1, true)
+      })
+
+      showJoinStep(0)
+    }
+  }
 })();
 
 (function () {

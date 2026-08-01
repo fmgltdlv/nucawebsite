@@ -20,11 +20,18 @@ export function randomSaltHex(byteLength = 16): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
 }
 
+function timingSafeEqualBase64(a: string, b: string): boolean {
+  const left = enc(a)
+  const right = enc(b)
+  if (left.length !== right.length) return false
+  return crypto.subtle.timingSafeEqual(left, right)
+}
+
 export async function verifyPassword(
   password: string,
   saltHex: string,
   expectedHash: string,
 ): Promise<boolean> {
   const hash = await hashPassword(password, saltHex)
-  return hash === expectedHash
+  return timingSafeEqualBase64(hash, expectedHash)
 }

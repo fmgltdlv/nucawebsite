@@ -99,6 +99,7 @@ export function AdminContentResourcesPage({
       {...site}
       user={ctx.user}
       inboxCounts={ctx.inboxCounts}
+      csrfToken={ctx.csrfToken}
       title="Resource links"
       activePath="/admin/content"
     >

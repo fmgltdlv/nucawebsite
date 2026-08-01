@@ -179,6 +179,7 @@ export function AdminContentLeadershipPage({
       {...site}
       user={ctx.user}
       inboxCounts={ctx.inboxCounts}
+      csrfToken={ctx.csrfToken}
       title="Leadership"
       activePath="/admin/content"
     >

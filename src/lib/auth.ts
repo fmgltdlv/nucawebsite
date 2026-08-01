@@ -10,6 +10,7 @@ type UserRow = {
   password_salt: string
   role: string
   display_name: string | null
+  session_version: number
 }
 
 type UserPublicRow = {
@@ -17,9 +18,10 @@ type UserPublicRow = {
   email: string
   role: string
   display_name: string | null
+  session_version: number
 }
 
-const USER_COLUMNS = `id, email, role, display_name`
+const USER_COLUMNS = `id, email, role, display_name, session_version`
 
 function mapUser(row: UserPublicRow): User | null {
   if (row.role !== 'admin') return null
@@ -28,6 +30,7 @@ function mapUser(row: UserPublicRow): User | null {
     email: row.email,
     role: 'admin',
     display_name: row.display_name,
+    session_version: row.session_version,
   }
 }
 
@@ -39,7 +42,7 @@ export async function countUsers(db: D1Database): Promise<number> {
 export async function findUserByEmail(db: D1Database, email: string): Promise<UserRow | null> {
   return db
     .prepare(
-      `SELECT id, email, password_hash, password_salt, role, display_name
+      `SELECT id, email, password_hash, password_salt, role, display_name, session_version
        FROM users WHERE email = ?`,
     )
     .bind(email.toLowerCase().trim())
@@ -52,6 +55,23 @@ export async function getUserById(db: D1Database, id: string): Promise<User | nu
     .bind(id)
     .first<UserPublicRow>()
   return row ? mapUser(row) : null
+}
+
+export async function getSessionVersion(db: D1Database, userId: string): Promise<number> {
+  const row = await db
+    .prepare(`SELECT session_version FROM users WHERE id = ?`)
+    .bind(userId)
+    .first<{ session_version: number }>()
+  return row?.session_version ?? 0
+}
+
+export async function bumpSessionVersion(db: D1Database, userId: string): Promise<void> {
+  await db
+    .prepare(
+      `UPDATE users SET session_version = session_version + 1, updated_at = datetime('now') WHERE id = ?`,
+    )
+    .bind(userId)
+    .run()
 }
 
 export async function createUser(

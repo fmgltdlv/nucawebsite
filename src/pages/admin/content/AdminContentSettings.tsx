@@ -38,6 +38,7 @@ export function AdminContentSettingsPage({
       breakingNews={breakingNews}
       user={ctx.user}
       inboxCounts={ctx.inboxCounts}
+      csrfToken={ctx.csrfToken}
       title="Site settings"
       activePath="/admin/content"
     >

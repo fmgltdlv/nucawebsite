@@ -109,6 +109,7 @@ export function AdminContentPostsPage({
       {...site}
       user={ctx.user}
       inboxCounts={ctx.inboxCounts}
+      csrfToken={ctx.csrfToken}
       title="THE DIRT — web posts"
       activePath="/admin/content"
     >

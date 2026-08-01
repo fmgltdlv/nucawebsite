@@ -1,5 +1,4 @@
 import type { Context } from 'hono'
-import type { ThemeId } from '../config/themes'
 import type { Env } from '../env'
 import { getUserById } from './auth'
 import type { User } from '../config/roles'
@@ -9,12 +8,11 @@ import { getAdminInboxCounts, type AdminInboxCounts } from './admin-inbox-counts
 export type AdminContext = {
   user: User
   inboxCounts: AdminInboxCounts
+  csrfToken: string
 }
 
-import type { AdminLayoutProps } from './site-context'
-
 export async function resolveAdminContext(
-  c: Context<{ Bindings: Env; Variables: { theme: ThemeId; adminSite?: AdminLayoutProps } }>,
+  c: Pick<Context<{ Bindings: Env }>, 'env' | 'req'>,
 ): Promise<AdminContext | null> {
   const token = readSessionCookie(c.req.header('Cookie'))
   const session = await verifySessionToken(token, c.env)
@@ -22,10 +20,11 @@ export async function resolveAdminContext(
 
   const user = await getUserById(c.env.DB, session.sub)
   if (!user || user.role !== session.role) return null
+  if (user.session_version !== session.sv) return null
 
   const inboxCounts = await getAdminInboxCounts(c.env.DB)
 
-  return { user, inboxCounts }
+  return { user, inboxCounts, csrfToken: session.csrf }
 }
 
 export function isAdmin(user: User): boolean {

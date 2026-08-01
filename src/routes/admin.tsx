@@ -3,8 +3,13 @@ import type { ThemeId } from '../config/themes'
 import type { AdminLayoutProps } from '../lib/site-context'
 import { MEMBER_TYPES, type MemberType } from '../data/demo'
 import type { Env } from '../env'
-import { createUser, listUsers, verifyUserLogin } from '../lib/auth'
-import { isAdmin, resolveAdminContext } from '../lib/admin-context'
+import { createUser, getSessionVersion, listUsers, verifyUserLogin } from '../lib/auth'
+import { getAdminCtx } from '../lib/admin-guard'
+import { resolveAdminContext } from '../lib/admin-context'
+import { writeAuditLog } from '../lib/security/audit-log'
+import { generateCsrfToken } from '../lib/security/csrf'
+import { clientIp, isLoginRateLimited, recordLoginAttempt } from '../lib/security/rate-limit'
+import { verifyTurnstile } from '../lib/security/turnstile'
 import { parseRepeatRule, parseRepeatUntil } from '../lib/event-repeat'
 import {
   applyEventImageUploads,
@@ -37,6 +42,7 @@ import { seedAdminIfNeeded } from '../lib/seed'
 import {
   clearSessionCookieHeader,
   createSessionToken,
+  isSecureRequest,
   sessionCookieHeader,
 } from '../lib/session'
 import { AdminLoginPage } from '../pages/AdminAuth'
@@ -46,7 +52,7 @@ import { AdminHomePage } from '../pages/admin/AdminHome'
 import { AdminMembersPage } from '../pages/admin/AdminMembers'
 import { AdminUsersPage } from '../pages/admin/AdminUsers'
 
-type AdminVariables = { theme: ThemeId; adminSite: AdminLayoutProps }
+type AdminVariables = { theme: ThemeId; adminSite: AdminLayoutProps; adminCtx: import('../lib/admin-context').AdminContext | null }
 
 function parseMemberType(value: string): MemberType {
   return MEMBER_TYPES.includes(value as MemberType) ? (value as MemberType) : 'contractor'
@@ -76,8 +82,8 @@ function parseMemberFormBody(body: Record<string, File | string>) {
   }
 }
 
-function requireAdmin(ctx: Awaited<ReturnType<typeof resolveAdminContext>>) {
-  return ctx && isAdmin(ctx.user)
+function secure(c: { req: { url: string } }): boolean {
+  return isSecureRequest(new URL(c.req.url))
 }
 
 export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminVariables }>) {
@@ -86,41 +92,92 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     await seedAdminIfNeeded(c.env)
     const ctx = await resolveAdminContext(c)
     if (ctx) return c.redirect('/admin', 303)
-    return c.html(<AdminLoginPage {...c.get('adminSite')} />)
+    return c.html(
+      <AdminLoginPage
+        {...c.get('adminSite')}
+        turnstileSiteKey={c.env.TURNSTILE_SITE_KEY}
+      />,
+    )
   })
 
   app.post('/admin/login', async (c) => {
     await seedAdminIfNeeded(c.env)
+    const ip = clientIp(c.req.raw.headers)
+    const turnstileSiteKey = c.env.TURNSTILE_SITE_KEY
+
+    if (await isLoginRateLimited(c.env.DB, ip)) {
+      await writeAuditLog(c.env.DB, { action: 'login.rate_limited', ip })
+      return c.html(
+        <AdminLoginPage
+          {...c.get('adminSite')}
+          turnstileSiteKey={turnstileSiteKey}
+          error="Too many sign-in attempts. Please wait about 15 minutes and try again."
+        />,
+        429,
+      )
+    }
+
     const body = await c.req.parseBody()
+    const turnstileToken =
+      typeof body['cf-turnstile-response'] === 'string' ? body['cf-turnstile-response'] : undefined
+    if (!(await verifyTurnstile(c.env, turnstileToken, ip))) {
+      await writeAuditLog(c.env.DB, { action: 'login.turnstile_failed', ip })
+      return c.html(
+        <AdminLoginPage
+          {...c.get('adminSite')}
+          turnstileSiteKey={turnstileSiteKey}
+          error="Security check failed. Please try again."
+        />,
+        403,
+      )
+    }
+
     const email = typeof body.email === 'string' ? body.email : ''
     const password = typeof body.password === 'string' ? body.password : ''
     const user = await verifyUserLogin(c.env, email, password)
+    await recordLoginAttempt(c.env.DB, ip, !!user)
+
     if (!user) {
+      await writeAuditLog(c.env.DB, { action: 'login.failed', ip, details: email || undefined })
       return c.html(
-        <AdminLoginPage {...c.get('adminSite')} error="Invalid email or password." />,
+        <AdminLoginPage
+          {...c.get('adminSite')}
+          turnstileSiteKey={turnstileSiteKey}
+          error="Invalid email or password."
+        />,
         401,
       )
     }
-    const token = await createSessionToken(user.id, c.env)
-    c.header('Set-Cookie', sessionCookieHeader(token))
+
+    const sessionVersion = await getSessionVersion(c.env.DB, user.id)
+    const csrf = generateCsrfToken()
+    const token = await createSessionToken(user.id, c.env, { sessionVersion, csrf })
+    await writeAuditLog(c.env.DB, { userId: user.id, action: 'login.success', ip })
+    c.header('Set-Cookie', sessionCookieHeader(token, secure(c)))
     return c.redirect('/admin', 303)
   })
 
-  app.post('/admin/logout', (c) => {
-    c.header('Set-Cookie', clearSessionCookieHeader())
+  app.post('/admin/logout', async (c) => {
+    const ctx = c.get('adminCtx')
+    if (ctx) {
+      await writeAuditLog(c.env.DB, {
+        userId: ctx.user.id,
+        action: 'logout',
+        ip: clientIp(c.req.raw.headers),
+      })
+    }
+    c.header('Set-Cookie', clearSessionCookieHeader(secure(c)))
     return c.redirect('/admin/login', 303)
   })
 
   app.get('/admin', async (c) => {
     await seedAdminIfNeeded(c.env)
-    const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
+    const ctx = getAdminCtx(c)
     return c.html(<AdminHomePage {...c.get('adminSite')} ctx={ctx} />)
   })
 
   app.get('/admin/assets', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
+    const ctx = getAdminCtx(c)
 
     const allAssets = await listIndexedAssets(c.env.DB)
     const filterType = parseAssetType(c.req.query('type'))
@@ -140,8 +197,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
   })
 
   app.get('/admin/api/assets', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!requireAdmin(ctx)) return c.json({ error: 'Unauthorized' }, 401)
+    const ctx = getAdminCtx(c)
 
     const kind = c.req.query('kind') === 'pdf' ? 'pdf' : 'image'
     const allAssets = await listIndexedAssets(c.env.DB)
@@ -156,8 +212,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
   })
 
   app.get('/admin/api/geocode', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!requireAdmin(ctx)) return c.json({ error: 'Unauthorized' }, 401)
+    const ctx = getAdminCtx(c)
 
     const address = c.req.query('address')?.trim() ?? ''
     if (!address) return c.json({ ok: false })
@@ -174,8 +229,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
   })
 
   app.get('/admin/users', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
+    const ctx = getAdminCtx(c)
     const users = await listUsers(c.env.DB)
     const message = c.req.query('ok') === '1' ? 'User created.' : undefined
     return c.html(
@@ -184,8 +238,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
   })
 
   app.post('/admin/users', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
+    const ctx = getAdminCtx(c)
 
     const body = await c.req.parseBody()
     const email = typeof body.email === 'string' ? body.email : ''
@@ -204,16 +257,23 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       )
     }
 
-    await createUser(c.env.DB, email, password, {
+    const userId = await createUser(c.env.DB, email, password, {
       display_name: display_name || undefined,
+    })
+    await writeAuditLog(c.env.DB, {
+      userId: ctx.user.id,
+      action: 'user.create',
+      resource: 'users',
+      resourceId: userId,
+      ip: clientIp(c.req.raw.headers),
+      details: email,
     })
 
     return c.redirect('/admin/users?ok=1', 303)
   })
 
   app.get('/admin/members', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
+    const ctx = getAdminCtx(c)
     const members = await listMembersForAdmin(c.env.DB)
     const flash =
       c.req.query('ok') === '1'
@@ -227,8 +287,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
   })
 
   app.post('/admin/members', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
+    const ctx = getAdminCtx(c)
 
     const body = await c.req.parseBody()
     const data = parseMemberFormBody(body)
@@ -268,8 +327,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
   })
 
   app.post('/admin/members/:id', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
+    const ctx = getAdminCtx(c)
 
     const id = c.req.param('id')
     const body = await c.req.parseBody()
@@ -312,8 +370,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
   })
 
   app.get('/admin/events', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
+    const ctx = getAdminCtx(c)
     const events = await listAllEventsForAdmin(c.env.DB)
     const committees = await listCommittees(c.env.DB)
     const flash =
@@ -334,8 +391,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
   })
 
   app.post('/admin/events', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
+    const ctx = getAdminCtx(c)
 
     const body = await c.req.parseBody()
     const title = typeof body.title === 'string' ? body.title.trim() : ''
@@ -398,8 +454,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
   })
 
   app.post('/admin/events/:id', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
+    const ctx = getAdminCtx(c)
 
     const id = c.req.param('id')
     const existing = await getEventById(c.env.DB, id)
@@ -451,8 +506,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
   })
 
   app.post('/admin/events/:id/delete', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
+    const ctx = getAdminCtx(c)
     const id = c.req.param('id')
     const existing = await getEventById(c.env.DB, id)
     if (existing) await deleteEventAssets(c.env.R2, c.env.DB, existing)

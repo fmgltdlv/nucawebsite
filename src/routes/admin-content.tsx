@@ -3,7 +3,9 @@ import type { ThemeId } from '../config/themes'
 import type { AdminLayoutProps } from '../lib/site-context'
 import { parseThemeId } from '../config/themes'
 import type { Env } from '../env'
-import { isAdmin, resolveAdminContext } from '../lib/admin-context'
+import { getAdminCtx } from '../lib/admin-guard'
+import { writeAuditLog } from '../lib/security/audit-log'
+import { clientIp } from '../lib/security/rate-limit'
 import {
   createDirtRelease,
   deleteDirtRelease,
@@ -19,7 +21,7 @@ import {
   updateLeadership,
 } from '../lib/leadership-db'
 import { createPost, deletePost, getPostById, listAllPosts, updatePost } from '../lib/posts-db'
-import { buildPageLabels, getPageBySlug, listPages, upsertPage } from '../lib/pages-db'
+import { buildPageLabels, createCustomPage, deleteCustomPage, getPageBySlug, listCustomPages, listPages, upsertPage } from '../lib/pages-db'
 import { blocksToMarkdown, parsePageBlocks } from '../lib/page-blocks'
 import { loadCmsPageExtras } from '../lib/cms-page-extras'
 import { renderCmsPage } from '../lib/render-cms-page'
@@ -70,7 +72,7 @@ import {
 } from '../lib/site-settings'
 import { loadPublicSiteContext } from '../lib/site-context'
 import { seedContentIfEmpty } from '../lib/seed'
-import { listNewsletterSubscribers, updateNewsletterSubscriberStatus, deleteNewsletterSubscriber, acknowledgeAllNewsletterSubscribers } from '../lib/newsletter-db'
+import { listNewsletterSubscribers, updateNewsletterSubscriberStatus, deleteNewsletterSubscriber, acknowledgeAllNewsletterSubscribers, listAllNewsletterSubscribers, buildNewsletterSubscribersCsv, newsletterSubscribersExportFilename } from '../lib/newsletter-db'
 import { listContactSubmissions, updateContactSubmissionStatus, deleteContactSubmission, acknowledgeAllContactSubmissions } from '../lib/contact-db'
 import { parseDatetimeLocal } from '../lib/datetime'
 import { AdminApplicationsPage } from '../pages/admin/AdminApplications'
@@ -90,7 +92,7 @@ import { AdminContentSettingsPage } from '../pages/admin/content/AdminContentSet
 import { PagePreviewFrame } from '../views/PagePreviewBanner'
 import { listApplications, updateApplicationStatus, deleteApplication, acknowledgeAllApplications } from '../lib/applications-db'
 
-type AdminVariables = { theme: ThemeId; adminSite: AdminLayoutProps }
+type AdminVariables = { theme: ThemeId; adminSite: AdminLayoutProps; adminCtx: import('../lib/admin-context').AdminContext | null }
 
 function parseSortOrder(value: string): number {
   const n = Number.parseInt(value, 10)
@@ -137,27 +139,14 @@ function flashMessage(c: { req: { query: (k: string) => string | undefined } }, 
   return c.req.query('ok') === key ? 'Saved.' : c.req.query('ok') === '1' ? 'Saved.' : undefined
 }
 
-async function requireAdmin(c: Parameters<typeof resolveAdminContext>[0]) {
-  const ctx = await resolveAdminContext(c)
-  if (!ctx) return { kind: 'redirect' as const, to: '/admin/login' }
-  if (!isAdmin(ctx.user)) return { kind: 'redirect' as const, to: '/admin' }
-  return { kind: 'ok' as const, ctx }
-}
-
-function adminRedirect(c: Parameters<typeof resolveAdminContext>[0], to: string) {
-  return c.redirect(to, 303)
-}
-
 export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables: AdminVariables }>) {
   app.get('/admin/content', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
-    return c.html(<AdminContentPage {...c.get('adminSite')} ctx={auth.ctx} />)
+    const ctx = getAdminCtx(c)
+    return c.html(<AdminContentPage {...c.get('adminSite')} ctx={ctx} />)
   })
 
   app.get('/admin/content/settings', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const contact = await getContactInfo(c.env.DB)
     const footer = await getFooterInfo(c.env.DB)
     const themeId = await getThemeId(c.env.DB)
@@ -167,7 +156,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     return c.html(
       <AdminContentSettingsPage
         {...c.get('adminSite')}
-        ctx={auth.ctx}
+        ctx={ctx}
         contact={contact}
         footer={footer}
         themeId={themeId}
@@ -181,8 +170,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/settings', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
     const previousLogoKey = await getSiteLogoR2Key(c.env.DB)
     const logoError = await applySiteLogoChange(
@@ -226,18 +214,23 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
       showPopup: body.breaking_popup === '1',
     }
     await setBreakingNews(c.env.DB, breaking)
+    await writeAuditLog(c.env.DB, {
+      userId: ctx.user.id,
+      action: 'settings.update',
+      resource: 'site_settings',
+      ip: clientIp(c.req.raw.headers),
+    })
     return c.redirect('/admin/content/settings?ok=1', 303)
   })
 
   app.get('/admin/content/navigation', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const items = await listNavItems(c.env.DB)
     const groups = await listNavParentOptions(c.env.DB)
     return c.html(
       <AdminContentNavigationPage
         {...c.get('adminSite')}
-        ctx={auth.ctx}
+        ctx={ctx}
         items={items}
         groups={groups}
         flash={flashMessage(c, '1')}
@@ -247,8 +240,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/navigation', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
     const fields = navItemFromBody(body)
     if (!fields.label) return c.redirect('/admin/content/navigation?error=Label%20required', 303)
@@ -257,8 +249,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/navigation/:id', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const id = c.req.param('id')
     const existing = await getNavItemById(c.env.DB, id)
     if (!existing) return c.redirect('/admin/content/navigation', 303)
@@ -275,24 +266,21 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/navigation/:id/delete', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     await deleteNavItem(c.env.DB, c.req.param('id'))
     return c.redirect('/admin/content/navigation?ok=1', 303)
   })
 
   app.get('/admin/content/qa', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const items = await listQaItems(c.env.DB)
     return c.html(
-      <AdminContentQaPage {...c.get('adminSite')} ctx={auth.ctx} items={items} flash={flashMessage(c, '1')} />,
+      <AdminContentQaPage {...c.get('adminSite')} ctx={ctx} items={items} flash={flashMessage(c, '1')} />,
     )
   })
 
   app.post('/admin/content/qa', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
     const question = typeof body.question === 'string' ? body.question.trim() : ''
     const answer_md = typeof body.answer_md === 'string' ? body.answer_md.trim() : ''
@@ -301,8 +289,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/qa/:id', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
     const id = c.req.param('id')
     await updateQaItem(c.env.DB, id, {
@@ -315,20 +302,18 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/qa/:id/delete', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     await deleteQaItem(c.env.DB, c.req.param('id'))
     return c.redirect('/admin/content/qa?ok=1', 303)
   })
 
   app.get('/admin/content/committees', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const items = await listCommittees(c.env.DB)
     return c.html(
       <AdminContentCommitteesPage
         {...c.get('adminSite')}
-        ctx={auth.ctx}
+        ctx={ctx}
         items={items}
         flash={flashMessage(c, '1')}
         error={c.req.query('error')}
@@ -337,8 +322,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/committees', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
     const name = typeof body.name === 'string' ? body.name.trim() : ''
     const keyInput = typeof body.key === 'string' ? body.key.trim() : ''
@@ -356,8 +340,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/committees/:id', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
     const id = c.req.param('id')
     try {
@@ -374,20 +357,18 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/committees/:id/delete', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     await deleteCommittee(c.env.DB, c.req.param('id'))
     return c.redirect('/admin/content/committees?ok=1', 303)
   })
 
   app.get('/admin/content/the-dirt', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const releases = await listDirtReleases(c.env.DB)
     return c.html(
       <AdminContentDirtPage
         {...c.get('adminSite')}
-        ctx={auth.ctx}
+        ctx={ctx}
         releases={releases}
         flash={flashMessage(c, '1')}
         error={c.req.query('error')}
@@ -396,8 +377,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/the-dirt', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
     const title = typeof body.title === 'string' ? body.title.trim() : ''
     const published_at = typeof body.published_at === 'string' ? body.published_at : ''
@@ -415,8 +395,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/the-dirt/:id', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const id = c.req.param('id')
     const existing = await getDirtRelease(c.env.DB, id)
     if (!existing) return c.redirect('/admin/content/the-dirt', 303)
@@ -441,8 +420,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/the-dirt/:id/delete', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const id = c.req.param('id')
     const existing = await getDirtRelease(c.env.DB, id)
     if (existing) {
@@ -453,17 +431,15 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.get('/admin/content/posts', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const posts = await listAllPosts(c.env.DB)
     return c.html(
-      <AdminContentPostsPage {...c.get('adminSite')} ctx={auth.ctx} posts={posts} flash={flashMessage(c, '1')} />,
+      <AdminContentPostsPage {...c.get('adminSite')} ctx={ctx} posts={posts} flash={flashMessage(c, '1')} />,
     )
   })
 
   app.post('/admin/content/posts', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
     const title = typeof body.title === 'string' ? body.title.trim() : ''
     const body_md = typeof body.body_md === 'string' ? body.body_md.trim() : ''
@@ -480,8 +456,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/posts/:id', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const id = c.req.param('id')
     const existing = await getPostById(c.env.DB, id)
     if (!existing) return c.redirect('/admin/content/posts', 303)
@@ -499,29 +474,52 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/posts/:id/delete', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     await deletePost(c.env.DB, c.req.param('id'))
     return c.redirect('/admin/content/posts?ok=1', 303)
   })
 
   app.get('/admin/content/pages', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
-    const [pages, committees] = await Promise.all([listPages(c.env.DB), listCommittees(c.env.DB)])
+    const ctx = getAdminCtx(c)
+    const [pages, customPages, committees] = await Promise.all([
+      listPages(c.env.DB),
+      listCustomPages(c.env.DB),
+      listCommittees(c.env.DB),
+    ])
     return c.html(
       <AdminContentPagesPage
         {...c.get('adminSite')}
-        ctx={auth.ctx}
+        ctx={ctx}
         pages={pages}
-        pageLabels={buildPageLabels(committees)}
+        customPages={customPages}
+        committees={committees}
+        flash={flashMessage(c, '1')}
+        error={c.req.query('error')}
       />,
     )
   })
 
+  app.post('/admin/content/pages', async (c) => {
+    const ctx = getAdminCtx(c)
+    const body = await c.req.parseBody()
+    const title = typeof body.title === 'string' ? body.title : ''
+    const slug = typeof body.slug === 'string' ? body.slug : ''
+    const meta_description =
+      typeof body.meta_description === 'string' ? body.meta_description.trim() : null
+    const result = await createCustomPage(c.env.DB, {
+      title,
+      slug: slug || undefined,
+      meta_description: meta_description || null,
+      published: body.published === '1',
+    })
+    if (!result.ok) {
+      return c.redirect(`/admin/content/pages?error=${encodeURIComponent(result.error)}`, 303)
+    }
+    return c.redirect(`/admin/content/pages/${result.slug}`, 303)
+  })
+
   app.get('/admin/content/pages/:slug/preview', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const slug = c.req.param('slug')
 
     await seedContentIfEmpty(c.env)
@@ -539,8 +537,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/pages/:slug/preview-draft', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return c.text('Unauthorized', 401)
+    getAdminCtx(c)
     const slug = c.req.param('slug')
 
     let payload: { title?: string; meta_description?: string; body_json?: string }
@@ -578,28 +575,39 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.get('/admin/content/pages/:slug', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const slug = c.req.param('slug')
     const page = await getPageBySlug(c.env.DB, slug)
-    const committees = await listCommittees(c.env.DB)
-    const pageLabels = buildPageLabels(committees)
+    const [committees, customPages] = await Promise.all([
+      listCommittees(c.env.DB),
+      listCustomPages(c.env.DB),
+    ])
+    const pageLabels = buildPageLabels(committees, customPages)
     return c.html(
       <AdminContentPageEditPage
         {...c.get('adminSite')}
-        ctx={auth.ctx}
+        ctx={ctx}
         page={page}
         slug={slug}
-        pageLabel={pageLabels[slug] ?? slug}
+        pageLabel={pageLabels[slug] ?? page?.title ?? slug}
         committees={committees}
         flash={flashMessage(c, '1')}
       />,
     )
   })
 
+  app.post('/admin/content/pages/:slug/delete', async (c) => {
+    const ctx = getAdminCtx(c)
+    const slug = c.req.param('slug')
+    const deleted = await deleteCustomPage(c.env.DB, slug)
+    if (!deleted) {
+      return c.redirect('/admin/content/pages?error=Only%20custom%20pages%20can%20be%20deleted', 303)
+    }
+    return c.redirect('/admin/content/pages?ok=1', 303)
+  })
+
   app.post('/admin/content/pages/:slug', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const slug = c.req.param('slug')
     const body = await c.req.parseBody()
     const body_json = typeof body.body_json === 'string' ? body.body_json : null
@@ -623,13 +631,12 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.get('/admin/content/leadership', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const leaders = await listLeadership(c.env.DB)
     return c.html(
       <AdminContentLeadershipPage
         {...c.get('adminSite')}
-        ctx={auth.ctx}
+        ctx={ctx}
         leaders={leaders}
         flash={flashMessage(c, '1')}
       />,
@@ -637,8 +644,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/leadership', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
     const fields = leadershipFromBody(body)
     if (!fields.name || !fields.role_title) return c.redirect('/admin/content/leadership', 303)
@@ -660,8 +666,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/leadership/:id', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const id = c.req.param('id')
     const existing = await getLeadershipById(c.env.DB, id)
     if (!existing) return c.redirect('/admin/content/leadership', 303)
@@ -688,8 +693,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/leadership/:id/delete', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const id = c.req.param('id')
     const existing = await getLeadershipById(c.env.DB, id)
     if (existing?.photo_r2_key) await deleteAssetIfUnreferenced(c.env.R2, c.env.DB, existing.photo_r2_key)
@@ -698,13 +702,12 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.get('/admin/content/resources', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const items = await listResourceItems(c.env.DB)
     return c.html(
       <AdminContentResourcesPage
         {...c.get('adminSite')}
-        ctx={auth.ctx}
+        ctx={ctx}
         items={items}
         flash={flashMessage(c, '1')}
       />,
@@ -712,8 +715,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/resources', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
     const label = typeof body.label === 'string' ? body.label.trim() : ''
     const url = typeof body.url === 'string' ? body.url.trim() : ''
@@ -723,8 +725,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/resources/:id', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
     await updateResourceItem(c.env.DB, c.req.param('id'), {
       label: typeof body.label === 'string' ? body.label.trim() : '',
@@ -737,36 +738,52 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/resources/:id/delete', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     await deleteResourceItem(c.env.DB, c.req.param('id'))
     return c.redirect('/admin/content/resources?ok=1', 303)
   })
 
   app.get('/admin/newsletter', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const subscribers = await listNewsletterSubscribers(c.env.DB)
     return c.html(
       <AdminNewsletterSubscribersPage
         {...c.get('adminSite')}
-        ctx={auth.ctx}
+        ctx={ctx}
         subscribers={subscribers}
         flash={flashMessage(c, '1')}
       />,
     )
   })
 
+  app.get('/admin/newsletter/export', async (c) => {
+    const ctx = getAdminCtx(c)
+    const subscribers = await listAllNewsletterSubscribers(c.env.DB)
+    await writeAuditLog(c.env.DB, {
+      userId: ctx.user.id,
+      action: 'newsletter.export',
+      resource: 'newsletter_subscribers',
+      ip: clientIp(c.req.raw.headers),
+      details: `${subscribers.length} subscribers`,
+    })
+    const csv = buildNewsletterSubscribersCsv(subscribers)
+    const filename = newsletterSubscribersExportFilename()
+    return new Response(csv, {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+      },
+    })
+  })
+
   app.post('/admin/newsletter/acknowledge-all', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     await acknowledgeAllNewsletterSubscribers(c.env.DB)
     return c.redirect('/admin/newsletter?ok=1', 303)
   })
 
   app.post('/admin/newsletter/:id', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
     const status = typeof body.status === 'string' ? body.status : 'acknowledged'
     await updateNewsletterSubscriberStatus(c.env.DB, c.req.param('id'), status)
@@ -774,20 +791,18 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/newsletter/:id/delete', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     await deleteNewsletterSubscriber(c.env.DB, c.req.param('id'))
     return c.redirect('/admin/newsletter?ok=1', 303)
   })
 
   app.get('/admin/contact-messages', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const submissions = await listContactSubmissions(c.env.DB)
     return c.html(
       <AdminContactMessagesPage
         {...c.get('adminSite')}
-        ctx={auth.ctx}
+        ctx={ctx}
         submissions={submissions}
         flash={flashMessage(c, '1')}
       />,
@@ -795,8 +810,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/contact-messages/:id', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
     const status = typeof body.status === 'string' ? body.status : 'new'
     await updateContactSubmissionStatus(c.env.DB, c.req.param('id'), status)
@@ -804,27 +818,24 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/contact-messages/:id/delete', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     await deleteContactSubmission(c.env.DB, c.req.param('id'))
     return c.redirect('/admin/contact-messages?ok=1', 303)
   })
 
   app.post('/admin/contact-messages/acknowledge-all', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     await acknowledgeAllContactSubmissions(c.env.DB)
     return c.redirect('/admin/contact-messages?ok=1', 303)
   })
 
   app.get('/admin/applications', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const applications = await listApplications(c.env.DB)
     return c.html(
       <AdminApplicationsPage
         {...c.get('adminSite')}
-        ctx={auth.ctx}
+        ctx={ctx}
         applications={applications}
         flash={flashMessage(c, '1')}
       />,
@@ -832,8 +843,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/applications/:id', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
     const status = typeof body.status === 'string' ? body.status : 'new'
     await updateApplicationStatus(c.env.DB, c.req.param('id'), status)
@@ -841,15 +851,13 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/applications/:id/delete', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     await deleteApplication(c.env.DB, c.req.param('id'))
     return c.redirect('/admin/applications?ok=1', 303)
   })
 
   app.post('/admin/applications/acknowledge-all', async (c) => {
-    const auth = await requireAdmin(c)
-    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
+    const ctx = getAdminCtx(c)
     await acknowledgeAllApplications(c.env.DB)
     return c.redirect('/admin/applications?ok=1', 303)
   })

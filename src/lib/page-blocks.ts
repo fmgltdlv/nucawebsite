@@ -3,11 +3,26 @@ import type { ExpandedEventRecord } from './event-repeat'
 import { EVENTS_LIST_PAGE_SIZE } from './events'
 import { renderMarkdown } from './markdown'
 import { parseCommitteeKey } from './committee-pages'
+import { getAssetUrl } from './r2-assets'
 
 export type TextAlign = 'left' | 'center' | 'right'
 export type BlockColor = 'default' | 'muted' | 'accent' | 'primary'
-export type BlockFont = 'body' | 'display'
+export type BlockFont =
+  | 'body'
+  | 'display'
+  | 'serif'
+  | 'fraunces'
+  | 'condensed'
+  | 'bebas'
+  | 'oswald'
+  | 'outfit'
+  | 'inter'
 export type CalendarView = 'list' | 'week' | 'month'
+export type ButtonStyle = 'primary' | 'secondary'
+export type ImageLayout = 'inline' | 'section' | 'background'
+export type ImageWidth = 'auto' | 'small' | 'medium' | 'large' | 'full'
+export type ImageHeight = 'auto' | 'small' | 'medium' | 'large' | 'viewport'
+export type ImageScroll = 'normal' | 'fixed'
 export type SectionBackground =
   | 'none'
   | 'muted'
@@ -63,6 +78,25 @@ export type PageBlock =
       lead: string
       limit: number
     }
+  | {
+      type: 'button'
+      label: string
+      href: string
+      style: ButtonStyle
+      align?: TextAlign
+      new_tab?: boolean
+    }
+  | {
+      type: 'image'
+      asset_key: string
+      alt?: string
+      caption?: string
+      layout: ImageLayout
+      align?: TextAlign
+      width?: ImageWidth
+      height?: ImageHeight
+      scroll?: ImageScroll
+    }
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -77,7 +111,65 @@ function isBlockColor(value: unknown): value is BlockColor {
 }
 
 function isBlockFont(value: unknown): value is BlockFont {
-  return value === 'body' || value === 'display'
+  return (
+    value === 'body' ||
+    value === 'display' ||
+    value === 'serif' ||
+    value === 'fraunces' ||
+    value === 'condensed' ||
+    value === 'bebas' ||
+    value === 'oswald' ||
+    value === 'outfit' ||
+    value === 'inter'
+  )
+}
+
+function isButtonStyle(value: unknown): value is ButtonStyle {
+  return value === 'primary' || value === 'secondary'
+}
+
+function isImageLayout(value: unknown): value is ImageLayout {
+  return value === 'inline' || value === 'section' || value === 'background'
+}
+
+function isImageWidth(value: unknown): value is ImageWidth {
+  return (
+    value === 'auto' ||
+    value === 'small' ||
+    value === 'medium' ||
+    value === 'large' ||
+    value === 'full'
+  )
+}
+
+function isImageHeight(value: unknown): value is ImageHeight {
+  return (
+    value === 'auto' ||
+    value === 'small' ||
+    value === 'medium' ||
+    value === 'large' ||
+    value === 'viewport'
+  )
+}
+
+function isImageScroll(value: unknown): value is ImageScroll {
+  return value === 'normal' || value === 'fixed'
+}
+
+function parseImageLayout(value: unknown): ImageLayout {
+  return isImageLayout(value) ? value : 'inline'
+}
+
+function parseImageWidth(value: unknown): ImageWidth | undefined {
+  return isImageWidth(value) && value !== 'auto' ? value : undefined
+}
+
+function parseImageHeight(value: unknown): ImageHeight | undefined {
+  return isImageHeight(value) && value !== 'auto' ? value : undefined
+}
+
+function parseImageScroll(value: unknown): ImageScroll | undefined {
+  return isImageScroll(value) && value !== 'normal' ? value : undefined
 }
 
 function isSectionBackground(value: unknown): value is SectionBackground {
@@ -200,6 +292,25 @@ function parseBlock(value: unknown, allowSection = true): PageBlock | null {
         lead: typeof value.lead === 'string' ? value.lead : '',
         limit,
       }
+    }
+    case 'button': {
+      const label = typeof value.label === 'string' ? value.label : 'Learn more'
+      const href = typeof value.href === 'string' ? value.href : '/'
+      const style = isButtonStyle(value.style) ? value.style : 'primary'
+      const align = isTextAlign(value.align) ? value.align : undefined
+      const new_tab = value.new_tab === true
+      return { type: 'button', label, href, style, align, new_tab }
+    }
+    case 'image': {
+      const asset_key = typeof value.asset_key === 'string' ? value.asset_key : ''
+      const alt = typeof value.alt === 'string' ? value.alt : undefined
+      const caption = typeof value.caption === 'string' ? value.caption : undefined
+      const layout = parseImageLayout(value.layout)
+      const align = isTextAlign(value.align) ? value.align : undefined
+      const width = parseImageWidth(value.width)
+      const height = parseImageHeight(value.height)
+      const scroll = parseImageScroll(value.scroll)
+      return { type: 'image', asset_key, alt, caption, layout, align, width, height, scroll }
     }
     default:
       return null
@@ -387,6 +498,57 @@ function renderBlocksHtml(blocks: PageBlock[], parentIndex = ''): string {
     .join('\n')
 }
 
+function imageWidthClass(width: ImageWidth | undefined): string {
+  if (!width || width === 'auto') return ''
+  return ` page-block-image--width-${width}`
+}
+
+function imageHeightClass(height: ImageHeight | undefined): string {
+  if (!height || height === 'auto') return ''
+  return ` page-block-image--height-${height}`
+}
+
+function renderImageBlockHtml(block: PageBlock & { type: 'image' }): string {
+  if (!block.asset_key.trim()) {
+    return '<div class="page-block-image page-block-image--empty" aria-hidden="true"></div>'
+  }
+
+  const url = escapeHtml(getAssetUrl(block.asset_key))
+  const alt = escapeHtml(block.alt?.trim() || '')
+  const caption = block.caption?.trim()
+  const captionHtml = caption
+    ? `<figcaption class="page-block-image-caption">${escapeHtml(caption)}</figcaption>`
+    : ''
+
+  if (block.layout === 'background') {
+    const scrollClass =
+      block.scroll === 'fixed' ? ' page-block-image-background--fixed' : ''
+    const heightClass = imageHeightClass(block.height) || ' page-block-image--height-medium'
+    return `<div class="page-block-image page-block-image-background${scrollClass}${heightClass}" style="background-image: url('${url}')" role="img" aria-label="${alt}">${caption ? `<div class="page-block-image-background-caption">${escapeHtml(caption)}</div>` : ''}</div>`
+  }
+
+  if (block.layout === 'section') {
+    const heightClass = imageHeightClass(block.height)
+    const figureClass = `page-block-image page-block-image-section${heightClass}`
+    return `<figure class="${figureClass}"><img src="${url}" alt="${alt}" loading="lazy" decoding="async" />${captionHtml}</figure>`
+  }
+
+  const align = alignClass(block.align)
+  const widthClass = imageWidthClass(block.width)
+  return `<figure class="page-block-image page-block-image-inline${align}${widthClass}"><img src="${url}" alt="${alt}" loading="lazy" decoding="async" />${captionHtml}</figure>`
+}
+
+function renderButtonBlockHtml(block: PageBlock & { type: 'button' }): string {
+  const label = block.label.trim()
+  if (!label) return ''
+
+  const href = escapeHtml(block.href.trim() || '/')
+  const align = alignClass(block.align)
+  const styleClass = block.style === 'secondary' ? 'btn-secondary' : 'btn-primary'
+  const target = block.new_tab ? ' target="_blank" rel="noopener noreferrer"' : ''
+  return `<div class="page-block-buttons${align}"><a class="btn ${styleClass}" href="${href}"${target}>${escapeHtml(label)}</a></div>`
+}
+
 function renderBlockHtml(block: PageBlock, blockIndex: string): string {
   switch (block.type) {
     case 'heading': {
@@ -419,6 +581,10 @@ function renderBlockHtml(block: PageBlock, blockIndex: string): string {
     }
     case 'calendar':
       return renderCalendarBlockHtml(block)
+    case 'button':
+      return renderButtonBlockHtml(block)
+    case 'image':
+      return renderImageBlockHtml(block)
     default:
       return ''
   }
@@ -500,6 +666,16 @@ export function blocksToMarkdown(blocks: PageBlock[]): string {
       case 'dirt_feed':
         parts.push(`## ${block.title}\n\n${block.lead}`)
         break
+      case 'button':
+        parts.push(`[${block.label}](${block.href})`)
+        break
+      case 'image': {
+        const alt = block.alt?.trim() || block.caption?.trim() || 'Image'
+        if (block.asset_key.trim()) {
+          parts.push(`![${alt}](/assets/${block.asset_key})`)
+        }
+        break
+      }
       default:
         break
     }

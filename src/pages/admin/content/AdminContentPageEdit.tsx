@@ -2,6 +2,7 @@ import type { PageRecord } from '../../../lib/pages-db'
 import type { CommitteeRecord } from '../../../lib/committees-db'
 import { blocksFromMarkdown, parsePageBlocks, serializePageBlocks } from '../../../lib/page-blocks'
 import { pagePreviewDraftPath, pagePreviewPath, pagePublicPath } from '../../../lib/page-paths'
+import { isCustomPage } from '../../../lib/pages-db'
 import { AdminShell } from '../../../views/AdminShell'
 import type { AdminContext } from '../../../lib/admin-context'
 import type { PageProps } from '../../../types/page'
@@ -45,6 +46,7 @@ export function AdminContentPageEditPage({
       {...site}
       user={ctx.user}
       inboxCounts={ctx.inboxCounts}
+      csrfToken={ctx.csrfToken}
       title={`Edit: ${label}`}
       activePath="/admin/content"
     >
@@ -62,6 +64,20 @@ export function AdminContentPageEditPage({
         )}
       </p>
       {flash && <p class="admin-flash">{flash}</p>}
+      {page && isCustomPage(page) ? (
+        <p class="admin-help">
+          Public URL: <a href={publicPath}>{publicPath}</a>
+          {' · '}
+          <form
+            method="post"
+            action={`/admin/content/pages/${slug}/delete`}
+            class="admin-inline-form"
+            onsubmit="return confirm('Delete this page permanently?')"
+          >
+            <button type="submit" class="admin-link-button">Delete page</button>
+          </form>
+        </p>
+      ) : null}
       <form
         class="form form-wide admin-form-section page-edit-form"
         method="post"

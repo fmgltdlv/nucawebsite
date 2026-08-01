@@ -8,7 +8,14 @@ export function AdminHomePage({ ctx, ...site }: PageProps & { ctx: AdminContext 
   const counts = ctx.inboxCounts
 
   return (
-    <AdminShell {...site} user={ctx.user} inboxCounts={counts} title="Dashboard" activePath="/admin">
+    <AdminShell
+      {...site}
+      user={ctx.user}
+      inboxCounts={counts}
+      csrfToken={ctx.csrfToken}
+      title="Dashboard"
+      activePath="/admin"
+    >
       <div class="admin-cards">
         <a class="admin-card" href="/admin/members">
           <h2>Member list</h2>

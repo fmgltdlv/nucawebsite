@@ -147,6 +147,7 @@ export function AdminContentNavigationPage({
       {...site}
       user={ctx.user}
       inboxCounts={ctx.inboxCounts}
+      csrfToken={ctx.csrfToken}
       title="Navigation"
       activePath="/admin/content"
     >

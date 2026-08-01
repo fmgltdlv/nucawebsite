@@ -1,3 +1,5 @@
+import { toCsv } from './csv'
+
 export type NewsletterSubscriber = {
   id: string
   email: string
@@ -29,14 +31,46 @@ export async function subscribeNewsletter(
   }
 }
 
-export async function listNewsletterSubscribers(db: D1Database): Promise<NewsletterSubscriber[]> {
+export async function listNewsletterSubscribers(
+  db: D1Database,
+  options?: { limit?: number },
+): Promise<NewsletterSubscriber[]> {
+  const limit = options?.limit ?? 500
   const { results } = await db
     .prepare(
       `SELECT id, email, subscribed_at, source, status
-       FROM newsletter_subscribers ORDER BY subscribed_at DESC LIMIT 500`,
+       FROM newsletter_subscribers ORDER BY subscribed_at DESC LIMIT ?`,
+    )
+    .bind(limit)
+    .all<NewsletterSubscriber>()
+  return results ?? []
+}
+
+export async function listAllNewsletterSubscribers(db: D1Database): Promise<NewsletterSubscriber[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT id, email, subscribed_at, source, status
+       FROM newsletter_subscribers ORDER BY subscribed_at DESC`,
     )
     .all<NewsletterSubscriber>()
   return results ?? []
+}
+
+export function buildNewsletterSubscribersCsv(subscribers: NewsletterSubscriber[]): string {
+  const rows: string[][] = [
+    ['email', 'subscribed_at', 'source', 'status'],
+    ...subscribers.map((subscriber) => [
+      subscriber.email,
+      subscriber.subscribed_at,
+      subscriber.source ?? '',
+      subscriber.status,
+    ]),
+  ]
+  return '\uFEFF' + toCsv(rows)
+}
+
+export function newsletterSubscribersExportFilename(date = new Date()): string {
+  return `newsletter-subscribers-${date.toISOString().slice(0, 10)}.csv`
 }
 
 export async function updateNewsletterSubscriberStatus(

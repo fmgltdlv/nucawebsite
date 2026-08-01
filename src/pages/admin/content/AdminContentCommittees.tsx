@@ -105,6 +105,7 @@ export function AdminContentCommitteesPage({
       {...site}
       user={ctx.user}
       inboxCounts={ctx.inboxCounts}
+      csrfToken={ctx.csrfToken}
       title="Committees"
       activePath="/admin/content"
     >

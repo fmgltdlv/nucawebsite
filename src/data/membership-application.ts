@@ -39,18 +39,6 @@ export const institutionalCategories = [
   { id: 'other', label: 'Other (describe below)' },
 ] as const
 
-export const applicationCommittees = [
-  { id: 'legislative', label: 'Legislative' },
-  { id: 'damage_prevention', label: 'Damage Prevention' },
-  { id: 'permits_inspection', label: 'Permits/Inspection' },
-  { id: 'safety', label: 'Safety' },
-  { id: 'scholarship', label: 'Scholarship' },
-  { id: 'membership', label: 'Membership' },
-  { id: 'golf_tournament', label: 'Golf Tournament' },
-  { id: 'holiday_party', label: 'Holiday Party' },
-  { id: 'workforce_development', label: 'Workforce Development' },
-] as const
-
 export const paymentMethods = [
   { id: 'check', label: 'Check enclosed (payable to NUCA of Las Vegas)' },
   { id: 'credit_phone', label: 'Credit card by phone — call Jen at (702) 577-8556' },

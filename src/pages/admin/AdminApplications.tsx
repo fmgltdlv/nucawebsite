@@ -110,6 +110,7 @@ export function AdminApplicationsPage({
       {...site}
       user={ctx.user}
       inboxCounts={ctx.inboxCounts}
+      csrfToken={ctx.csrfToken}
       title="Join applications"
       activePath="/admin/applications"
     >

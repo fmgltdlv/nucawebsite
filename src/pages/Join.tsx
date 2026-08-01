@@ -1,16 +1,27 @@
 import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
-import { JoinApplicationAside, JoinApplicationForm } from '../views/JoinApplicationForm'
+import { JoinApplicationAside, JoinApplicationModal, JoinApplyButton } from '../views/JoinApplicationForm'
 import { StatusPage } from '../views/StatusPage'
 import { joinBenefits, memberTypes } from '../data/demo'
 
+import type { CommitteeRecord } from '../lib/committees-db'
 import type { PageProps } from '../types/page'
 
-export function JoinPage({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount }: PageProps) {
+export function JoinPage({
+  theme,
+  contact,
+  footer,
+  breakingNews,
+  logoUrl,
+  navigation,
+  staffInboxCount,
+  committees,
+}: PageProps & { committees: CommitteeRecord[] }) {
   return (
     <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })} title="Join">
       <PageHeader
         title="Join NUCA of Las Vegas"
         lead="Membership connects your firm to advocacy, safety resources, events, and a network of industry peers."
+        actions={<JoinApplyButton />}
       />
       <section class="section">
         <div class="container split">
@@ -80,11 +91,13 @@ export function JoinPage({ theme, contact, footer, breakingNews, logoUrl, naviga
               Complete the same information as the chapter membership application. You can also download the PDF and
               return it by email.
             </p>
-            <JoinApplicationForm />
+            <JoinApplyButton />
           </div>
           <JoinApplicationAside />
         </div>
       </section>
+
+      <JoinApplicationModal committees={committees} />
     </Layout>
   )
 }

@@ -18,12 +18,14 @@ export function AdminShell({
   navigation,
   user,
   inboxCounts,
+  csrfToken,
   title,
   children,
   activePath,
 }: SiteLayoutProps & {
   user: User
   inboxCounts: AdminInboxCounts
+  csrfToken: string
   title: string
   children: unknown
   activePath: string
@@ -55,7 +57,7 @@ export function AdminShell({
       })}
       title={title}
     >
-      <div class="admin-shell">
+      <div class="admin-shell" data-csrf-token={csrfToken}>
         <aside class="admin-sidebar">
           <p class="admin-sidebar-title">Staff portal</p>
           <p class="admin-sidebar-user">
@@ -95,6 +97,7 @@ export function AdminShell({
         </div>
       </div>
       <AdminAssetLibraryDialog />
+      <script src="/admin-security.js" defer></script>
     </Layout>
   )
 }

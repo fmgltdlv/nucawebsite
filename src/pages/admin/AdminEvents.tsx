@@ -283,6 +283,7 @@ export function AdminEventsPage({
       {...site}
       user={ctx.user}
       inboxCounts={ctx.inboxCounts}
+      csrfToken={ctx.csrfToken}
       title="Events"
       activePath="/admin/events"
     >

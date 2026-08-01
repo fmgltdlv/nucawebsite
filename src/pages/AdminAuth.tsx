@@ -1,7 +1,11 @@
 import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import type { PageProps } from '../types/page'
 
-export function AdminLoginPage({ error, ...site }: PageProps & { error?: string }) {
+export function AdminLoginPage({
+  error,
+  turnstileSiteKey,
+  ...site
+}: PageProps & { error?: string; turnstileSiteKey?: string }) {
   return (
     <Layout {...pickLayoutSite(site)} title="Admin sign in">
       <PageHeader title="Staff sign in" lead="Secretary and authorized staff only." />
@@ -17,15 +21,18 @@ export function AdminLoginPage({ error, ...site }: PageProps & { error?: string 
               <label for="password">Password</label>
               <input type="password" name="password" id="password" required autocomplete="current-password" />
             </div>
+            {turnstileSiteKey ? (
+              <div class="form-field">
+                <div class="cf-turnstile" data-sitekey={turnstileSiteKey} />
+              </div>
+            ) : null}
             <button type="submit" class="btn btn-primary">Sign in</button>
           </form>
-          <p class="form-hint">
-            Default admin is created from <code>ADMIN_EMAIL</code> + <code>ADMIN_PASSWORD</code> on the Worker
-            when no account exists yet.
-          </p>
         </div>
       </section>
+      {turnstileSiteKey ? (
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+      ) : null}
     </Layout>
   )
 }
-

@@ -23,6 +23,7 @@ export function AdminUsersPage({
       {...site}
       user={ctx.user}
       inboxCounts={ctx.inboxCounts}
+      csrfToken={ctx.csrfToken}
       title="Users"
       activePath="/admin/users"
     >

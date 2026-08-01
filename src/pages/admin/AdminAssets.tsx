@@ -113,6 +113,7 @@ export function AdminAssetsPage({
       {...site}
       user={ctx.user}
       inboxCounts={ctx.inboxCounts}
+      csrfToken={ctx.csrfToken}
       title="Assets"
       activePath="/admin/assets"
     >

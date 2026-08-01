@@ -17,7 +17,7 @@ const contentSections: Array<{
   { href: '/admin/content/the-dirt', title: 'THE DIRT — PDF releases', desc: 'PDF news release archive' },
   { href: '/admin/content/posts', title: 'THE DIRT — web posts', desc: 'Blog posts and announcements' },
   { href: '/admin/content/committees', title: 'Committees', desc: 'Add, remove, and reorder chapter committees' },
-  { href: '/admin/content/pages', title: 'Editable pages', desc: 'Home, About, Training, Resources, Scholarships, committee pages' },
+  { href: '/admin/content/pages', title: 'Editable pages', desc: 'Built-in, committee, and custom pages' },
   { href: '/admin/content/leadership', title: 'Leadership', desc: 'Chapter officer roster' },
   { href: '/admin/content/resources', title: 'Resource links', desc: 'Structured links on Resources page' },
   {
@@ -46,6 +46,7 @@ export function AdminContentPage({ ctx, ...site }: PageProps & { ctx: AdminConte
       {...site}
       user={ctx.user}
       inboxCounts={ctx.inboxCounts}
+      csrfToken={ctx.csrfToken}
       title="Content"
       activePath="/admin/content"
     >
