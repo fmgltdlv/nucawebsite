@@ -758,20 +758,141 @@
     const searchInput = assetLibraryDialog.querySelector('[data-asset-library-search]')
     const loadingEl = assetLibraryDialog.querySelector('[data-asset-library-loading]')
     const emptyEl = assetLibraryDialog.querySelector('[data-asset-library-empty]')
+    const uploadLabelInput = assetLibraryDialog.querySelector('[data-asset-library-upload-label]')
+    const uploadFileInput = assetLibraryDialog.querySelector('[data-asset-library-upload-file]')
+    const uploadBtn = assetLibraryDialog.querySelector('[data-asset-library-upload-btn]')
+    const uploadStatus = assetLibraryDialog.querySelector('[data-asset-library-upload-status]')
     /** @type {HTMLElement | null} */
     let activePickerField = null
-    /** @type {Record<string, Array<{ key: string, label: string, type: string, url: string }>>} */
+    /** @type {Record<string, Array<{ key: string, label: string, type: string, url: string }> | null>} */
     const assetsCache = { image: null, pdf: null }
+    /** @type {Record<string, number>} */
+    const assetsLoadGeneration = { image: 0, pdf: 0 }
     /** @type {Array<{ key: string, label: string, type: string, url: string }>} */
     let libraryAssets = []
+    let activeKind = 'image'
+    let uploadInFlight = false
+    let openSeq = 0
+
+    function invalidateAssetsCache(kind) {
+      assetsLoadGeneration[kind] += 1
+      assetsCache[kind] = null
+    }
+
+    function escapeAssetLabel(label) {
+      return label.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')
+    }
+
+    function setUploadStatus(message, isError = false) {
+      if (!(uploadStatus instanceof HTMLElement)) return
+      if (!message) {
+        uploadStatus.hidden = true
+        uploadStatus.textContent = ''
+        uploadStatus.classList.remove('form-hint-warn')
+        return
+      }
+      uploadStatus.hidden = false
+      uploadStatus.textContent = message
+      uploadStatus.classList.toggle('form-hint-warn', isError)
+    }
+
+    function configureUploadForKind(kind) {
+      activeKind = kind
+      if (uploadFileInput instanceof HTMLInputElement) {
+        uploadFileInput.value = ''
+        uploadFileInput.accept =
+          kind === 'pdf'
+            ? 'application/pdf'
+            : 'image/png,image/jpeg,image/webp,image/gif'
+      }
+      if (uploadLabelInput instanceof HTMLInputElement) uploadLabelInput.value = ''
+      setUploadStatus('')
+      if (uploadBtn instanceof HTMLButtonElement) uploadBtn.disabled = false
+    }
+
+    async function prepareLibraryUploadFile(file) {
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+      if (isPdf) {
+        if (file.size > ADMIN_PDF_MAX_BYTES) {
+          throw new Error(`PDF too large (max ${Math.round(ADMIN_PDF_MAX_BYTES / 1024 / 1024)} MB).`)
+        }
+        return file
+      }
+
+      if (isRasterImageFile(file) && file.size > ADMIN_IMAGE_MAX_BYTES) {
+        return await compressImageToMaxBytes(
+          file,
+          ADMIN_IMAGE_MAX_BYTES,
+          file.name.replace(/\.[^.]+$/, '') || 'image',
+        )
+      }
+
+      return file
+    }
+
+    async function uploadLibraryFile(file) {
+      if (uploadInFlight) return
+      uploadInFlight = true
+      setUploadStatus('Uploading…')
+      if (uploadBtn instanceof HTMLButtonElement) uploadBtn.disabled = true
+
+      try {
+        const preparedFile = await prepareLibraryUploadFile(file)
+        const formData = new FormData()
+        formData.append('file', preparedFile)
+        formData.append('kind', activeKind)
+        if (uploadLabelInput instanceof HTMLInputElement && uploadLabelInput.value.trim()) {
+          formData.append('label', uploadLabelInput.value.trim())
+        }
+
+        const response = await fetch('/admin/api/assets/upload', {
+          method: 'POST',
+          body: formData,
+        })
+        const data = await response.json().catch(() => null)
+        if (!response.ok || !data?.ok || !data.asset) {
+          const message =
+            (data && typeof data.error === 'string' && data.error) ||
+            'Upload failed. Try again.'
+          setUploadStatus(message, true)
+          return
+        }
+
+        invalidateAssetsCache(activeKind)
+        libraryAssets = [data.asset, ...libraryAssets.filter((asset) => asset.key !== data.asset.key)]
+        if (searchInput instanceof HTMLInputElement) searchInput.value = ''
+        renderAssetGrid()
+        setUploadStatus('Uploaded.')
+
+        if (activePickerField instanceof HTMLElement) {
+          const fileInput = activePickerField.querySelector('[data-asset-picker-file]')
+          if (fileInput instanceof HTMLInputElement) fileInput.value = ''
+          setPickerPreview(activePickerField, data.asset)
+          openSeq += 1
+          assetLibraryDialog.close()
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Upload failed. Try again.'
+        setUploadStatus(message, true)
+      } finally {
+        uploadInFlight = false
+        if (uploadBtn instanceof HTMLButtonElement) uploadBtn.disabled = false
+        if (uploadFileInput instanceof HTMLInputElement) uploadFileInput.value = ''
+      }
+    }
 
     async function loadAssets(kind) {
       if (assetsCache[kind]) return assetsCache[kind]
+      const generation = assetsLoadGeneration[kind]
       const response = await fetch(`/admin/api/assets?kind=${kind}`)
       if (!response.ok) throw new Error('Could not load assets.')
       const data = await response.json()
-      assetsCache[kind] = data.assets ?? []
-      return assetsCache[kind]
+      const assets = data.assets ?? []
+      if (generation !== assetsLoadGeneration[kind]) {
+        return assetsCache[kind] ?? assets
+      }
+      assetsCache[kind] = assets
+      return assets
     }
 
     function setPickerPreview(field, asset) {
@@ -781,7 +902,10 @@
       const removeCheckbox = field.querySelector('[data-asset-picker-remove]')
       const kind = field.getAttribute('data-asset-kind') || 'image'
 
-      if (hiddenInput instanceof HTMLInputElement) hiddenInput.value = asset.key
+      if (hiddenInput instanceof HTMLInputElement) {
+        hiddenInput.value = asset.key
+        hiddenInput.dispatchEvent(new Event('change', { bubbles: true }))
+      }
       if (clearBtn instanceof HTMLButtonElement) clearBtn.hidden = false
       if (removeCheckbox instanceof HTMLInputElement) removeCheckbox.checked = false
 
@@ -854,9 +978,9 @@
         button.title = asset.label
 
         if (asset.url.toLowerCase().endsWith('.pdf')) {
-          button.innerHTML = `<span class="admin-asset-pdf-icon" aria-hidden="true">PDF</span><span class="admin-asset-library-label">${asset.label}</span>`
+          button.innerHTML = `<span class="admin-asset-pdf-icon" aria-hidden="true">PDF</span><span class="admin-asset-library-label">${escapeAssetLabel(asset.label)}</span>`
         } else {
-          button.innerHTML = `<img src="${asset.url}" alt="" loading="lazy" decoding="async" /><span class="admin-asset-library-label">${asset.label}</span>`
+          button.innerHTML = `<img src="${asset.url}" alt="" loading="lazy" decoding="async" /><span class="admin-asset-library-label">${escapeAssetLabel(asset.label)}</span>`
         }
 
         button.addEventListener('click', () => {
@@ -872,8 +996,10 @@
     }
 
     async function openAssetLibrary(field) {
+      const seq = ++openSeq
       activePickerField = field
       const kind = field.getAttribute('data-asset-kind') || 'image'
+      configureUploadForKind(kind)
 
       if (loadingEl instanceof HTMLElement) loadingEl.hidden = false
       if (emptyEl instanceof HTMLElement) emptyEl.hidden = true
@@ -886,10 +1012,13 @@
       assetLibraryDialog.showModal()
 
       try {
-        libraryAssets = await loadAssets(kind)
+        const assets = await loadAssets(kind)
+        if (seq !== openSeq || !assetLibraryDialog.open) return
+        libraryAssets = assets
         if (loadingEl instanceof HTMLElement) loadingEl.hidden = true
         renderAssetGrid()
       } catch (error) {
+        if (seq !== openSeq || !assetLibraryDialog.open) return
         if (loadingEl instanceof HTMLElement) loadingEl.hidden = true
         if (emptyEl instanceof HTMLElement) {
           emptyEl.hidden = false
@@ -937,6 +1066,19 @@
     searchInput?.addEventListener('input', () => {
       renderAssetGrid()
     })
+
+    if (uploadBtn instanceof HTMLButtonElement) {
+      uploadBtn.addEventListener('click', () => {
+        if (uploadFileInput instanceof HTMLInputElement) uploadFileInput.click()
+      })
+    }
+
+    if (uploadFileInput instanceof HTMLInputElement) {
+      uploadFileInput.addEventListener('change', () => {
+        const file = uploadFileInput.files?.[0]
+        if (file) uploadLibraryFile(file)
+      })
+    }
   }
 
   function wireAdminLists(scope = document) {

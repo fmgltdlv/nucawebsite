@@ -4009,20 +4009,63 @@ button.pill {
   margin-top: 0.5rem;
 }
 
+.admin-asset-library-dialog {
+  width: min(72rem, 96vw);
+}
+
 .admin-asset-library-dialog .admin-modal-form {
-  width: min(48rem, 92vw);
+  width: 100%;
+  min-height: min(36rem, calc(100vh - 2rem));
+}
+
+.admin-asset-library-dialog .admin-modal-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.admin-asset-library-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
 }
 
 .admin-asset-library-search {
   display: block;
-  margin-bottom: 1rem;
+  flex: 1 1 14rem;
+  margin-bottom: 0;
+}
+
+.admin-asset-library-upload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 18rem;
+}
+
+.admin-asset-library-upload-label {
+  flex: 1 1 10rem;
+  min-width: 8rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 4px);
+  font-size: 0.9rem;
+}
+
+.admin-asset-library-upload-status {
+  font-size: 0.85rem;
 }
 
 .admin-asset-library-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
   gap: 0.75rem;
-  max-height: 24rem;
+  flex: 1;
+  min-height: 12rem;
   overflow: auto;
   padding: 0.25rem;
 }
@@ -4458,6 +4501,52 @@ button.pill {
 
 .page-blocks-toolbar-nested {
   margin-bottom: 0.5rem;
+}
+
+.page-blocks-toolbar-btn {
+  cursor: grab;
+}
+
+.page-blocks-toolbar-btn.is-dragging {
+  opacity: 0.55;
+}
+
+.page-blocks-toolbar-btn:active {
+  cursor: grabbing;
+}
+
+.page-blocks-drop-zone {
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm, 4px);
+  padding: 0.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #64748b);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.page-blocks-drop-zone.is-drag-over {
+  border-color: var(--color-primary, #2563eb);
+  background: color-mix(in srgb, var(--color-primary, #2563eb) 8%, transparent);
+  color: var(--color-text);
+}
+
+.page-blocks-drop-zone-nested {
+  margin-top: 0.35rem;
+  padding: 0.35rem;
+  font-size: 0.8rem;
+}
+
+.page-blocks-empty-drop {
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm, 4px);
+  padding: 1rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.page-blocks-empty-drop.is-drag-over {
+  border-color: var(--color-primary, #2563eb);
+  background: color-mix(in srgb, var(--color-primary, #2563eb) 8%, transparent);
 }
 
 .page-block-card {

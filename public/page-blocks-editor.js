@@ -317,8 +317,17 @@
     dragHandle.addEventListener('dragstart', (event) => {
       const card = dragHandle.closest('[data-block-index]')
       if (card instanceof HTMLElement) card.classList.add('is-dragging')
-      event.dataTransfer?.setData('text/plain', index)
-      if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+      const indexStr = String(index)
+      if (indexStr.includes('-')) {
+        const parts = indexStr.split('-')
+        const sectionIndex = Number.parseInt(parts[0] || '', 10)
+        const childIndex = Number.parseInt(parts[1] || '', 10)
+        if (Number.isFinite(sectionIndex) && Number.isFinite(childIndex)) {
+          setDragTransfer(event.dataTransfer, `move-nested:${sectionIndex}:${childIndex}`)
+        }
+      } else {
+        setDragTransfer(event.dataTransfer, `move:${indexStr}`)
+      }
     })
     dragHandle.addEventListener('dragend', () => {
       const card = dragHandle.closest('[data-block-index]')
@@ -683,6 +692,231 @@
     render()
   }
 
+  function setDragTransfer(dataTransfer, value) {
+    dataTransfer?.setData('text/plain', value)
+    if (dataTransfer) dataTransfer.effectAllowed = 'move'
+  }
+
+  /**
+   * @param {string} raw
+   * @returns {{ kind: 'move', index: number } | { kind: 'new', type: string } | { kind: 'move-nested', sectionIndex: number, childIndex: number } | { kind: 'new-nested', sectionIndex: number, type: string } | null}
+   */
+  function parseDragData(raw) {
+    if (!raw) return null
+    if (raw.startsWith('move-nested:')) {
+      const parts = raw.slice(12).split(':')
+      const sectionIndex = Number.parseInt(parts[0] || '', 10)
+      const childIndex = Number.parseInt(parts[1] || '', 10)
+      if (Number.isFinite(sectionIndex) && Number.isFinite(childIndex)) {
+        return { kind: 'move-nested', sectionIndex, childIndex }
+      }
+      return null
+    }
+    if (raw.startsWith('new-nested:')) {
+      const parts = raw.slice(11).split(':')
+      const sectionIndex = Number.parseInt(parts[0] || '', 10)
+      const type = parts[1] || ''
+      if (Number.isFinite(sectionIndex) && type) return { kind: 'new-nested', sectionIndex, type }
+      return null
+    }
+    if (raw.startsWith('new:')) {
+      const type = raw.slice(4)
+      if (type) return { kind: 'new', type }
+      return null
+    }
+    if (raw.startsWith('move:')) {
+      const index = Number.parseInt(raw.slice(5), 10)
+      if (Number.isFinite(index)) return { kind: 'move', index }
+      return null
+    }
+    const legacyIndex = Number.parseInt(raw, 10)
+    if (Number.isFinite(legacyIndex) && String(legacyIndex) === raw.trim()) {
+      return { kind: 'move', index: legacyIndex }
+    }
+    return null
+  }
+
+  function insertTopLevelBlockAt(index, block) {
+    const copy = blocks.slice()
+    copy.splice(index, 0, block)
+    blocks = copy
+    activeBlockIndex = String(index)
+    collapsedBlocks.delete(String(index))
+    render()
+  }
+
+  function reorderTopLevelBlock(from, to) {
+    if (!Number.isFinite(from) || from === to) return
+    if (from < 0 || from >= blocks.length) return
+    const boundedTo = Math.max(0, Math.min(to, blocks.length - 1))
+    if (from === boundedTo) return
+    const copy = blocks.slice()
+    const [item] = copy.splice(from, 1)
+    if (!item) return
+    copy.splice(boundedTo, 0, item)
+    blocks = copy
+    activeBlockIndex = String(boundedTo)
+    render()
+  }
+
+  function insertNestedBlockAt(sectionIndex, childIndex, block) {
+    const section = blocks[sectionIndex]
+    if (section?.type !== 'section') return
+    const indexKey = `${sectionIndex}-${childIndex}`
+    activeBlockIndex = indexKey
+    collapsedBlocks.delete(String(sectionIndex))
+    collapsedBlocks.delete(indexKey)
+    updateBlock(sectionIndex, (s) => {
+      if (s.type !== 'section') return s
+      const nextBlocks = s.blocks.slice()
+      nextBlocks.splice(childIndex, 0, block)
+      return { ...s, blocks: nextBlocks }
+    })
+    render()
+  }
+
+  function reorderNestedBlock(sectionIndex, fromChild, toChild) {
+    if (fromChild === toChild) return
+    const section = blocks[sectionIndex]
+    if (section?.type !== 'section') return
+    if (fromChild < 0 || fromChild >= section.blocks.length) return
+    const boundedTo = Math.max(0, Math.min(toChild, section.blocks.length - 1))
+    if (fromChild === boundedTo) return
+    updateBlock(sectionIndex, (s) => {
+      if (s.type !== 'section') return s
+      const nextBlocks = s.blocks.slice()
+      const [item] = nextBlocks.splice(fromChild, 1)
+      if (!item) return s
+      nextBlocks.splice(boundedTo, 0, item)
+      return { ...s, blocks: nextBlocks }
+    })
+    activeBlockIndex = `${sectionIndex}-${boundedTo}`
+    render()
+  }
+
+  /**
+   * @param {HTMLElement} el
+   * @param {(data: ReturnType<typeof parseDragData>) => void} onDrop
+   */
+  function wireDropTarget(el, onDrop) {
+    el.addEventListener('dragover', (event) => {
+      event.preventDefault()
+      el.classList.add('is-drag-over')
+    })
+    el.addEventListener('dragleave', (event) => {
+      const related = event.relatedTarget
+      if (related instanceof Node && el.contains(related)) return
+      el.classList.remove('is-drag-over')
+    })
+    el.addEventListener('drop', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      el.classList.remove('is-drag-over')
+      const raw = event.dataTransfer?.getData('text/plain') || ''
+      onDrop(parseDragData(raw))
+    })
+  }
+
+  /**
+   * @param {ReturnType<typeof parseDragData>} dragData
+   * @param {number} targetIndex
+   */
+  function handleTopLevelDrop(targetIndex, dragData) {
+    if (!dragData) return
+    if (dragData.kind === 'new') {
+      insertTopLevelBlockAt(targetIndex, defaultBlock(dragData.type))
+      return
+    }
+    if (dragData.kind === 'move') {
+      reorderTopLevelBlock(dragData.index, targetIndex)
+    }
+  }
+
+  /**
+   * @param {number} sectionIndex
+   * @param {number} targetChildIndex
+   * @param {ReturnType<typeof parseDragData>} dragData
+   */
+  function handleNestedDrop(sectionIndex, targetChildIndex, dragData) {
+    if (!dragData) return
+    if (dragData.kind === 'new' || dragData.kind === 'new-nested') {
+      if (dragData.kind === 'new-nested' && dragData.sectionIndex !== sectionIndex) return
+      insertNestedBlockAt(sectionIndex, targetChildIndex, defaultBlock(dragData.type))
+      return
+    }
+    if (
+      dragData.kind === 'move-nested' &&
+      dragData.sectionIndex === sectionIndex &&
+      dragData.childIndex !== targetChildIndex
+    ) {
+      reorderNestedBlock(sectionIndex, dragData.childIndex, targetChildIndex)
+    }
+  }
+
+  /**
+   * @param {number} insertIndex
+   * @param {string} [label]
+   */
+  function renderDropZone(insertIndex, label = 'Drop block here') {
+    const zone = document.createElement('div')
+    zone.className = 'page-blocks-drop-zone'
+    zone.textContent = label
+    wireDropTarget(zone, (data) => handleTopLevelDrop(insertIndex, data))
+    return zone
+  }
+
+  /**
+   * @param {number} sectionIndex
+   * @param {number} insertChildIndex
+   */
+  function renderNestedDropZone(sectionIndex, insertChildIndex) {
+    const zone = document.createElement('div')
+    zone.className = 'page-blocks-drop-zone page-blocks-drop-zone-nested'
+    zone.textContent = 'Drop block here'
+    wireDropTarget(zone, (data) => handleNestedDrop(sectionIndex, insertChildIndex, data))
+    return zone
+  }
+
+  /**
+   * @param {HTMLButtonElement} btn
+   * @param {string} type
+   * @param {{ sectionIndex?: number }} [options]
+   */
+  function wireToolbarAddButton(btn, type, options = {}) {
+    const { sectionIndex } = options
+    let suppressClick = false
+    btn.draggable = true
+    btn.classList.add('page-blocks-toolbar-btn')
+    btn.title =
+      sectionIndex == null
+        ? 'Drag onto the list to insert at a position, or click to add at the end'
+        : 'Drag onto the section to insert at a position, or click to add at the end'
+    btn.addEventListener('dragstart', (event) => {
+      suppressClick = false
+      btn.classList.add('is-dragging')
+      const payload =
+        sectionIndex == null ? `new:${type}` : `new-nested:${sectionIndex}:${type}`
+      setDragTransfer(event.dataTransfer, payload)
+    })
+    btn.addEventListener('dragend', () => {
+      btn.classList.remove('is-dragging')
+      suppressClick = true
+      window.setTimeout(() => {
+        suppressClick = false
+      }, 0)
+    })
+    btn.addEventListener('click', () => {
+      if (suppressClick) return
+      if (sectionIndex == null) {
+        insertTopLevelBlockAt(blocks.length, defaultBlock(type))
+      } else {
+        const section = blocks[sectionIndex]
+        const childCount = section?.type === 'section' ? section.blocks.length : 0
+        insertNestedBlockAt(sectionIndex, childCount, defaultBlock(type))
+      }
+    })
+  }
+
   /** @param {PageBlock} current @param {PageBlock | ((block: PageBlock) => PageBlock)} nextOrUpdater */
   function resolveBlockUpdate(current, nextOrUpdater) {
     return typeof nextOrUpdater === 'function' ? nextOrUpdater(current) : nextOrUpdater
@@ -737,13 +971,7 @@
       btn.type = 'button'
       btn.className = 'btn btn-secondary btn-sm'
       btn.textContent = `+ ${label}`
-      btn.addEventListener('click', () => {
-        const newIndex = blocks.length
-        blocks = [...blocks, defaultBlock(type)]
-        activeBlockIndex = String(newIndex)
-        collapsedBlocks.delete(String(newIndex))
-        render()
-      })
+      wireToolbarAddButton(btn, type)
       toolbar.append(btn)
     })
 
@@ -1237,16 +1465,7 @@
       btn.type = 'button'
       btn.className = 'btn btn-secondary btn-sm'
       btn.textContent = `+ ${label}`
-      btn.addEventListener('click', () => {
-        activeBlockIndex = `${sectionIndex}-${blocks[sectionIndex]?.type === 'section' ? blocks[sectionIndex].blocks.length : 0}`
-        collapsedBlocks.delete(String(sectionIndex))
-        collapsedBlocks.delete(activeBlockIndex)
-        updateBlock(sectionIndex, (section) => {
-          if (section.type !== 'section') return section
-          return { ...section, blocks: [...section.blocks, defaultBlock(type)] }
-        })
-        render()
-      })
+      wireToolbarAddButton(btn, type, { sectionIndex })
       nestedToolbar.append(btn)
     })
     nested.append(nestedToolbar)
@@ -1254,6 +1473,11 @@
     sectionBlock.blocks.forEach((child, childIndex) => {
       nested.append(renderNestedBlockEditor(child, sectionIndex, childIndex))
     })
+    nested.append(renderNestedDropZone(sectionIndex, sectionBlock.blocks.length))
+
+    wireDropTarget(nested, (data) =>
+      handleNestedDrop(sectionIndex, sectionBlock.blocks.length, data),
+    )
 
     return nested
   }
@@ -1265,6 +1489,8 @@
     card.dataset.blockIndex = indexKey
     if (collapsedBlocks.has(indexKey)) card.classList.add('is-collapsed')
     if (activeBlockIndex === indexKey) card.classList.add('page-block-card--active')
+
+    wireDropTarget(card, (data) => handleNestedDrop(sectionIndex, childIndex, data))
 
     const body = document.createElement('div')
     body.className = 'page-block-card-body'
@@ -1470,23 +1696,7 @@
     if (collapsedBlocks.has(indexKey)) card.classList.add('is-collapsed')
     if (activeBlockIndex === indexKey) card.classList.add('page-block-card--active')
 
-    card.addEventListener('dragover', (event) => {
-      event.preventDefault()
-      card.classList.add('is-drag-over')
-    })
-    card.addEventListener('dragleave', () => card.classList.remove('is-drag-over'))
-    card.addEventListener('drop', (event) => {
-      event.preventDefault()
-      card.classList.remove('is-drag-over')
-      const from = Number.parseInt(event.dataTransfer?.getData('text/plain') || '', 10)
-      if (!Number.isFinite(from) || from === index) return
-      const copy = blocks.slice()
-      const [item] = copy.splice(from, 1)
-      copy.splice(index, 0, item)
-      blocks = copy
-      activeBlockIndex = String(index)
-      render()
-    })
+    wireDropTarget(card, (data) => handleTopLevelDrop(index, data))
 
     const body = document.createElement('div')
     body.className = 'page-block-card-body'
@@ -1874,16 +2084,21 @@
     root.append(renderToolbar())
 
     if (blocks.length === 0) {
-      const empty = document.createElement('p')
-      empty.className = 'admin-help'
-      empty.textContent = isHomePage
-        ? 'No home page blocks yet. Add a hero banner, events list, THE DIRT feed, or any content block (heading, paragraph, section, calendar, and more).'
-        : 'No content blocks yet. Add a heading, paragraph, list, callout, section, button, image, or events calendar.'
+      const empty = document.createElement('div')
+      empty.className = 'page-blocks-empty-drop'
+      const hint = document.createElement('p')
+      hint.className = 'admin-help'
+      hint.textContent = isHomePage
+        ? 'No home page blocks yet. Drag a block type from the toolbar above into this area, or click a button to add at the end.'
+        : 'No content blocks yet. Drag a block type from the toolbar above into this area, or click a button to add at the end.'
+      empty.append(hint)
+      wireDropTarget(empty, (data) => handleTopLevelDrop(0, data))
       root.append(empty)
     } else {
       blocks.forEach((block, index) => {
         root.append(renderBlockEditor(block, index))
       })
+      root.append(renderDropZone(blocks.length, 'Drop here to add at the end'))
     }
 
     syncHidden({ immediate: true })

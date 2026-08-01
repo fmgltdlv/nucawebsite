@@ -53,12 +53,8 @@ import { AdminHomePage } from '../pages/admin/AdminHome'
 import { AdminMembersPage } from '../pages/admin/AdminMembers'
 import { AdminProfilePage } from '../pages/admin/AdminProfile'
 import { AdminUsersPage } from '../pages/admin/AdminUsers'
-import {
-  createLibraryAsset,
-  deleteLibraryAsset,
-  libraryAssetKey,
-} from '../lib/library-assets-db'
-import { uploadImage, uploadPdf } from '../lib/r2-assets'
+import { deleteLibraryAsset } from '../lib/library-assets-db'
+import { uploadLibraryAsset } from '../lib/library-asset-upload'
 import { applyAssetManage, parseAssetManageRequest } from '../lib/asset-manage'
 import { deleteAssetIfUnreferenced } from '../lib/asset-references'
 
@@ -223,38 +219,41 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     getAdminCtx(c)
     const body = await c.req.parseBody()
     const file = body.file
-    const label =
-      typeof body.label === 'string' && body.label.trim()
-        ? body.label.trim()
-        : file instanceof File
-          ? file.name
-          : 'Upload'
+    const label = typeof body.label === 'string' ? body.label : undefined
 
-    if (!(file instanceof File) || file.size === 0) {
+    if (!(file instanceof File)) {
       return c.redirect('/admin/assets?error=' + encodeURIComponent('Choose a file to upload.'), 303)
     }
 
-    const isPdf = file.type === 'application/pdf'
-    const isImage = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)
-    if (!isPdf && !isImage) {
-      return c.redirect(
-        '/admin/assets?error=' + encodeURIComponent('Upload a PDF or image (JPEG, PNG, WebP, GIF).'),
-        303,
-      )
-    }
-
-    const key = libraryAssetKey(file.name)
-    const result = isPdf ? await uploadPdf(c.env.R2, file, key) : await uploadImage(c.env.R2, file, key)
+    const result = await uploadLibraryAsset(c.env.R2, c.env.DB, file, { label })
     if (!result.ok) {
       return c.redirect('/admin/assets?error=' + encodeURIComponent(result.error), 303)
     }
 
-    await createLibraryAsset(c.env.DB, {
-      r2_key: key,
-      label,
-      content_kind: isPdf ? 'pdf' : 'image',
-    })
     return c.redirect('/admin/assets?type=library&uploaded=1', 303)
+  })
+
+  app.post('/admin/api/assets/upload', async (c) => {
+    getAdminCtx(c)
+    const body = await c.req.parseBody()
+    const file = body.file
+    const label = typeof body.label === 'string' ? body.label : undefined
+    const expectedKind = body.kind === 'pdf' ? 'pdf' : 'image'
+
+    if (!(file instanceof File)) {
+      return c.json({ ok: false, error: 'Choose a file to upload.' }, 400)
+    }
+
+    const result = await uploadLibraryAsset(c.env.R2, c.env.DB, file, {
+      label,
+      expectedKind,
+    })
+
+    if (!result.ok) {
+      return c.json({ ok: false, error: result.error }, 400)
+    }
+
+    return c.json({ ok: true, asset: result.asset })
   })
 
   app.post('/admin/assets/manage', async (c) => {

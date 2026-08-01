@@ -11,16 +11,37 @@ export function AdminAssetLibraryDialog() {
           </button>
         </header>
         <div class="admin-modal-body">
-          <label class="admin-list-search admin-asset-library-search">
-            <span class="visually-hidden">Search assets</span>
-            <input
-              type="search"
-              class="admin-list-search-input"
-              data-asset-library-search
-              placeholder="Search by name or key…"
-              autocomplete="off"
-            />
-          </label>
+          <div class="admin-asset-library-toolbar">
+            <label class="admin-list-search admin-asset-library-search">
+              <span class="visually-hidden">Search assets</span>
+              <input
+                type="search"
+                class="admin-list-search-input"
+                data-asset-library-search
+                placeholder="Search by name or key…"
+                autocomplete="off"
+              />
+            </label>
+            <div class="admin-asset-library-upload" data-asset-library-upload>
+              <input
+                type="text"
+                class="admin-asset-library-upload-label"
+                data-asset-library-upload-label
+                placeholder="Label (optional)"
+                autocomplete="off"
+              />
+              <input
+                type="file"
+                class="visually-hidden"
+                data-asset-library-upload-file
+                accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+              />
+              <button type="button" class="btn btn-secondary btn-sm" data-asset-library-upload-btn>
+                Upload
+              </button>
+              <span class="admin-asset-library-upload-status muted" data-asset-library-upload-status hidden></span>
+            </div>
+          </div>
           <p class="muted" data-asset-library-loading>
             Loading assets…
           </p>
