@@ -263,6 +263,11 @@
       .cms-preview-block { cursor: pointer; transition: outline-color 0.15s ease, box-shadow 0.15s ease; }
       .cms-preview-block:hover { outline: 2px dashed rgba(37, 99, 235, 0.55); outline-offset: 3px; }
       .cms-preview-block--active { outline: 3px solid #2563eb; outline-offset: 3px; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15); }
+      html.cms-preview-just-updated body { animation: cmsPreviewPulse 0.18s ease; }
+      @keyframes cmsPreviewPulse {
+        from { filter: brightness(1.04); }
+        to { filter: none; }
+      }
     `
     doc.head.append(style)
   }
@@ -272,8 +277,8 @@
     const doc = previewFrame.contentDocument
     if (!doc?.body) return
     injectPreviewStyles(doc)
-    if (doc.body.dataset.cmsPreviewWired === '1') return
-    doc.body.dataset.cmsPreviewWired = '1'
+    if (doc.documentElement.dataset.cmsPreviewWired === '1') return
+    doc.documentElement.dataset.cmsPreviewWired = '1'
     doc.addEventListener(
       'click',
       (event) => {
@@ -384,10 +389,10 @@
     return block.muted === true ? 'muted' : 'none'
   }
 
-  function syncHidden() {
+  function syncHidden(options = {}) {
     hiddenInput.value = JSON.stringify(blocks)
     if (savedSnapshot) markDirty()
-    schedulePreview()
+    schedulePreview(Boolean(options.immediate))
   }
 
   let savedSnapshot = ''
@@ -422,10 +427,71 @@
     el.hidden = !message
   }
 
-  function schedulePreview() {
+  function setPreviewUpdating(updating) {
+    const viewport = document.querySelector('[data-preview-viewport]')
+    if (viewport instanceof HTMLElement) {
+      viewport.classList.toggle('is-preview-updating', updating)
+    }
+  }
+
+  const PREVIEW_DEBOUNCE_MS = 80
+
+  function schedulePreview(immediate = false) {
     if (!(previewFrame instanceof HTMLIFrameElement) || !previewDraftUrl) return
     window.clearTimeout(previewTimer)
-    previewTimer = window.setTimeout(updatePreview, 450)
+    previewTimer = window.setTimeout(updatePreview, immediate ? 0 : PREVIEW_DEBOUNCE_MS)
+  }
+
+  /**
+   * Patch the existing iframe document instead of resetting srcdoc (avoids white flash + scroll jump).
+   * @param {string} html
+   */
+  function applyPreviewHtml(html) {
+    if (!(previewFrame instanceof HTMLIFrameElement)) return
+    const doc = previewFrame.contentDocument
+    const canPatch =
+      doc?.documentElement &&
+      doc.body &&
+      doc.body.childNodes.length > 0 &&
+      // Full reload when new preview brings calendar/map assets that need script execution
+      !/<script[^>]+(?:leaflet|event-map-thumbs|page-calendar)/i.test(html)
+
+    if (!canPatch) {
+      previewFrame.srcdoc = html
+      return
+    }
+
+    const scrollY = doc.defaultView?.scrollY ?? 0
+    const scrollX = doc.defaultView?.scrollX ?? 0
+    const activeIndex = activeBlockIndex
+    const parser = new DOMParser()
+    const nextDoc = parser.parseFromString(html, 'text/html')
+    if (!nextDoc.body) {
+      previewFrame.srcdoc = html
+      return
+    }
+
+    nextDoc.head.querySelectorAll('link[rel="stylesheet"]').forEach((link) => {
+      const href = link.getAttribute('href')
+      if (!href) return
+      if (!doc.head.querySelector(`link[rel="stylesheet"][href="${CSS.escape(href)}"]`)) {
+        doc.head.append(doc.importNode(link, true))
+      }
+    })
+
+    if (nextDoc.title) doc.title = nextDoc.title
+
+    const importedBody = doc.importNode(nextDoc.body, true)
+    doc.body.replaceWith(importedBody)
+
+    doc.defaultView?.scrollTo(scrollX, scrollY)
+    wirePreviewFrame()
+    if (activeIndex) highlightPreviewBlock(activeIndex)
+
+    doc.documentElement.classList.add('cms-preview-just-updated')
+    window.setTimeout(() => {
+      doc.documentElement?.classList.remove('cms-preview-just-updated')
+    }, 180)
   }
 
   async function updatePreview() {
@@ -434,6 +500,7 @@
     const requestId = ++previewRequestId
     const title = titleInput instanceof HTMLInputElement ? titleInput.value : ''
     const meta_description = metaInput instanceof HTMLInputElement ? metaInput.value : ''
+    setPreviewUpdating(true)
 
     try {
       const response = await fetch(previewDraftUrl, {
@@ -455,12 +522,23 @@
       const html = await response.text()
       if (requestId !== previewRequestId) return
       showPreviewError('')
-      previewFrame.srcdoc = html
-      wirePreviewFrame()
-      if (activeBlockIndex) highlightPreviewBlock(activeBlockIndex)
+      applyPreviewHtml(html)
+      if (!(previewFrame.contentDocument?.body?.childNodes.length)) {
+        // First paint / full srcdoc path — wire after load
+        previewFrame.addEventListener(
+          'load',
+          () => {
+            wirePreviewFrame()
+            if (activeBlockIndex) highlightPreviewBlock(activeBlockIndex)
+          },
+          { once: true },
+        )
+      }
     } catch {
       if (requestId !== previewRequestId) return
       showPreviewError('Preview could not update. Check your connection and try editing again.')
+    } finally {
+      if (requestId === previewRequestId) setPreviewUpdating(false)
     }
   }
 
@@ -1783,7 +1861,7 @@
       })
     }
 
-    syncHidden()
+    syncHidden({ immediate: true })
     wireAssetPickerSync()
   }
 

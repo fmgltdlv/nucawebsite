@@ -175,7 +175,7 @@ export function AdminContentPageEditPage({
             <div class="page-edit-preview-header">
               <div class="page-edit-preview-heading">
                 <h2 class="page-edit-preview-title">Live preview</h2>
-                <p class="admin-help">Updates automatically as you edit. Save to publish changes.</p>
+                <p class="admin-help">Updates as you type — no full refresh. Save to publish.</p>
                 <p id="page-edit-preview-error" class="form-hint-warn" hidden></p>
               </div>
               <div
