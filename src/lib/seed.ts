@@ -12,6 +12,8 @@ import { createLeadership } from './leadership-db'
 import { createResourceItem } from './resource-items-db'
 import { seedCommitteesIfEmpty } from './committees-db'
 import { defaultHomePageSeed } from './home-page'
+import { seedMembershipTypesIfEmpty } from './membership-types-db'
+import { defaultContactPageSeed, defaultJoinPageSeed } from './join-contact-pages'
 
 /** Seed first admin from Worker secrets when no users exist. */
 export async function seedAdminIfNeeded(env: Env): Promise<void> {
@@ -47,8 +49,10 @@ export async function seedContentIfEmpty(env: Env): Promise<void> {
   await seedPagesIfEmpty(env)
   await seedHomePageIfMissing(env)
   await seedTrainingPageIfMissing(env)
+  await seedHybridPagesIfMissing(env)
   await seedResourcesIfEmpty(env)
   await seedLeadershipIfEmpty(env)
+  await seedMembershipTypesIfEmpty(env.DB)
 }
 
 async function seedSiteSettingsIfEmpty(env: Env): Promise<void> {
@@ -194,6 +198,62 @@ async function seedTrainingPageIfMissing(env: Env): Promise<void> {
       'NUCA excavation safety competent person and confined space entry training for utility construction professionals.',
     published: true,
   })
+}
+
+const HYBRID_PAGE_SEEDS: Array<{
+  slug: string
+  title: string
+  meta_description: string
+  body_md?: string
+}> = [
+  {
+    slug: 'faq',
+    title: 'FAQ',
+    meta_description: 'Frequently asked questions about NUCA and the Las Vegas chapter.',
+  },
+  {
+    slug: 'leadership',
+    title: 'Leadership',
+    meta_description: 'Chapter officers and leadership team.',
+  },
+  {
+    slug: 'events',
+    title: 'Events',
+    meta_description: 'Chapter meetings, training, and member gatherings across Las Vegas.',
+  },
+  {
+    slug: 'the-dirt',
+    title: 'THE DIRT',
+    meta_description: 'News, policy, and chapter announcements from NUCA of Las Vegas.',
+    body_md:
+      'Want email delivery? [Subscribe to the mailing list](/contact#newsletter) on the Contact page.',
+  },
+]
+
+async function seedHybridPagesIfMissing(env: Env): Promise<void> {
+  for (const page of HYBRID_PAGE_SEEDS) {
+    const existing = await env.DB.prepare('SELECT slug FROM pages WHERE slug = ?')
+      .bind(page.slug)
+      .first<{ slug: string }>()
+    if (existing) continue
+    await upsertPage(env.DB, {
+      slug: page.slug,
+      title: page.title,
+      body_md: page.body_md ?? '',
+      meta_description: page.meta_description,
+      published: true,
+    })
+  }
+
+  const joinExisting = await env.DB.prepare('SELECT slug FROM pages WHERE slug = ?')
+    .bind('join')
+    .first<{ slug: string }>()
+  if (!joinExisting) await upsertPage(env.DB, defaultJoinPageSeed())
+
+  const contactExisting = await env.DB.prepare('SELECT slug FROM pages WHERE slug = ?')
+    .bind('contact')
+    .first<{ slug: string }>()
+  if (!contactExisting) await upsertPage(env.DB, defaultContactPageSeed())
 }
 
 async function seedResourcesIfEmpty(env: Env): Promise<void> {

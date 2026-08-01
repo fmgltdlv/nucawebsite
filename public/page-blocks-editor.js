@@ -73,8 +73,13 @@
   /** @typedef {{ type: 'events_feed', title: string, lead: string, limit: number }} EventsFeedBlock */
   /** @typedef {{ type: 'dirt_feed', title: string, lead: string, limit: number }} DirtFeedBlock */
   /** @typedef {{ type: 'button', label: string, href: string, style: 'primary' | 'secondary', align?: TextAlign, new_tab?: boolean }} ButtonBlock */
-  /** @typedef {{ type: 'image', asset_key: string, alt?: string, caption?: string, layout: 'inline' | 'section' | 'background', align?: TextAlign, width?: 'auto' | 'small' | 'medium' | 'large' | 'full', height?: 'auto' | 'small' | 'medium' | 'large' | 'viewport', scroll?: 'normal' | 'fixed' }} ImageBlock */
-  /** @typedef {HeadingBlock | TextBlock | ListBlock | CalloutBlock | SectionBlock | CalendarBlock | HeroBlock | EventsFeedBlock | DirtFeedBlock | ButtonBlock | ImageBlock} PageBlock */
+  /** @typedef {{ type: 'image', asset_key: string, alt?: string, caption?: string, layout: 'inline' | 'section' | 'background', align?: TextAlign, width?: 'auto' | 'small' | 'medium' | 'large' | 'full', height?: 'auto' | 'small' | 'medium' | 'large' | 'viewport', scroll?: 'normal' | 'fixed', full_width?: boolean }} ImageBlock */
+  /** @typedef {{ type: 'benefits_grid', title?: string, items: { title: string, body: string }[] }} BenefitsGridBlock */
+  /** @typedef {{ type: 'stats_panel', items: { value: string, label: string }[] }} StatsPanelBlock */
+  /** @typedef {{ type: 'member_types', title?: string }} MemberTypesBlock */
+  /** @typedef {{ type: 'newsletter_panel', title: string, body: string, consent_hint: string, button_label: string }} NewsletterPanelBlock */
+  /** @typedef {{ type: 'contact_form', name_label: string, email_label: string, message_label: string, submit_label: string }} ContactFormBlock */
+  /** @typedef {HeadingBlock | TextBlock | ListBlock | CalloutBlock | SectionBlock | CalendarBlock | HeroBlock | EventsFeedBlock | DirtFeedBlock | ButtonBlock | ImageBlock | BenefitsGridBlock | StatsPanelBlock | MemberTypesBlock | NewsletterPanelBlock | ContactFormBlock} PageBlock */
 
   /** @type {PageBlock[]} */
   let blocks = []
@@ -86,6 +91,8 @@
   const collapsedBlocks = new Set()
   const pageSlug = root.dataset.pageSlug || ''
   const isHomePage = pageSlug === 'home'
+  const isJoinPage = pageSlug === 'join'
+  const isContactPage = pageSlug === 'contact'
 
   const BLOCK_TYPE_LABELS = {
     heading: 'Heading',
@@ -99,6 +106,11 @@
     dirt_feed: 'THE DIRT feed',
     button: 'Button link',
     image: 'Image',
+    benefits_grid: 'Benefits grid',
+    stats_panel: 'Stats panel',
+    member_types: 'Membership types',
+    newsletter_panel: 'Newsletter panel',
+    contact_form: 'Contact form',
   }
 
   function blockTypeLabel(type) {
@@ -140,6 +152,16 @@
         return truncate(block.label || 'Button')
       case 'image':
         return block.asset_key ? truncate(block.alt || block.caption || block.asset_key) : 'No image selected'
+      case 'benefits_grid':
+        return truncate(block.title || `Benefits · ${block.items.length} items`)
+      case 'stats_panel':
+        return `Stats · ${block.items.length} items`
+      case 'member_types':
+        return truncate(block.title || 'Membership types')
+      case 'newsletter_panel':
+        return truncate(block.title || 'Newsletter panel')
+      case 'contact_form':
+        return 'Contact form labels'
       default:
         return blockTypeLabel(block.type)
     }
@@ -155,14 +177,17 @@
 
   function initCollapsedState() {
     collapsedBlocks.clear()
-    blocks.forEach((block, index) => {
-      collapsedBlocks.add(String(index))
-      if (block.type === 'section') {
-        block.blocks.forEach((_, childIndex) => {
-          collapsedBlocks.add(`${index}-${childIndex}`)
-        })
-      }
-    })
+    // Keep expanded when few blocks; collapse when many to reduce scroll.
+    if (blocks.length > 5) {
+      blocks.forEach((block, index) => {
+        collapsedBlocks.add(String(index))
+        if (block.type === 'section') {
+          block.blocks.forEach((_, childIndex) => {
+            collapsedBlocks.add(`${index}-${childIndex}`)
+          })
+        }
+      })
+    }
   }
 
   /** @param {string} index */
@@ -308,6 +333,14 @@
     committees = []
   }
 
+  /** @type {{ href: string, label: string, group: string }[]} */
+  let internalLinks = []
+  try {
+    internalLinks = JSON.parse(root.dataset.internalLinks || '[]')
+  } catch {
+    internalLinks = []
+  }
+
   const COLOR_OPTIONS = [
     ['default', 'Default'],
     ['muted', 'Muted'],
@@ -353,7 +386,40 @@
 
   function syncHidden() {
     hiddenInput.value = JSON.stringify(blocks)
+    if (savedSnapshot) markDirty()
     schedulePreview()
+  }
+
+  let savedSnapshot = ''
+  let isDirty = false
+  const draftStorageKey = `page-blocks-draft:${pageSlug}`
+
+  function currentSnapshot() {
+    const title = titleInput instanceof HTMLInputElement ? titleInput.value : ''
+    const meta = metaInput instanceof HTMLInputElement ? metaInput.value : ''
+    return JSON.stringify({ title, meta, blocks })
+  }
+
+  function markDirty() {
+    if (!savedSnapshot) return
+    const dirty = currentSnapshot() !== savedSnapshot
+    if (dirty === isDirty) return
+    isDirty = dirty
+    const banner = document.getElementById('page-edit-unsaved')
+    if (banner) banner.hidden = !dirty
+    try {
+      if (dirty) sessionStorage.setItem(draftStorageKey, currentSnapshot())
+      else sessionStorage.removeItem(draftStorageKey)
+    } catch {
+      // Ignore storage errors.
+    }
+  }
+
+  function showPreviewError(message) {
+    const el = document.getElementById('page-edit-preview-error')
+    if (!el) return
+    el.textContent = message
+    el.hidden = !message
   }
 
   function schedulePreview() {
@@ -381,14 +447,20 @@
         }),
       })
 
-      if (!response.ok || requestId !== previewRequestId) return
+      if (requestId !== previewRequestId) return
+      if (!response.ok) {
+        showPreviewError(`Preview failed (${response.status}). Your edits are still in the editor.`)
+        return
+      }
       const html = await response.text()
       if (requestId !== previewRequestId) return
+      showPreviewError('')
       previewFrame.srcdoc = html
       wirePreviewFrame()
       if (activeBlockIndex) highlightPreviewBlock(activeBlockIndex)
     } catch {
-      // Ignore transient preview errors while typing.
+      if (requestId !== previewRequestId) return
+      showPreviewError('Preview could not update. Check your connection and try editing again.')
     }
   }
 
@@ -460,6 +532,36 @@
           align: 'center',
           width: 'large',
         }
+      case 'benefits_grid':
+        return {
+          type: 'benefits_grid',
+          title: 'Member benefits',
+          items: [{ title: 'Benefit title', body: 'Short description.' }],
+        }
+      case 'stats_panel':
+        return {
+          type: 'stats_panel',
+          items: [{ value: '50+', label: 'Years of leadership' }],
+        }
+      case 'member_types':
+        return { type: 'member_types', title: 'Membership types' }
+      case 'newsletter_panel':
+        return {
+          type: 'newsletter_panel',
+          title: 'Newsletter — THE DIRT',
+          body: 'Join the mailing list for chapter news and upcoming events.',
+          consent_hint:
+            'By subscribing you agree to receive chapter emails. We will not sell your information.',
+          button_label: 'Subscribe',
+        }
+      case 'contact_form':
+        return {
+          type: 'contact_form',
+          name_label: 'Name',
+          email_label: 'Email',
+          message_label: 'Message',
+          submit_label: 'Send message',
+        }
       default:
         return { type: 'text', body: '' }
     }
@@ -494,25 +596,41 @@
     syncHidden()
   }
 
+  const generalBlockTypes = [
+    ['heading', 'Heading'],
+    ['text', 'Paragraph'],
+    ['list', 'List'],
+    ['callout', 'Callout box'],
+    ['section', 'Section'],
+    ['calendar', 'Events calendar'],
+    ['button', 'Button link'],
+    ['image', 'Image'],
+  ]
+
+  const homeBlockTypes = [
+    ['hero', 'Hero banner'],
+    ['events_feed', 'Events list'],
+    ['dirt_feed', 'THE DIRT feed'],
+  ]
+
+  const joinBlockTypes = [
+    ['benefits_grid', 'Benefits grid'],
+    ['stats_panel', 'Stats panel'],
+    ['member_types', 'Membership types'],
+  ]
+
+  const contactBlockTypes = [
+    ['contact_form', 'Contact form'],
+    ['newsletter_panel', 'Newsletter panel'],
+  ]
+
   function renderToolbar() {
     const toolbar = document.createElement('div')
     toolbar.className = 'page-blocks-toolbar'
-    const blockTypes = isHomePage
-      ? [
-          ['hero', 'Hero banner'],
-          ['events_feed', 'Events list'],
-          ['dirt_feed', 'THE DIRT feed'],
-        ]
-      : [
-          ['heading', 'Heading'],
-          ['text', 'Paragraph'],
-          ['list', 'List'],
-          ['callout', 'Callout box'],
-          ['section', 'Section'],
-          ['calendar', 'Events calendar'],
-          ['button', 'Button link'],
-          ['image', 'Image'],
-        ]
+    let blockTypes = generalBlockTypes
+    if (isHomePage) blockTypes = [...homeBlockTypes, ...generalBlockTypes]
+    else if (isJoinPage) blockTypes = [...joinBlockTypes, ...generalBlockTypes]
+    else if (isContactPage) blockTypes = [...contactBlockTypes, ...generalBlockTypes]
     blockTypes.forEach(([type, label]) => {
       const btn = document.createElement('button')
       btn.type = 'button'
@@ -664,7 +782,7 @@
 
     const picker = document.createElement('div')
     picker.className = 'admin-asset-picker-field'
-    picker.setAttribute('data-asset-picker')
+    picker.setAttribute('data-asset-picker', '')
     picker.setAttribute('data-asset-kind', 'image')
 
     const assetKey = block.asset_key || ''
@@ -672,14 +790,14 @@
 
     const preview = document.createElement('div')
     preview.className = 'admin-asset-picker-preview'
-    preview.setAttribute('data-asset-picker-preview')
+    preview.setAttribute('data-asset-picker-preview', '')
     if (!assetUrl) preview.hidden = true
     if (assetUrl) {
       const img = document.createElement('img')
       img.src = assetUrl
       img.alt = ''
       img.className = 'admin-modal-logo-preview'
-      img.setAttribute('data-asset-picker-preview-image')
+      img.setAttribute('data-asset-picker-preview-image', '')
       img.loading = 'lazy'
       img.decoding = 'async'
       preview.append(img)
@@ -688,7 +806,7 @@
     const hiddenInput = document.createElement('input')
     hiddenInput.type = 'hidden'
     hiddenInput.value = assetKey
-    hiddenInput.setAttribute('data-asset-picker-value')
+    hiddenInput.setAttribute('data-asset-picker-value', '')
     hiddenInput.dataset.blockAssetIndex = indexKey
 
     const actions = document.createElement('div')
@@ -697,13 +815,13 @@
     const openBtn = document.createElement('button')
     openBtn.type = 'button'
     openBtn.className = 'btn btn-secondary btn-sm'
-    openBtn.setAttribute('data-asset-picker-open')
+    openBtn.setAttribute('data-asset-picker-open', '')
     openBtn.textContent = 'Choose from library'
 
     const clearBtn = document.createElement('button')
     clearBtn.type = 'button'
     clearBtn.className = 'btn btn-secondary btn-sm'
-    clearBtn.setAttribute('data-asset-picker-clear')
+    clearBtn.setAttribute('data-asset-picker-clear', '')
     clearBtn.textContent = 'Clear'
     clearBtn.hidden = !assetKey
 
@@ -740,10 +858,7 @@
           onSummary?.(next)
         }),
       ),
-      field(
-        'Link URL',
-        textInput(block.href, (href) => onChange({ ...block, href }), '/about or https://…'),
-      ),
+      field('Link', linkInput(block.href, (href) => onChange({ ...block, href }))),
       field(
         'Style',
         selectField(
@@ -763,12 +878,6 @@
         onChange({ ...block, new_tab }),
       ),
     ]
-
-    const hint = document.createElement('p')
-    hint.className = 'form-hint'
-    hint.textContent =
-      'Use paths like /join for internal pages, or full URLs like https://example.com for external sites.'
-    fields.push(hint)
 
     return fields
   }
@@ -806,14 +915,18 @@
                 next.width = block.width || 'large'
                 next.height = undefined
                 next.scroll = undefined
+                next.full_width = undefined
               } else if (layout === 'section') {
                 next.width = undefined
                 next.height = block.height || 'auto'
                 next.scroll = undefined
+                next.full_width = undefined
               } else {
                 next.width = undefined
                 next.height = block.height || 'medium'
                 next.scroll = block.scroll || 'normal'
+                next.full_width =
+                  (block.scroll || 'normal') === 'fixed' ? block.full_width === true : undefined
               }
               onChange(next)
               onSummary?.(next)
@@ -886,14 +999,30 @@
               ['fixed', 'Fixed background (parallax effect)'],
             ],
             block.scroll || 'normal',
-            (scroll) => onChange({ ...block, scroll }),
+            (scroll) => {
+              const next = { ...block, scroll }
+              if (scroll === 'fixed') {
+                next.full_width = block.full_width === undefined ? true : block.full_width === true
+              } else {
+                next.full_width = undefined
+              }
+              onChange(next)
+              render()
+            },
           ),
         ),
       )
+      if ((block.scroll || 'normal') === 'fixed') {
+        fields.push(
+          checkboxField('Full page width', block.full_width === true, (full_width) =>
+            onChange({ ...block, full_width }),
+          ),
+        )
+      }
       const hint = document.createElement('p')
       hint.className = 'form-hint'
       hint.textContent =
-        'Fixed backgrounds stay in place while content scrolls over them, creating a parallax-style effect.'
+        'Fixed backgrounds stay in place while content scrolls over them, creating a parallax-style effect. Use full page width for edge-to-edge parallax bands.'
       fields.push(hint)
     }
 
@@ -944,6 +1073,24 @@
     if (placeholder) input.placeholder = placeholder
     input.addEventListener('input', () => onInput(input.value))
     return input
+  }
+
+  /**
+   * @param {string} value
+   * @param {(href: string) => void} onChange
+   */
+  function linkInput(value, onChange) {
+    if (window.AdminLinkPicker && typeof window.AdminLinkPicker.create === 'function') {
+      const picker = window.AdminLinkPicker.create({
+        value,
+        onChange,
+        internalLinks,
+        inputClass: 'page-block-input',
+      })
+      picker.classList.add('page-block-link-picker')
+      return picker
+    }
+    return textInput(value, onChange, '/about or https://…')
   }
 
   function textArea(value, onInput, rows) {
@@ -1210,8 +1357,33 @@
     card.className = 'page-block-card'
     card.dataset.blockType = block.type
     card.dataset.blockIndex = indexKey
+    card.draggable = true
     if (collapsedBlocks.has(indexKey)) card.classList.add('is-collapsed')
     if (activeBlockIndex === indexKey) card.classList.add('page-block-card--active')
+
+    card.addEventListener('dragstart', (event) => {
+      card.classList.add('is-dragging')
+      event.dataTransfer?.setData('text/plain', indexKey)
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+    })
+    card.addEventListener('dragend', () => card.classList.remove('is-dragging'))
+    card.addEventListener('dragover', (event) => {
+      event.preventDefault()
+      card.classList.add('is-drag-over')
+    })
+    card.addEventListener('dragleave', () => card.classList.remove('is-drag-over'))
+    card.addEventListener('drop', (event) => {
+      event.preventDefault()
+      card.classList.remove('is-drag-over')
+      const from = Number.parseInt(event.dataTransfer?.getData('text/plain') || '', 10)
+      if (!Number.isFinite(from) || from === index) return
+      const copy = blocks.slice()
+      const [item] = copy.splice(from, 1)
+      copy.splice(index, 0, item)
+      blocks = copy
+      activeBlockIndex = String(index)
+      render()
+    })
 
     const body = document.createElement('div')
     body.className = 'page-block-card-body'
@@ -1404,7 +1576,7 @@
         ),
         field(
           'Primary button link',
-          textInput(block.cta_primary_href, (cta_primary_href) =>
+          linkInput(block.cta_primary_href, (cta_primary_href) =>
             updateBlock(index, (b) => ({ ...b, cta_primary_href })),
           ),
         ),
@@ -1416,7 +1588,7 @@
         ),
         field(
           'Secondary button link',
-          textInput(block.cta_secondary_href, (cta_secondary_href) =>
+          linkInput(block.cta_secondary_href, (cta_secondary_href) =>
             updateBlock(index, (b) => ({ ...b, cta_secondary_href })),
           ),
         ),
@@ -1446,6 +1618,148 @@
           }),
         ),
       )
+    } else if (block.type === 'benefits_grid') {
+      body.append(
+        field('Section title', textInput(block.title || '', (title) => {
+          updateBlock(index, (b) => {
+            const next = { ...b, title }
+            updateSummaryText(card, next)
+            return next
+          })
+        })),
+      )
+      block.items.forEach((item, itemIndex) => {
+        const row = document.createElement('div')
+        row.className = 'page-block-repeat-row'
+        row.append(
+          field(`Benefit ${itemIndex + 1} title`, textInput(item.title, (title) => {
+            updateBlock(index, (b) => {
+              const items = b.items.map((it, i) => (i === itemIndex ? { ...it, title } : it))
+              const next = { ...b, items }
+              updateSummaryText(card, next)
+              return next
+            })
+          })),
+          field(`Benefit ${itemIndex + 1} body`, textArea(item.body, (bodyText) => {
+            updateBlock(index, (b) => {
+              const items = b.items.map((it, i) => (i === itemIndex ? { ...it, body: bodyText } : it))
+              return { ...b, items }
+            })
+          }, 2)),
+        )
+        const remove = document.createElement('button')
+        remove.type = 'button'
+        remove.className = 'btn btn-secondary btn-sm'
+        remove.textContent = 'Remove benefit'
+        remove.addEventListener('click', () => {
+          updateBlock(index, (b) => ({ ...b, items: b.items.filter((_, i) => i !== itemIndex) }))
+          render()
+        })
+        row.append(remove)
+        body.append(row)
+      })
+      const addBenefit = document.createElement('button')
+      addBenefit.type = 'button'
+      addBenefit.className = 'btn btn-secondary btn-sm'
+      addBenefit.textContent = '+ Add benefit'
+      addBenefit.addEventListener('click', () => {
+        updateBlock(index, (b) => ({
+          ...b,
+          items: [...b.items, { title: 'Benefit title', body: 'Short description.' }],
+        }))
+        render()
+      })
+      body.append(addBenefit)
+    } else if (block.type === 'stats_panel') {
+      block.items.forEach((item, itemIndex) => {
+        const row = document.createElement('div')
+        row.className = 'page-block-repeat-row'
+        row.append(
+          field(`Stat ${itemIndex + 1} value`, textInput(item.value, (value) => {
+            updateBlock(index, (b) => {
+              const items = b.items.map((it, i) => (i === itemIndex ? { ...it, value } : it))
+              return { ...b, items }
+            })
+          })),
+          field(`Stat ${itemIndex + 1} label`, textInput(item.label, (label) => {
+            updateBlock(index, (b) => {
+              const items = b.items.map((it, i) => (i === itemIndex ? { ...it, label } : it))
+              return { ...b, items }
+            })
+          })),
+        )
+        const remove = document.createElement('button')
+        remove.type = 'button'
+        remove.className = 'btn btn-secondary btn-sm'
+        remove.textContent = 'Remove stat'
+        remove.addEventListener('click', () => {
+          updateBlock(index, (b) => ({ ...b, items: b.items.filter((_, i) => i !== itemIndex) }))
+          render()
+        })
+        row.append(remove)
+        body.append(row)
+      })
+      const addStat = document.createElement('button')
+      addStat.type = 'button'
+      addStat.className = 'btn btn-secondary btn-sm'
+      addStat.textContent = '+ Add stat'
+      addStat.addEventListener('click', () => {
+        updateBlock(index, (b) => ({
+          ...b,
+          items: [...b.items, { value: 'New', label: 'Label' }],
+        }))
+        render()
+      })
+      body.append(addStat)
+    } else if (block.type === 'member_types') {
+      body.append(
+        field('Section title', textInput(block.title || '', (title) => {
+          updateBlock(index, (b) => {
+            const next = { ...b, title }
+            updateSummaryText(card, next)
+            return next
+          })
+        })),
+      )
+      const help = document.createElement('p')
+      help.className = 'admin-help'
+      help.innerHTML =
+        'Types are managed in <a href="/admin/content/member-types">Membership types</a>.'
+      body.append(help)
+    } else if (block.type === 'newsletter_panel') {
+      body.append(
+        field('Title', textInput(block.title, (title) => {
+          updateBlock(index, (b) => {
+            const next = { ...b, title }
+            updateSummaryText(card, next)
+            return next
+          })
+        })),
+        field('Body', textArea(block.body, (bodyText) => {
+          updateBlock(index, (b) => ({ ...b, body: bodyText }))
+        }, 3)),
+        field('Consent hint', textArea(block.consent_hint, (consent_hint) => {
+          updateBlock(index, (b) => ({ ...b, consent_hint }))
+        }, 2)),
+        field('Button label', textInput(block.button_label, (button_label) => {
+          updateBlock(index, (b) => ({ ...b, button_label }))
+        })),
+      )
+    } else if (block.type === 'contact_form') {
+      body.append(
+        field('Name label', textInput(block.name_label, (name_label) => {
+          updateBlock(index, (b) => ({ ...b, name_label }))
+        })),
+        field('Email label', textInput(block.email_label, (email_label) => {
+          updateBlock(index, (b) => ({ ...b, email_label }))
+        })),
+        field('Message label', textInput(block.message_label, (message_label) => {
+          updateBlock(index, (b) => ({ ...b, message_label }))
+        })),
+        field('Submit button label', textInput(block.submit_label, (submit_label) => {
+          updateBlock(index, (b) => ({ ...b, submit_label }))
+        })),
+      )
     }
 
     card.append(body)
@@ -1460,7 +1774,7 @@
       const empty = document.createElement('p')
       empty.className = 'admin-help'
       empty.textContent = isHomePage
-        ? 'No home page blocks yet. Add a hero banner, events list, or THE DIRT feed.'
+        ? 'No home page blocks yet. Add a hero banner, events list, THE DIRT feed, or any content block (heading, paragraph, section, calendar, and more).'
         : 'No content blocks yet. Add a heading, paragraph, list, callout, section, button, image, or events calendar.'
       root.append(empty)
     } else {
@@ -1474,8 +1788,36 @@
   }
 
   parseInitial()
+
+  try {
+    const draftRaw = sessionStorage.getItem(draftStorageKey)
+    if (draftRaw) {
+      const draft = JSON.parse(draftRaw)
+      if (
+        draft &&
+        Array.isArray(draft.blocks) &&
+        JSON.stringify(draft.blocks) !== JSON.stringify(blocks) &&
+        window.confirm('Restore unsaved draft for this page?')
+      ) {
+        blocks = draft.blocks
+        if (titleInput instanceof HTMLInputElement && typeof draft.title === 'string') {
+          titleInput.value = draft.title
+        }
+        if (metaInput instanceof HTMLInputElement && typeof draft.meta === 'string') {
+          metaInput.value = draft.meta
+        }
+      }
+    }
+  } catch {
+    // Ignore draft restore errors.
+  }
+
   initCollapsedState()
   render()
+  savedSnapshot = currentSnapshot()
+  isDirty = false
+  const unsavedBanner = document.getElementById('page-edit-unsaved')
+  if (unsavedBanner) unsavedBanner.hidden = true
 
   root.addEventListener('focusin', (event) => {
     const card =
@@ -1493,9 +1835,28 @@
     })
   }
 
-  form?.addEventListener('submit', syncHidden)
-  titleInput?.addEventListener('input', schedulePreview)
-  metaInput?.addEventListener('input', schedulePreview)
+  form?.addEventListener('submit', () => {
+    syncHidden()
+    isDirty = false
+    try {
+      sessionStorage.removeItem(draftStorageKey)
+    } catch {
+      // Ignore.
+    }
+  })
+  titleInput?.addEventListener('input', () => {
+    markDirty()
+    schedulePreview()
+  })
+  metaInput?.addEventListener('input', () => {
+    markDirty()
+    schedulePreview()
+  })
+  window.addEventListener('beforeunload', (event) => {
+    if (!isDirty) return
+    event.preventDefault()
+    event.returnValue = ''
+  })
   window.initPagePreviewMode()
   }
 

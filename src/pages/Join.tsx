@@ -1,9 +1,10 @@
 import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import { JoinApplicationAside, JoinApplicationModal, JoinApplyButton } from '../views/JoinApplicationForm'
 import { StatusPage } from '../views/StatusPage'
-import { joinBenefits, memberTypes } from '../data/demo'
-
+import { renderPageContent } from '../lib/page-blocks'
 import type { CommitteeRecord } from '../lib/committees-db'
+import type { MembershipTypeRecord } from '../lib/membership-types-db'
+import type { PageRecord } from '../lib/pages-db'
 import type { PageProps } from '../types/page'
 
 export function JoinPage({
@@ -15,73 +16,40 @@ export function JoinPage({
   navigation,
   staffInboxCount,
   committees,
-}: PageProps & { committees: CommitteeRecord[] }) {
+  page,
+  membershipTypes = [],
+}: PageProps & {
+  committees: CommitteeRecord[]
+  page?: PageRecord | null
+  membershipTypes?: MembershipTypeRecord[]
+}) {
+  const title = page?.title ?? 'Join NUCA of Las Vegas'
+  const lead =
+    page?.meta_description ??
+    'Membership connects your firm to advocacy, safety resources, events, and a network of industry peers.'
+  const hasBlocks = Boolean(page?.body_json || page?.body_md?.trim())
+
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })} title="Join">
-      <PageHeader
-        title="Join NUCA of Las Vegas"
-        lead="Membership connects your firm to advocacy, safety resources, events, and a network of industry peers."
-        actions={<JoinApplyButton />}
-      />
-      <section class="section">
-        <div class="container split">
-          <div>
-            <h2>Why members join</h2>
-            <p class="section-lead">
-              From Washington advocacy to local networking, NUCA gives utility and excavation firms a voice and a
-              playbook.
-            </p>
-            <ul class="check-list">
-              <li>Member pricing on chapter events</li>
-              <li>Committee leadership and board pathways</li>
-              <li>Safety and training resources</li>
-              <li>Full national NUCA member benefits</li>
-            </ul>
-          </div>
-          <div class="stat-panel">
-            <div class="stat">
-              <span class="stat-value">50+</span>
-              <span class="stat-label">Years of national NUCA safety leadership</span>
-            </div>
-            <div class="stat">
-              <span class="stat-value">Local</span>
-              <span class="stat-label">Las Vegas chapter focused on Nevada projects &amp; policy</span>
-            </div>
-            <div class="stat">
-              <span class="stat-value">Industry</span>
-              <span class="stat-label">Contractors, associates, and institutional partners</span>
-            </div>
-          </div>
-        </div>
-      </section>
+    <Layout
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })}
+      title={title}
+      description={page?.meta_description ?? undefined}
+    >
+      <PageHeader title={title} lead={lead} actions={<JoinApplyButton />} />
 
-      <section class="section section-muted">
-        <div class="container">
-          <h2>Member benefits</h2>
-          <ul class="benefit-grid">
-            {joinBenefits.map((item) => (
-              <li key={item.title}>
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      <section class="section">
-        <div class="container">
-          <h2>Membership types</h2>
-          <div class="type-cards">
-            {memberTypes.map((type) => (
-              <article class="type-card" key={type.id}>
-                <h3>{type.name}</h3>
-                <p>{type.description}</p>
-              </article>
-            ))}
+      {hasBlocks ? (
+        <section class="section">
+          <div class="container">
+            {renderPageContent(page?.body_md ?? '', page?.body_json, {
+              membershipTypes: membershipTypes.map((t) => ({
+                key: t.key,
+                name: t.name,
+                description: t.description,
+              })),
+            })}
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       <section class="section">
         <div class="container join-grid join-grid--application">
@@ -97,7 +65,7 @@ export function JoinPage({
         </div>
       </section>
 
-      <JoinApplicationModal committees={committees} />
+      <JoinApplicationModal committees={committees} membershipTypes={membershipTypes} />
     </Layout>
   )
 }

@@ -6,7 +6,9 @@ import {
   toLeadershipPublicProfile,
 } from '../lib/leadership-public'
 import { getAssetUrl } from '../lib/r2-assets'
+import { renderPageContent } from '../lib/page-blocks'
 import type { LeadershipRecord } from '../lib/leadership-db'
+import type { PageRecord } from '../lib/pages-db'
 import type { ContactInfo } from '../lib/site-settings'
 import type { PageProps } from '../types/page'
 
@@ -111,16 +113,27 @@ export function LeadershipPage({
   navigation,
   staffInboxCount,
   leaders,
-}: PageProps & { contact: ContactInfo; leaders: LeadershipRecord[] }) {
+  page,
+}: PageProps & { contact?: ContactInfo; leaders: LeadershipRecord[]; page?: PageRecord | null }) {
   const groups = groupLeadership(leaders)
   const officerRoster = [...groups.officers, ...groups.other]
   const rosterJson = serializeLeadershipRoster(leaders.map(toLeadershipPublicProfile))
+  const title = page?.title ?? 'Leadership'
+  const lead = page?.meta_description ?? 'Chapter officers and leadership team.'
+  const intro = page?.body_json || page?.body_md?.trim()
 
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })} title="Leadership">
-      <PageHeader title="Leadership" lead="Chapter officers and leadership team." />
+    <Layout
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })}
+      title={title}
+      description={page?.meta_description ?? undefined}
+    >
+      <PageHeader title={title} lead={lead} />
       <section class="section">
         <div class="container">
+          {intro && (
+            <div class="prose">{renderPageContent(page?.body_md ?? '', page?.body_json)}</div>
+          )}
           {leaders.length === 0 ? (
             <p class="prose">Leadership roster coming soon.</p>
           ) : (
@@ -165,7 +178,12 @@ export function LeadershipPage({
           )}
 
           <p class="prose leadership-contact">
-            Chapter contact: <a href={`mailto:${contact.email}`}>{contact.email}</a>
+            Chapter contact:{' '}
+            {contact?.email ? (
+              <a href={`mailto:${contact.email}`}>{contact.email}</a>
+            ) : (
+              <a href="/contact">Contact page</a>
+            )}
           </p>
         </div>
       </section>

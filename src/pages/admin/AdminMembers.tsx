@@ -1,4 +1,5 @@
-import { MEMBER_TYPES, memberTypeLabel } from '../../data/demo'
+import { resolveMemberTypeLabel } from '../../data/demo'
+import type { MembershipTypeRecord } from '../../lib/membership-types-db'
 import type { AdminMember } from '../../lib/members-db'
 import { AdminShell } from '../../views/AdminShell'
 import { AdminModal, AdminModalCancelButton } from '../../views/admin/AdminModal'
@@ -10,10 +11,16 @@ import type { AdminContext } from '../../lib/admin-context'
 import { padPointsOfContact } from '../../lib/member-contacts'
 import type { PageProps } from '../../types/page'
 
-function memberSearchText(member: AdminMember): string {
+function typeLabels(types: MembershipTypeRecord[]): Record<string, string> {
+  const map: Record<string, string> = {}
+  for (const t of types) map[t.key] = t.name
+  return map
+}
+
+function memberSearchText(member: AdminMember, labels: Record<string, string>): string {
   return [
     member.company,
-    memberTypeLabel[member.type],
+    resolveMemberTypeLabel(member.type, labels),
     member.active ? 'listed' : 'hidden',
     member.id,
   ]
@@ -21,11 +28,17 @@ function memberSearchText(member: AdminMember): string {
     .toLowerCase()
 }
 
-function MemberListRow({ member }: { member: AdminMember }) {
+function MemberListRow({
+  member,
+  labels,
+}: {
+  member: AdminMember
+  labels: Record<string, string>
+}) {
   const editModalId = `edit-member-${member.id}`
 
   return (
-    <tr data-admin-list-row data-search={memberSearchText(member)}>
+    <tr data-admin-list-row data-search={memberSearchText(member, labels)}>
       <td class="admin-list-logo-cell">
         {member.logoUrl ? (
           <img
@@ -46,7 +59,7 @@ function MemberListRow({ member }: { member: AdminMember }) {
         <br />
         <code class="admin-id">{member.id}</code>
       </td>
-      <td>{memberTypeLabel[member.type]}</td>
+      <td>{resolveMemberTypeLabel(member.type, labels)}</td>
       <td>
         {member.active ? (
           <span class="admin-status-badge admin-status-listed">Listed</span>
@@ -61,7 +74,13 @@ function MemberListRow({ member }: { member: AdminMember }) {
   )
 }
 
-function MemberEditModal({ member }: { member: AdminMember }) {
+function MemberEditModal({
+  member,
+  membershipTypes,
+}: {
+  member: AdminMember
+  membershipTypes: MembershipTypeRecord[]
+}) {
   const modalId = `edit-member-${member.id}`
   const formId = `form-member-${member.id}`
 
@@ -94,9 +113,9 @@ function MemberEditModal({ member }: { member: AdminMember }) {
         <div class="form-field">
           <label for={`${formId}-type`}>Type</label>
           <select name="member_type" id={`${formId}-type`} required>
-            {MEMBER_TYPES.map((type) => (
-              <option key={type} value={type} selected={member.type === type}>
-                {memberTypeLabel[type]}
+            {membershipTypes.map((type) => (
+              <option key={type.key} value={type.key} selected={member.type === type.key}>
+                {type.name}
               </option>
             ))}
           </select>
@@ -155,15 +174,19 @@ function MemberEditModal({ member }: { member: AdminMember }) {
 export function AdminMembersPage({
   ctx,
   members,
+  membershipTypes,
   flash,
   error,
   ...site
 }: PageProps & {
   ctx: AdminContext
   members: AdminMember[]
+  membershipTypes: MembershipTypeRecord[]
   flash?: string
   error?: string
 }) {
+  const labels = typeLabels(membershipTypes)
+
   return (
     <AdminShell
       {...site}
@@ -175,7 +198,8 @@ export function AdminMembersPage({
     >
       <p class="section-lead">
         Public directory at <a href="/members">/members</a>. Only members marked <strong>Listed</strong>{' '}
-        appear on the public site.
+        appear on the public site. Manage type labels in{' '}
+        <a href="/admin/content/member-types">Membership types</a>.
       </p>
 
       <AdminCrudSections
@@ -198,9 +222,9 @@ export function AdminMembersPage({
               <div class="form-field">
                 <label for="member_type">Type</label>
                 <select name="member_type" id="member_type" required>
-                  {MEMBER_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {memberTypeLabel[type]}
+                  {membershipTypes.map((type) => (
+                    <option key={type.key} value={type.key}>
+                      {type.name}
                     </option>
                   ))}
                 </select>
@@ -253,8 +277,12 @@ export function AdminMembersPage({
             <th></th>
           </tr>
         }
-        tableBody={members.map((member) => <MemberListRow key={member.id} member={member} />)}
-        afterTable={members.map((member) => <MemberEditModal key={member.id} member={member} />)}
+        tableBody={members.map((member) => (
+          <MemberListRow key={member.id} member={member} labels={labels} />
+        ))}
+        afterTable={members.map((member) => (
+          <MemberEditModal key={member.id} member={member} membershipTypes={membershipTypes} />
+        ))}
       />
     </AdminShell>
   )

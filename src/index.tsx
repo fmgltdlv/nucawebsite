@@ -1,5 +1,4 @@
 import { Hono, type Context } from 'hono'
-import type { MemberType } from './data/demo'
 import type { ThemeId } from './config/themes'
 import type { Env } from './env'
 import { createApplication } from './lib/applications-db'
@@ -27,6 +26,7 @@ import { getPageBySlug, isCustomPage } from './lib/pages-db'
 import { getPostBySlug, listPublishedPosts } from './lib/posts-db'
 import { listQaItems } from './lib/qa-db'
 import { listResourceItems } from './lib/resource-items-db'
+import { listMembershipTypes } from './lib/membership-types-db'
 import { getAssetObject } from './lib/r2-assets'
 import { subscribeNewsletter } from './lib/newsletter-db'
 import { loadAdminLayoutProps, loadPublicSiteContext, type AdminLayoutProps } from './lib/site-context'
@@ -114,13 +114,21 @@ registerAdminRoutes(app)
 app.get('/', async (c) => {
   const site = await siteProps(c)
   const page = await getPageBySlug(c.env.DB, 'home', true)
-  const [events, dirtReleases, posts] = await Promise.all([
+  const [events, dirtReleases, posts, calendarEvents] = await Promise.all([
     listUpcomingEvents(c.env.DB, 12),
     listDirtReleases(c.env.DB, true),
     listPublishedPosts(c.env.DB),
+    loadPageCalendarEvents(c.env.DB, page?.body_json),
   ])
   return c.html(
-    <HomePage {...site} page={page} events={events} dirtReleases={dirtReleases} posts={posts} />,
+    <HomePage
+      {...site}
+      page={page}
+      events={events}
+      dirtReleases={dirtReleases}
+      posts={posts}
+      calendarEvents={calendarEvents}
+    />,
   )
 })
 
@@ -134,16 +142,22 @@ app.get('/about', async (c) => {
 
 app.get('/about/faq', async (c) => {
   const site = await siteProps(c)
-  const items = await listQaItems(c.env.DB, true)
-  return c.html(<QaPage {...site} items={items} />)
+  const [page, items] = await Promise.all([
+    getPageBySlug(c.env.DB, 'faq', true),
+    listQaItems(c.env.DB, true),
+  ])
+  return c.html(<QaPage {...site} page={page} items={items} />)
 })
 
 app.get('/about/q-and-a', (c) => c.redirect('/about/faq', 301))
 
 app.get('/about/leadership', async (c) => {
   const site = await siteProps(c)
-  const leaders = await listLeadership(c.env.DB, true)
-  return c.html(<LeadershipPage {...site} leaders={leaders} />)
+  const [page, leaders] = await Promise.all([
+    getPageBySlug(c.env.DB, 'leadership', true),
+    listLeadership(c.env.DB, true),
+  ])
+  return c.html(<LeadershipPage {...site} page={page} leaders={leaders} />)
 })
 
 app.get('/about/committees', async (c) => {
@@ -179,11 +193,12 @@ app.get('/about/committees/:key', async (c) => {
 
 app.get('/the-dirt', async (c) => {
   const site = await siteProps(c)
-  const [posts, releases] = await Promise.all([
+  const [page, posts, releases] = await Promise.all([
+    getPageBySlug(c.env.DB, 'the-dirt', true),
     listPublishedPosts(c.env.DB),
     listDirtReleases(c.env.DB, true),
   ])
-  return c.html(<TheDirtArchivePage {...site} posts={posts} releases={releases} />)
+  return c.html(<TheDirtArchivePage {...site} page={page} posts={posts} releases={releases} />)
 })
 
 app.get('/about/the-dirt', (c) => c.redirect('/the-dirt', 301))
@@ -245,11 +260,21 @@ app.get('/api/members/:id', async (c) => {
 app.get('/members', async (c) => {
   await seedDemoMembersIfEmpty(c.env)
   const site = await siteProps(c)
-  const members = await listActiveMemberSummaries(c.env.DB)
+  const [members, membershipTypes] = await Promise.all([
+    listActiveMemberSummaries(c.env.DB),
+    listMembershipTypes(c.env.DB, true),
+  ])
   const type = c.req.query('type')
-  const valid: MemberType[] = ['contractor', 'associate', 'institutional']
-  const filter = valid.includes(type as MemberType) ? (type as MemberType) : undefined
-  return c.html(<MembersPage {...site} members={members} filter={filter} />)
+  const valid = new Set(membershipTypes.map((t) => t.key))
+  const filter = type && valid.has(type) ? type : undefined
+  return c.html(
+    <MembersPage
+      {...site}
+      members={members}
+      filter={filter}
+      membershipTypes={membershipTypes}
+    />,
+  )
 })
 
 function parseEventsView(value: string | undefined): EventsView {
@@ -277,7 +302,8 @@ app.get('/events', async (c) => {
     committeeKey = committee ? committee.key : null
   }
 
-  const [totalEvents, calendarEvents, committees] = await Promise.all([
+  const [cmsPage, totalEvents, calendarEvents, committees] = await Promise.all([
+    getPageBySlug(c.env.DB, 'events', true),
     countUpcomingEvents(c.env.DB, committeeKey),
     listPublishedEventsForCalendar(c.env.DB),
     listCommittees(c.env.DB, true),
@@ -289,6 +315,7 @@ app.get('/events', async (c) => {
   return c.html(
     <EventsPage
       {...site}
+      cmsPage={cmsPage}
       events={events}
       calendarEvents={calendarEvents}
       view={view}
@@ -317,8 +344,20 @@ app.get('/events/:id', async (c) => {
 app.get('/advocacy', (c) => c.redirect('/about/committees', 301))
 
 app.get('/join', async (c) => {
-  const [site, committees] = await Promise.all([siteProps(c), listCommittees(c.env.DB, true)])
-  return c.html(<JoinPage {...site} committees={committees} />)
+  const [site, page, committees, membershipTypes] = await Promise.all([
+    siteProps(c),
+    getPageBySlug(c.env.DB, 'join', true),
+    listCommittees(c.env.DB, true),
+    listMembershipTypes(c.env.DB, true),
+  ])
+  return c.html(
+    <JoinPage
+      {...site}
+      page={page}
+      committees={committees}
+      membershipTypes={membershipTypes}
+    />,
+  )
 })
 
 app.post('/join', async (c) => {
@@ -337,7 +376,8 @@ app.post('/join', async (c) => {
 
 app.get('/contact', async (c) => {
   const site = await siteProps(c)
-  return c.html(<ContactPage {...site} />)
+  const page = await getPageBySlug(c.env.DB, 'contact', true)
+  return c.html(<ContactPage {...site} page={page} />)
 })
 
 app.post('/contact', async (c) => {

@@ -1,4 +1,4 @@
-import { memberTypes, site } from '../data/demo'
+import { site } from '../data/demo'
 import {
   MEMBERSHIP_APPLICATION_PDF_URL,
   KEY_PERSON_ROW_COUNT,
@@ -10,6 +10,7 @@ import {
   paymentMethods,
 } from '../data/membership-application'
 import type { CommitteeRecord } from '../lib/committees-db'
+import type { MembershipTypeRecord } from '../lib/membership-types-db'
 
 const JOIN_APPLICATION_STEPS = [
   { id: 'membership', label: 'Membership' },
@@ -33,8 +34,22 @@ export function JoinApplyButton({ className = 'btn btn-primary' }: { className?:
   )
 }
 
-export function JoinApplicationModal({ committees }: { committees: CommitteeRecord[] }) {
+export function JoinApplicationModal({
+  committees,
+  membershipTypes = [],
+}: {
+  committees: CommitteeRecord[]
+  membershipTypes?: MembershipTypeRecord[]
+}) {
   const today = applicationDateDefault()
+  const types =
+    membershipTypes.length > 0
+      ? membershipTypes
+      : [
+          { key: 'contractor', name: 'Contractor Member', description: '', sort_order: 0, published: 1 },
+          { key: 'associate', name: 'Associate Member', description: '', sort_order: 1, published: 1 },
+          { key: 'institutional', name: 'Institutional Member', description: '', sort_order: 2, published: 1 },
+        ]
 
   return (
     <dialog
@@ -82,8 +97,8 @@ export function JoinApplicationModal({ committees }: { committees: CommitteeReco
                     <label for="member_type">Membership type</label>
                     <select name="member_type" id="member_type" required>
                       <option value="">Select…</option>
-                      {memberTypes.map((t) => (
-                        <option value={t.id} key={t.id}>
+                      {types.map((t) => (
+                        <option value={t.key} key={t.key}>
                           {t.name}
                         </option>
                       ))}

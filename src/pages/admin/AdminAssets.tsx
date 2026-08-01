@@ -57,9 +57,22 @@ function AssetRow({ asset }: { asset: AssetIndexEntry }) {
         <code class="admin-asset-key">{asset.key}</code>
       </td>
       <td class="admin-list-actions">
-        <a href={asset.adminEditUrl} class="btn btn-secondary btn-sm">
-          Manage
-        </a>
+        {asset.type === 'library' ? (
+          <form
+            method="post"
+            action={`/admin/assets/library/${asset.entityId}/delete`}
+            class="admin-inline-form"
+            onsubmit="return confirm('Delete this library upload?')"
+          >
+            <button type="submit" class="btn btn-secondary btn-sm">
+              Delete
+            </button>
+          </form>
+        ) : (
+          <a href={asset.adminEditUrl} class="btn btn-secondary btn-sm">
+            Manage
+          </a>
+        )}
       </td>
     </tr>
   )
@@ -98,6 +111,8 @@ export function AdminAssetsPage({
   typeCounts,
   totalCount,
   filterType,
+  flash,
+  error,
   ...site
 }: PageProps & {
   ctx: AdminContext
@@ -105,6 +120,8 @@ export function AdminAssetsPage({
   typeCounts: Record<AssetType, number>
   totalCount: number
   filterType?: AssetType
+  flash?: string
+  error?: string
 }) {
   const listTitle = filterType ? assetTypeLabel(filterType) : 'All assets'
 
@@ -118,8 +135,39 @@ export function AdminAssetsPage({
       activePath="/admin/assets"
     >
       <p class="section-lead">
-        Files stored in R2 for the public site. Edit or replace them from the linked management screens.
+        Files stored in R2 for the public site. Upload library images/PDFs for the page editor, or manage
+        entity files from their linked screens.
       </p>
+      {flash && <p class="admin-flash">{flash}</p>}
+      {error && <p class="form-hint-warn">{error}</p>}
+
+      <form
+        class="form admin-form-section"
+        method="post"
+        action="/admin/assets/upload"
+        encType="multipart/form-data"
+      >
+        <h2>Upload to library</h2>
+        <div class="form-row">
+          <div class="form-field">
+            <label for="label">Label</label>
+            <input type="text" name="label" id="label" placeholder="Optional display name" />
+          </div>
+          <div class="form-field">
+            <label for="file">File</label>
+            <input
+              type="file"
+              name="file"
+              id="file"
+              required
+              accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+            />
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">
+          Upload
+        </button>
+      </form>
 
       <AssetTypeFilters activeType={filterType} typeCounts={typeCounts} totalCount={totalCount} />
 

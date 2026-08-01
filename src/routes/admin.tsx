@@ -3,7 +3,7 @@ import type { ThemeId } from '../config/themes'
 import type { AdminLayoutProps } from '../lib/site-context'
 import { MEMBER_TYPES, type MemberType } from '../data/demo'
 import type { Env } from '../env'
-import { createUser, getSessionVersion, listUsers, verifyUserLogin } from '../lib/auth'
+import { createUser, changeUserPassword, deleteUser, getSessionVersion, listUsers, verifyUserLogin, verifyUserPassword } from '../lib/auth'
 import { getAdminCtx } from '../lib/admin-guard'
 import { resolveAdminContext } from '../lib/admin-context'
 import { writeAuditLog } from '../lib/security/audit-log'
@@ -24,6 +24,7 @@ import {
   resolveEventCommitteeKey,
 } from '../lib/events'
 import { listCommittees } from '../lib/committees-db'
+import { listMembershipTypes } from '../lib/membership-types-db'
 import { geocodeClarkCountyAddress } from '../lib/geocode'
 import { parseDatetimeLocal } from '../lib/datetime'
 import { registerAdminContentRoutes } from './admin-content'
@@ -50,18 +51,29 @@ import { AdminAssetsPage } from '../pages/admin/AdminAssets'
 import { AdminEventsPage } from '../pages/admin/AdminEvents'
 import { AdminHomePage } from '../pages/admin/AdminHome'
 import { AdminMembersPage } from '../pages/admin/AdminMembers'
+import { AdminProfilePage } from '../pages/admin/AdminProfile'
 import { AdminUsersPage } from '../pages/admin/AdminUsers'
+import {
+  createLibraryAsset,
+  deleteLibraryAsset,
+  libraryAssetKey,
+} from '../lib/library-assets-db'
+import { uploadImage, uploadPdf } from '../lib/r2-assets'
+import { deleteAssetIfUnreferenced } from '../lib/asset-references'
 
 type AdminVariables = { theme: ThemeId; adminSite: AdminLayoutProps; adminCtx: import('../lib/admin-context').AdminContext | null }
 
-function parseMemberType(value: string): MemberType {
-  return MEMBER_TYPES.includes(value as MemberType) ? (value as MemberType) : 'contractor'
+function parseMemberType(value: string, allowedKeys: string[]): MemberType {
+  if (allowedKeys.includes(value)) return value
+  if ((MEMBER_TYPES as readonly string[]).includes(value)) return value
+  return allowedKeys[0] ?? 'contractor'
 }
 
-function parseMemberFormBody(body: Record<string, File | string>) {
+function parseMemberFormBody(body: Record<string, File | string>, allowedKeys: string[]) {
   const company_name = typeof body.company_name === 'string' ? body.company_name.trim() : ''
   const member_type = parseMemberType(
     typeof body.member_type === 'string' ? body.member_type : '',
+    allowedKeys,
   )
   const website = typeof body.website === 'string' ? body.website.trim() : ''
   const phone = typeof body.phone === 'string' ? body.phone.trim() : ''
@@ -183,6 +195,12 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const filterType = parseAssetType(c.req.query('type'))
     const typeCounts = countAssetsByType(allAssets)
     const assets = filterType ? allAssets.filter((asset) => asset.type === filterType) : allAssets
+    const flash =
+      c.req.query('ok') === '1'
+        ? 'Asset uploaded.'
+        : c.req.query('deleted') === '1'
+          ? 'Library asset deleted.'
+          : undefined
 
     return c.html(
       <AdminAssetsPage
@@ -192,8 +210,55 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
         typeCounts={typeCounts}
         totalCount={allAssets.length}
         filterType={filterType}
+        flash={flash}
+        error={c.req.query('error') || undefined}
       />,
     )
+  })
+
+  app.post('/admin/assets/upload', async (c) => {
+    getAdminCtx(c)
+    const body = await c.req.parseBody()
+    const file = body.file
+    const label =
+      typeof body.label === 'string' && body.label.trim()
+        ? body.label.trim()
+        : file instanceof File
+          ? file.name
+          : 'Upload'
+
+    if (!(file instanceof File) || file.size === 0) {
+      return c.redirect('/admin/assets?error=' + encodeURIComponent('Choose a file to upload.'), 303)
+    }
+
+    const isPdf = file.type === 'application/pdf'
+    const isImage = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)
+    if (!isPdf && !isImage) {
+      return c.redirect(
+        '/admin/assets?error=' + encodeURIComponent('Upload a PDF or image (JPEG, PNG, WebP, GIF).'),
+        303,
+      )
+    }
+
+    const key = libraryAssetKey(file.name)
+    const result = isPdf ? await uploadPdf(c.env.R2, file, key) : await uploadImage(c.env.R2, file, key)
+    if (!result.ok) {
+      return c.redirect('/admin/assets?error=' + encodeURIComponent(result.error), 303)
+    }
+
+    await createLibraryAsset(c.env.DB, {
+      r2_key: key,
+      label,
+      content_kind: isPdf ? 'pdf' : 'image',
+    })
+    return c.redirect('/admin/assets?type=library&ok=1', 303)
+  })
+
+  app.post('/admin/assets/library/:id/delete', async (c) => {
+    getAdminCtx(c)
+    const key = await deleteLibraryAsset(c.env.DB, c.req.param('id'))
+    if (key) await deleteAssetIfUnreferenced(c.env.R2, c.env.DB, key)
+    return c.redirect('/admin/assets?type=library&deleted=1', 303)
   })
 
   app.get('/admin/api/assets', async (c) => {
@@ -231,9 +296,22 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
   app.get('/admin/users', async (c) => {
     const ctx = getAdminCtx(c)
     const users = await listUsers(c.env.DB)
-    const message = c.req.query('ok') === '1' ? 'User created.' : undefined
+    const message =
+      c.req.query('ok') === '1'
+        ? 'User created.'
+        : c.req.query('password') === '1'
+          ? 'Password updated.'
+          : c.req.query('deleted') === '1'
+            ? 'User deleted.'
+            : undefined
     return c.html(
-      <AdminUsersPage {...c.get('adminSite')} ctx={ctx} users={users} message={message} />,
+      <AdminUsersPage
+        {...c.get('adminSite')}
+        ctx={ctx}
+        users={users}
+        message={message}
+        error={c.req.query('error') || undefined}
+      />,
     )
   })
 
@@ -252,7 +330,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
           {...c.get('adminSite')}
           ctx={ctx}
           users={users}
-          message="Email and password (10+ characters) are required."
+          error="Email and password (10+ characters) are required."
         />,
       )
     }
@@ -272,9 +350,108 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     return c.redirect('/admin/users?ok=1', 303)
   })
 
+  app.post('/admin/users/:id/password', async (c) => {
+    const ctx = getAdminCtx(c)
+    const body = await c.req.parseBody()
+    const password = typeof body.password === 'string' ? body.password : ''
+    if (password.length < 10) {
+      return c.redirect(
+        '/admin/users?error=' + encodeURIComponent('Password must be at least 10 characters.'),
+        303,
+      )
+    }
+    const id = c.req.param('id')
+    await changeUserPassword(c.env.DB, id, password)
+    await writeAuditLog(c.env.DB, {
+      userId: ctx.user.id,
+      action: 'user.password_reset',
+      resource: 'users',
+      resourceId: id,
+      ip: clientIp(c.req.raw.headers),
+    })
+    return c.redirect('/admin/users?password=1', 303)
+  })
+
+  app.post('/admin/users/:id/delete', async (c) => {
+    const ctx = getAdminCtx(c)
+    const id = c.req.param('id')
+    if (id === ctx.user.id) {
+      return c.redirect(
+        '/admin/users?error=' + encodeURIComponent('You cannot delete your own account.'),
+        303,
+      )
+    }
+    await deleteUser(c.env.DB, id)
+    await writeAuditLog(c.env.DB, {
+      userId: ctx.user.id,
+      action: 'user.delete',
+      resource: 'users',
+      resourceId: id,
+      ip: clientIp(c.req.raw.headers),
+    })
+    return c.redirect('/admin/users?deleted=1', 303)
+  })
+
+  app.get('/admin/profile', async (c) => {
+    const ctx = getAdminCtx(c)
+    return c.html(
+      <AdminProfilePage
+        {...c.get('adminSite')}
+        ctx={ctx}
+        flash={c.req.query('ok') === '1' ? 'Password updated.' : undefined}
+        error={c.req.query('error') || undefined}
+      />,
+    )
+  })
+
+  app.post('/admin/profile/password', async (c) => {
+    const ctx = getAdminCtx(c)
+    const body = await c.req.parseBody()
+    const current = typeof body.current_password === 'string' ? body.current_password : ''
+    const next = typeof body.new_password === 'string' ? body.new_password : ''
+    const confirm = typeof body.confirm_password === 'string' ? body.confirm_password : ''
+
+    if (next.length < 10) {
+      return c.redirect(
+        '/admin/profile?error=' + encodeURIComponent('New password must be at least 10 characters.'),
+        303,
+      )
+    }
+    if (next !== confirm) {
+      return c.redirect(
+        '/admin/profile?error=' + encodeURIComponent('New password and confirmation do not match.'),
+        303,
+      )
+    }
+    const ok = await verifyUserPassword(c.env.DB, ctx.user.id, current)
+    if (!ok) {
+      return c.redirect(
+        '/admin/profile?error=' + encodeURIComponent('Current password is incorrect.'),
+        303,
+      )
+    }
+
+    await changeUserPassword(c.env.DB, ctx.user.id, next)
+    const sessionVersion = await getSessionVersion(c.env.DB, ctx.user.id)
+    const csrf = generateCsrfToken()
+    const token = await createSessionToken(ctx.user.id, c.env, { sessionVersion, csrf })
+    await writeAuditLog(c.env.DB, {
+      userId: ctx.user.id,
+      action: 'user.password_change',
+      resource: 'users',
+      resourceId: ctx.user.id,
+      ip: clientIp(c.req.raw.headers),
+    })
+    c.header('Set-Cookie', sessionCookieHeader(token, secure(c)))
+    return c.redirect('/admin/profile?ok=1', 303)
+  })
+
   app.get('/admin/members', async (c) => {
     const ctx = getAdminCtx(c)
-    const members = await listMembersForAdmin(c.env.DB)
+    const [members, membershipTypes] = await Promise.all([
+      listMembersForAdmin(c.env.DB),
+      listMembershipTypes(c.env.DB),
+    ])
     const flash =
       c.req.query('ok') === '1'
         ? 'Member saved.'
@@ -282,7 +459,13 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
           ? 'Member added.'
           : undefined
     return c.html(
-      <AdminMembersPage {...c.get('adminSite')} ctx={ctx} members={members} flash={flash} />,
+      <AdminMembersPage
+        {...c.get('adminSite')}
+        ctx={ctx}
+        members={members}
+        membershipTypes={membershipTypes}
+        flash={flash}
+      />,
     )
   })
 
@@ -290,7 +473,9 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const ctx = getAdminCtx(c)
 
     const body = await c.req.parseBody()
-    const data = parseMemberFormBody(body)
+    const membershipTypes = await listMembershipTypes(c.env.DB)
+    const allowedKeys = membershipTypes.map((t) => t.key)
+    const data = parseMemberFormBody(body, allowedKeys)
     if (!data.company_name) {
       const members = await listMembersForAdmin(c.env.DB)
       return c.html(
@@ -298,6 +483,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
           {...c.get('adminSite')}
           ctx={ctx}
           members={members}
+          membershipTypes={membershipTypes}
           error="Company name is required."
         />,
       )
@@ -318,6 +504,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
           {...c.get('adminSite')}
           ctx={ctx}
           members={members}
+          membershipTypes={membershipTypes}
           error={`Member added, but logo upload failed: ${logoError}`}
         />,
       )
@@ -331,7 +518,9 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
 
     const id = c.req.param('id')
     const body = await c.req.parseBody()
-    const data = parseMemberFormBody(body)
+    const membershipTypes = await listMembershipTypes(c.env.DB)
+    const allowedKeys = membershipTypes.map((t) => t.key)
+    const data = parseMemberFormBody(body, allowedKeys)
     if (!data.company_name) {
       const members = await listMembersForAdmin(c.env.DB)
       return c.html(
@@ -339,6 +528,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
           {...c.get('adminSite')}
           ctx={ctx}
           members={members}
+          membershipTypes={membershipTypes}
           error="Company name is required."
         />,
       )
@@ -361,6 +551,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
           {...c.get('adminSite')}
           ctx={ctx}
           members={members}
+          membershipTypes={membershipTypes}
           error={`Member saved, but logo upload failed: ${logoError}`}
         />,
       )

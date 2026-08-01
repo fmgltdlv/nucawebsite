@@ -1,6 +1,7 @@
-export type MemberType = 'contractor' | 'associate' | 'institutional'
+export type MemberType = string
 
-export const MEMBER_TYPES: MemberType[] = ['contractor', 'associate', 'institutional']
+/** Fallback keys when membership_types table is empty. */
+export const MEMBER_TYPES = ['contractor', 'associate', 'institutional'] as const
 
 export interface Member {
   id: string
@@ -41,50 +42,6 @@ export const site = {
   email: 'info@nucalasvegas.com',
   address: 'PO Box 96681, Las Vegas, NV 89193',
 }
-
-export const joinBenefits = [
-  {
-    title: 'Member pricing for NUCA events',
-    body: 'Save on registration and connect with industry peers at local chapter events.',
-  },
-  {
-    title: 'Committees & leadership paths',
-    body: 'Serve on committees and be considered for local and national board roles.',
-  },
-  {
-    title: 'Advocacy in Washington',
-    body: 'NUCA’s national team tracks federal policy and mobilizes members when it matters.',
-  },
-  {
-    title: 'Safety & training',
-    body: 'Stay ahead of regulations and training expectations that affect utility construction.',
-  },
-  {
-    title: 'National NUCA benefits',
-    body: 'Full access to resources and programs available to NUCA members nationwide.',
-  },
-]
-
-export const memberTypes = [
-  {
-    id: 'associate',
-    name: 'Associate Member',
-    description:
-      'Suppliers of equipment, materials, or services to contractors in the excavation and utility construction industry.',
-  },
-  {
-    id: 'contractor',
-    name: 'Contractor Member',
-    description:
-      'Firms engaged in excavation, site work, and construction or rehabilitation of utility systems—including water, sewer, gas, electric, and communications infrastructure.',
-  },
-  {
-    id: 'institutional',
-    name: 'Institutional Member',
-    description:
-      'Schools and governmental entities involved in utility construction and excavation.',
-  },
-]
 
 export const demoMembers: Member[] = [
   {
@@ -163,8 +120,15 @@ export const demoLeadership: Leader[] = [
   { name: 'Member Representative', role: 'Secretary / Treasurer' },
 ]
 
-export const memberTypeLabel: Record<MemberType, string> = {
+export const memberTypeLabel: Record<string, string> = {
   contractor: 'Contractor',
   associate: 'Associate',
   institutional: 'Institutional',
+}
+
+export function resolveMemberTypeLabel(
+  key: string,
+  labels?: Record<string, string>,
+): string {
+  return labels?.[key] ?? memberTypeLabel[key] ?? key
 }

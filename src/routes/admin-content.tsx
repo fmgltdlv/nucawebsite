@@ -22,6 +22,7 @@ import {
 } from '../lib/leadership-db'
 import { createPost, deletePost, getPostById, listAllPosts, updatePost } from '../lib/posts-db'
 import { buildPageLabels, createCustomPage, deleteCustomPage, getPageBySlug, listCustomPages, listPages, upsertPage } from '../lib/pages-db'
+import { listSiteInternalLinks } from '../lib/site-internal-links'
 import { blocksToMarkdown, parsePageBlocks } from '../lib/page-blocks'
 import { loadCmsPageExtras } from '../lib/cms-page-extras'
 import { renderCmsPage } from '../lib/render-cms-page'
@@ -47,6 +48,12 @@ import {
   listResourceItems,
   updateResourceItem,
 } from '../lib/resource-items-db'
+import {
+  createMembershipType,
+  deleteMembershipType,
+  listMembershipTypes,
+  updateMembershipType,
+} from '../lib/membership-types-db'
 import { deleteAssetIfUnreferenced } from '../lib/asset-references'
 import {
   dirtPdfKey,
@@ -87,6 +94,7 @@ import { AdminContentPostsPage } from '../pages/admin/content/AdminContentPosts'
 import { AdminContentCommitteesPage } from '../pages/admin/content/AdminContentCommittees'
 import { AdminContentQaPage } from '../pages/admin/content/AdminContentQa'
 import { AdminContentResourcesPage } from '../pages/admin/content/AdminContentResources'
+import { AdminContentMemberTypesPage } from '../pages/admin/content/AdminContentMemberTypes'
 import { AdminContentNavigationPage } from '../pages/admin/content/AdminContentNavigation'
 import { AdminContentSettingsPage } from '../pages/admin/content/AdminContentSettings'
 import { PagePreviewFrame } from '../views/PagePreviewBanner'
@@ -225,14 +233,18 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
 
   app.get('/admin/content/navigation', async (c) => {
     const ctx = getAdminCtx(c)
-    const items = await listNavItems(c.env.DB)
-    const groups = await listNavParentOptions(c.env.DB)
+    const [items, groups, internalLinks] = await Promise.all([
+      listNavItems(c.env.DB),
+      listNavParentOptions(c.env.DB),
+      listSiteInternalLinks(c.env.DB),
+    ])
     return c.html(
       <AdminContentNavigationPage
         {...c.get('adminSite')}
         ctx={ctx}
         items={items}
         groups={groups}
+        internalLinks={internalLinks}
         flash={flashMessage(c, '1')}
         error={c.req.query('error')}
       />,
@@ -562,6 +574,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
       meta_description:
         typeof payload.meta_description === 'string' ? payload.meta_description.trim() : null,
       published: 0,
+      is_custom: 0,
       updated_at: new Date().toISOString(),
     }
 
@@ -571,16 +584,18 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
 
     // Return a single <html> document for iframe srcdoc — PagePreviewFrame would prepend a
     // sibling <div> and break parsing/styles inside the live preview panel.
-    return c.html(renderCmsPage(site, slug, page, extras))
+    const preview = renderCmsPage(site, slug, page, extras)
+    return c.html(preview as string | Promise<string>)
   })
 
   app.get('/admin/content/pages/:slug', async (c) => {
     const ctx = getAdminCtx(c)
     const slug = c.req.param('slug')
     const page = await getPageBySlug(c.env.DB, slug)
-    const [committees, customPages] = await Promise.all([
+    const [committees, customPages, internalLinks] = await Promise.all([
       listCommittees(c.env.DB),
       listCustomPages(c.env.DB),
+      listSiteInternalLinks(c.env.DB),
     ])
     const pageLabels = buildPageLabels(committees, customPages)
     return c.html(
@@ -591,6 +606,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
         slug={slug}
         pageLabel={pageLabels[slug] ?? page?.title ?? slug}
         committees={committees}
+        internalLinks={internalLinks}
         flash={flashMessage(c, '1')}
       />,
     )
@@ -741,6 +757,54 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const ctx = getAdminCtx(c)
     await deleteResourceItem(c.env.DB, c.req.param('id'))
     return c.redirect('/admin/content/resources?ok=1', 303)
+  })
+
+  app.get('/admin/content/member-types', async (c) => {
+    const ctx = getAdminCtx(c)
+    const items = await listMembershipTypes(c.env.DB)
+    return c.html(
+      <AdminContentMemberTypesPage
+        {...c.get('adminSite')}
+        ctx={ctx}
+        items={items}
+        flash={flashMessage(c, '1')}
+        error={c.req.query('error') || undefined}
+      />,
+    )
+  })
+
+  app.post('/admin/content/member-types', async (c) => {
+    getAdminCtx(c)
+    const body = await c.req.parseBody()
+    const name = typeof body.name === 'string' ? body.name.trim() : ''
+    const description = typeof body.description === 'string' ? body.description.trim() : ''
+    const key = typeof body.key === 'string' ? body.key.trim() : undefined
+    const result = await createMembershipType(c.env.DB, { name, description, key })
+    if (!result.ok) {
+      return c.redirect(`/admin/content/member-types?error=${encodeURIComponent(result.error)}`, 303)
+    }
+    return c.redirect('/admin/content/member-types?ok=1', 303)
+  })
+
+  app.post('/admin/content/member-types/:key', async (c) => {
+    getAdminCtx(c)
+    const body = await c.req.parseBody()
+    await updateMembershipType(c.env.DB, c.req.param('key'), {
+      name: typeof body.name === 'string' ? body.name.trim() : '',
+      description: typeof body.description === 'string' ? body.description.trim() : '',
+      sort_order: parseSortOrder(typeof body.sort_order === 'string' ? body.sort_order : '0'),
+      published: body.published === '1',
+    })
+    return c.redirect('/admin/content/member-types?ok=1', 303)
+  })
+
+  app.post('/admin/content/member-types/:key/delete', async (c) => {
+    getAdminCtx(c)
+    const result = await deleteMembershipType(c.env.DB, c.req.param('key'))
+    if (!result.ok) {
+      return c.redirect(`/admin/content/member-types?error=${encodeURIComponent(result.error)}`, 303)
+    }
+    return c.redirect('/admin/content/member-types?ok=1', 303)
   })
 
   app.get('/admin/newsletter', async (c) => {

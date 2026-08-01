@@ -1,12 +1,19 @@
 import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import {
-  memberTypeLabel,
+  resolveMemberTypeLabel,
   type MemberSummary,
   type MemberType,
 } from '../data/demo'
+import type { MembershipTypeRecord } from '../lib/membership-types-db'
 import type { PageProps } from '../types/page'
 
-function MemberBubble({ member }: { member: MemberSummary }) {
+function MemberBubble({
+  member,
+  labels,
+}: {
+  member: MemberSummary
+  labels: Record<string, string>
+}) {
   const initial = member.company.trim().charAt(0).toUpperCase() || '?'
 
   return (
@@ -26,7 +33,9 @@ function MemberBubble({ member }: { member: MemberSummary }) {
         </div>
         <div class="member-bubble-body">
           <span class="member-bubble-company">{member.company}</span>
-          <span class={`badge badge-${member.type}`}>{memberTypeLabel[member.type]}</span>
+          <span class={`badge badge-${member.type}`}>
+            {resolveMemberTypeLabel(member.type, labels)}
+          </span>
         </div>
       </button>
     </li>
@@ -75,16 +84,28 @@ export function MembersPage({
   staffInboxCount,
   filter,
   members,
-}: PageProps & { filter?: MemberType; members: MemberSummary[] }) {
+  membershipTypes = [],
+}: PageProps & {
+  filter?: MemberType
+  members: MemberSummary[]
+  membershipTypes?: MembershipTypeRecord[]
+}) {
   const sorted = [...members].sort((a, b) =>
     a.company.localeCompare(b.company, undefined, { sensitivity: 'base' }),
   )
 
+  const labels: Record<string, string> = {}
+  for (const t of membershipTypes) labels[t.key] = t.name
+
   const filters: { id: MemberType | 'all'; label: string }[] = [
     { id: 'all', label: 'All' },
-    { id: 'contractor', label: 'Contractors' },
-    { id: 'associate', label: 'Associates' },
-    { id: 'institutional', label: 'Institutional' },
+    ...(membershipTypes.length > 0
+      ? membershipTypes.map((t) => ({ id: t.key, label: t.name }))
+      : [
+          { id: 'contractor', label: 'Contractors' },
+          { id: 'associate', label: 'Associates' },
+          { id: 'institutional', label: 'Institutional' },
+        ]),
   ]
 
   return (
@@ -123,7 +144,7 @@ export function MembersPage({
 
           <ul class="member-grid" id="member-grid">
             {sorted.map((member) => (
-              <MemberBubble key={member.id} member={member} />
+              <MemberBubble key={member.id} member={member} labels={labels} />
             ))}
           </ul>
           <p class="table-note" id="member-search-empty" hidden>

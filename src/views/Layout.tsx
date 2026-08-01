@@ -139,7 +139,7 @@ export function Layout({
           </div>
         </footer>
         <script src="/site.js?v=16" defer></script>
-        <script src="/admin-nav.js?v=2" defer></script>
+        <script src="/admin-nav.js?v=3" defer></script>
       </body>
     </html>
   )
@@ -152,7 +152,7 @@ export function PageHeader({
 }: {
   title: string
   lead?: string
-  actions?: HtmlEscapedString | string
+  actions?: unknown
 }) {
   return (
     <div class="page-header">

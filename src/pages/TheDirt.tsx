@@ -3,6 +3,8 @@ import { ArchiveCard, ArchiveCardList } from '../views/ArchiveCard'
 import type { DirtReleaseRecord } from '../lib/dirt-db'
 import { mergeDirtFeed } from '../lib/dirt-feed'
 import { getAssetUrl } from '../lib/r2-assets'
+import { renderPageContent } from '../lib/page-blocks'
+import type { PageRecord } from '../lib/pages-db'
 import type { PostRecord } from '../lib/posts-db'
 import type { PageProps } from '../types/page'
 
@@ -16,25 +18,38 @@ export function TheDirtArchivePage({
   staffInboxCount,
   posts,
   releases,
-}: PageProps & { posts: PostRecord[]; releases: DirtReleaseRecord[] }) {
+  page,
+}: PageProps & {
+  posts: PostRecord[]
+  releases: DirtReleaseRecord[]
+  page?: PageRecord | null
+}) {
   const items = mergeDirtFeed(posts, releases)
+  const title = page?.title ?? 'THE DIRT'
+  const lead =
+    page?.meta_description ??
+    'Chapter news releases, policy updates, and announcements. Open PDF issues in your browser or read web posts.'
+  const intro = page?.body_json || page?.body_md?.trim()
 
   return (
     <Layout
       {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })}
-      title="THE DIRT"
-      description="News, policy, and chapter announcements from NUCA of Las Vegas."
+      title={title}
+      description={
+        page?.meta_description ?? 'News, policy, and chapter announcements from NUCA of Las Vegas.'
+      }
     >
-      <PageHeader
-        title="THE DIRT"
-        lead="Chapter news releases, policy updates, and announcements. Open PDF issues in your browser or read web posts."
-      />
+      <PageHeader title={title} lead={lead} />
       <section class="section">
         <div class="container">
-          <p class="section-lead dirt-subscribe">
-            Want email delivery?{' '}
-            <a href="/contact#newsletter">Subscribe to the mailing list</a> on the Contact page.
-          </p>
+          {intro ? (
+            <div class="prose dirt-subscribe">{renderPageContent(page?.body_md ?? '', page?.body_json)}</div>
+          ) : (
+            <p class="section-lead dirt-subscribe">
+              Want email delivery?{' '}
+              <a href="/contact#newsletter">Subscribe to the mailing list</a> on the Contact page.
+            </p>
+          )}
           {items.length > 0 ? (
             <ArchiveCardList>
               {items.map((item) => {

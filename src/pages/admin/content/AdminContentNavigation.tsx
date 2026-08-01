@@ -1,8 +1,10 @@
 import type { NavItemRecord } from '../../../lib/nav-items-db'
+import type { SiteInternalLink } from '../../../lib/site-internal-links'
 import { AdminShell } from '../../../views/AdminShell'
 import { AdminCrudSections } from '../../../views/admin/AdminCrudSections'
 import { AdminEditModalFooter } from '../../../views/admin/AdminEditActions'
 import { AdminEditButton } from '../../../views/admin/AdminListSection'
+import { AdminLinkPickerField } from '../../../views/admin/AdminLinkPickerField'
 import { AdminModal } from '../../../views/admin/AdminModal'
 import type { AdminContext } from '../../../lib/admin-context'
 import type { PageProps } from '../../../types/page'
@@ -79,7 +81,15 @@ function NavListRow({ item, items }: { item: NavItemRecord; items: NavItemRecord
   )
 }
 
-function NavEditModal({ item, groups }: { item: NavItemRecord; groups: NavItemRecord[] }) {
+function NavEditModal({
+  item,
+  groups,
+  internalLinks,
+}: {
+  item: NavItemRecord
+  groups: NavItemRecord[]
+  internalLinks: SiteInternalLink[]
+}) {
   const formId = `form-nav-${item.id}`
   const selectableGroups = groups.filter((group) => group.id !== item.id)
 
@@ -111,11 +121,13 @@ function NavEditModal({ item, groups }: { item: NavItemRecord; groups: NavItemRe
         <label for={`${formId}-label`}>Label</label>
         <input type="text" name="label" id={`${formId}-label`} value={item.label} required />
       </div>
-      <div class="form-field">
-        <label for={`${formId}-href`}>Link URL</label>
-        <input type="text" name="href" id={`${formId}-href`} value={item.href} placeholder="/about or https://..." />
-        <p class="form-hint">Leave blank for a label-only parent menu item.</p>
-      </div>
+      <AdminLinkPickerField
+        id={`${formId}-href`}
+        value={item.href}
+        internalLinks={internalLinks}
+        allowEmpty
+        hint="Leave blank for a label-only parent menu item."
+      />
       <label class="admin-check">
         <input type="checkbox" name="indent" value="1" checked={item.indent === 1} />
         Indent in submenu
@@ -132,6 +144,7 @@ export function AdminContentNavigationPage({
   ctx,
   items,
   groups,
+  internalLinks,
   flash,
   error,
   ...site
@@ -139,6 +152,7 @@ export function AdminContentNavigationPage({
   ctx: AdminContext
   items: NavItemRecord[]
   groups: NavItemRecord[]
+  internalLinks: SiteInternalLink[]
   flash?: string
   error?: string
 }) {
@@ -171,10 +185,12 @@ export function AdminContentNavigationPage({
               <input type="text" name="label" id="label" required />
             </div>
             <ParentSelect formId="add-nav" groups={groups} />
-            <div class="form-field">
-              <label for="href">Link URL</label>
-              <input type="text" name="href" id="href" placeholder="/about or https://..." />
-            </div>
+            <AdminLinkPickerField
+              id="href"
+              internalLinks={internalLinks}
+              allowEmpty
+              hint="Leave blank for a label-only parent menu item."
+            />
             <label class="admin-check">
               <input type="checkbox" name="indent" value="1" />
               Indent in submenu
@@ -200,7 +216,9 @@ export function AdminContentNavigationPage({
           </tr>
         }
         tableBody={items.map((item) => <NavListRow item={item} items={items} key={item.id} />)}
-        afterTable={items.map((item) => <NavEditModal item={item} groups={groups} key={item.id} />)}
+        afterTable={items.map((item) => (
+          <NavEditModal item={item} groups={groups} internalLinks={internalLinks} key={item.id} />
+        ))}
       />
     </AdminShell>
   )

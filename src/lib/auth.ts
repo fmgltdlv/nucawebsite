@@ -112,3 +112,38 @@ export async function listUsers(db: D1Database): Promise<User[]> {
     .all<UserPublicRow>()
   return (results ?? []).map(mapUser).filter((user): user is User => user !== null)
 }
+
+export async function changeUserPassword(
+  db: D1Database,
+  userId: string,
+  newPassword: string,
+): Promise<void> {
+  const salt = randomSaltHex()
+  const password_hash = await hashPassword(newPassword, salt)
+  await db
+    .prepare(
+      `UPDATE users
+       SET password_hash = ?, password_salt = ?, session_version = session_version + 1, updated_at = datetime('now')
+       WHERE id = ?`,
+    )
+    .bind(password_hash, salt, userId)
+    .run()
+}
+
+export async function deleteUser(db: D1Database, userId: string): Promise<boolean> {
+  const result = await db.prepare('DELETE FROM users WHERE id = ?').bind(userId).run()
+  return (result.meta?.changes ?? 0) > 0
+}
+
+export async function verifyUserPassword(
+  db: D1Database,
+  userId: string,
+  password: string,
+): Promise<boolean> {
+  const row = await db
+    .prepare(`SELECT password_hash, password_salt, role FROM users WHERE id = ?`)
+    .bind(userId)
+    .first<{ password_hash: string; password_salt: string; role: string }>()
+  if (!row || row.role !== 'admin') return false
+  return verifyPassword(password, row.password_salt, row.password_hash)
+}

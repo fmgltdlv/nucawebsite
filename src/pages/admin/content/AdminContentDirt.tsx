@@ -125,6 +125,8 @@ export function AdminContentDirtPage({
         breadcrumb={
           <p class="admin-note">
             <a href="/admin/content">← Content</a> · <a href="/the-dirt">View public listing</a>
+            {' · '}
+            <a href="/admin/content/pages/the-dirt">Edit page shell</a>
           </p>
         }
         flash={flash}

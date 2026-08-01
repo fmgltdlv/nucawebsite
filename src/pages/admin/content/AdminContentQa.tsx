@@ -103,6 +103,8 @@ export function AdminContentQaPage({
         breadcrumb={
           <p class="admin-note">
             <a href="/admin/content">← Content</a> · <a href="/about/faq">View public page</a>
+            {' · '}
+            <a href="/admin/content/pages/faq">Edit page shell</a>
           </p>
         }
         flash={flash}

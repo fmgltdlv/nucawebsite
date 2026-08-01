@@ -88,21 +88,43 @@
     })
   }
 
+  /** @type {Map<string, Promise<void>>} */
+  const pendingScripts = new Map()
+
+  function hasLoadedScript(base) {
+    return Array.from(document.body.children).some(
+      (el) =>
+        el instanceof HTMLScriptElement &&
+        (el.getAttribute('src') || '').split('?')[0] === base,
+    )
+  }
+
   function loadScript(src) {
     const base = src.split('?')[0]
-    // Only match scripts in <body> — script tags copied via innerHTML do not execute.
-    if (document.body.querySelector(`script[src^="${base}"]`)) {
+    // Only scripts appended directly to <body> count — inert tags inside .admin-main do not.
+    if (hasLoadedScript(base)) {
       return Promise.resolve()
     }
 
-    return new Promise((resolve, reject) => {
+    const pending = pendingScripts.get(base)
+    if (pending) return pending
+
+    const promise = new Promise((resolve, reject) => {
       const script = document.createElement('script')
       script.src = src
       script.defer = true
-      script.onload = () => resolve()
-      script.onerror = () => reject(new Error(`Could not load script: ${src}`))
+      script.onload = () => {
+        pendingScripts.delete(base)
+        resolve()
+      }
+      script.onerror = () => {
+        pendingScripts.delete(base)
+        reject(new Error(`Could not load script: ${src}`))
+      }
       document.body.appendChild(script)
     })
+    pendingScripts.set(base, promise)
+    return promise
   }
 
   async function activatePageScripts(container) {
@@ -121,6 +143,7 @@
     const scripts = Array.from(container.querySelectorAll('script'))
     for (const oldScript of scripts) {
       const src = oldScript.getAttribute('src')
+      oldScript.remove()
       if (src) {
         try {
           await loadScript(src)
@@ -128,9 +151,11 @@
           // Fall back to full navigation if a required script fails.
         }
       }
-      oldScript.remove()
     }
 
+    if (window.AdminLinkPicker && typeof window.AdminLinkPicker.init === 'function') {
+      window.AdminLinkPicker.init()
+    }
     if (typeof window.initEventLocationPicker === 'function') {
       window.initEventLocationPicker()
     }

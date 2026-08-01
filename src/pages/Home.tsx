@@ -6,7 +6,7 @@ import type { DirtReleaseRecord } from '../lib/dirt-db'
 import { mergeDirtFeed } from '../lib/dirt-feed'
 import type { ExpandedEventRecord } from '../lib/event-repeat'
 import { homeBlocksFromPage, homePageIncludesEventsFeed } from '../lib/home-page'
-import type { PageBlock } from '../lib/page-blocks'
+import { renderPageContent, type PageBlock } from '../lib/page-blocks'
 import type { PageRecord } from '../lib/pages-db'
 import type { PostRecord } from '../lib/posts-db'
 import type { PageProps } from '../types/page'
@@ -129,6 +129,7 @@ function renderHomeBlock(
     events: ExpandedEventRecord[]
     dirtReleases: DirtReleaseRecord[]
     posts: PostRecord[]
+    calendarEvents?: ExpandedEventRecord[]
   },
 ) {
   let content = null
@@ -149,7 +150,16 @@ function renderHomeBlock(
       )
       break
     default:
-      return null
+      content = (
+        <section class="section">
+          <div class="container prose">
+            {renderPageContent('', JSON.stringify([block]), {
+              calendarEvents: data.calendarEvents,
+            })}
+          </div>
+        </section>
+      )
+      break
   }
 
   return (
@@ -171,11 +181,13 @@ export function HomePage({
   events,
   dirtReleases,
   posts,
+  calendarEvents,
 }: PageProps & {
   page: PageRecord | null
   events: ExpandedEventRecord[]
   dirtReleases: DirtReleaseRecord[]
   posts: PostRecord[]
+  calendarEvents?: ExpandedEventRecord[]
 }) {
   const blocks = homeBlocksFromPage(page?.body_json)
   const showEventMapAssets = homePageIncludesEventsFeed(blocks)
@@ -186,7 +198,9 @@ export function HomePage({
       title="Home"
       description={page?.meta_description ?? HOME_DESCRIPTION}
     >
-      {blocks.map((block, index) => renderHomeBlock(block, index, { events, dirtReleases, posts }))}
+      {blocks.map((block, index) =>
+        renderHomeBlock(block, index, { events, dirtReleases, posts, calendarEvents }),
+      )}
       {showEventMapAssets ? <EventMapThumbAssets /> : null}
       {breakingNews?.showPopup ? <BreakingNewsPopup news={breakingNews} /> : null}
     </Layout>

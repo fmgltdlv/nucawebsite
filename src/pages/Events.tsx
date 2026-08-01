@@ -1,7 +1,9 @@
 import type { ExpandedEventRecord } from '../lib/event-repeat'
 import type { CommitteeRecord } from '../lib/committees-db'
+import type { PageRecord } from '../lib/pages-db'
 import type { PageProps } from '../types/page'
 import { EVENTS_LIST_PAGE_SIZE } from '../lib/events'
+import { renderPageContent } from '../lib/page-blocks'
 import { EventCard, EventMapThumbAssets } from '../views/EventCard'
 import { JsonScript } from '../views/JsonScript'
 import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
@@ -25,6 +27,7 @@ export function EventsPage({
   focusDate,
   committeeKey,
   committees,
+  cmsPage,
 }: PageProps & {
   events: ExpandedEventRecord[]
   calendarEvents: ExpandedEventRecord[]
@@ -35,19 +38,33 @@ export function EventsPage({
   focusDate: string
   committeeKey: string | null
   committees: CommitteeRecord[]
+  cmsPage?: PageRecord | null
 }) {
   const views: { id: EventsView; label: string }[] = [
     { id: 'list', label: 'List' },
     { id: 'week', label: 'Week' },
     { id: 'month', label: 'Month' },
   ]
+  const title = cmsPage?.title ?? 'Events'
+  const lead =
+    cmsPage?.meta_description ??
+    'Chapter meetings, training, and member gatherings across Las Vegas.'
+  const intro = cmsPage?.body_json || cmsPage?.body_md?.trim()
 
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })} title="Events">
-      <PageHeader
-        title="Events"
-        lead="Chapter meetings, training, and member gatherings across Las Vegas."
-      />
+    <Layout
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })}
+      title={title}
+      description={cmsPage?.meta_description ?? undefined}
+    >
+      <PageHeader title={title} lead={lead} />
+      {intro && (
+        <section class="section">
+          <div class="container prose">
+            {renderPageContent(cmsPage?.body_md ?? '', cmsPage?.body_json)}
+          </div>
+        </section>
+      )}
       <section
         class="section"
         id="events-page"

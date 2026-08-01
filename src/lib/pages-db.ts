@@ -15,6 +15,12 @@ export const PAGE_SLUGS = [
   'resources',
   'scholarships',
   'committees',
+  'faq',
+  'leadership',
+  'events',
+  'the-dirt',
+  'join',
+  'contact',
 ] as const
 
 export type PageSlug = (typeof PAGE_SLUGS)[number]
@@ -26,6 +32,12 @@ export const PAGE_LABELS: Record<PageSlug, string> = {
   resources: 'Resources',
   scholarships: 'NUCA Las Vegas Scholarships',
   committees: 'Committees',
+  faq: 'FAQ',
+  leadership: 'Leadership',
+  events: 'Events',
+  'the-dirt': 'THE DIRT',
+  join: 'Join',
+  contact: 'Contact',
 }
 
 /** URL path segments reserved for app routes — cannot be used as custom page slugs. */
@@ -38,9 +50,11 @@ export const RESERVED_PAGE_SLUGS = new Set([
   'committees',
   'contact',
   'events',
+  'faq',
   'home',
   'industry-updates',
   'join',
+  'leadership',
   'members',
   'resources',
   'scholarships',

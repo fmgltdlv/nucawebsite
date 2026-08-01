@@ -1,4 +1,5 @@
 import type { PageRecord } from '../../../lib/pages-db'
+import type { SiteInternalLink } from '../../../lib/site-internal-links'
 import type { CommitteeRecord } from '../../../lib/committees-db'
 import { blocksFromMarkdown, parsePageBlocks, serializePageBlocks } from '../../../lib/page-blocks'
 import { pagePreviewDraftPath, pagePreviewPath, pagePublicPath } from '../../../lib/page-paths'
@@ -21,6 +22,7 @@ export function AdminContentPageEditPage({
   slug,
   pageLabel,
   committees,
+  internalLinks,
   flash,
   ...site
 }: PageProps & {
@@ -29,6 +31,7 @@ export function AdminContentPageEditPage({
   slug: string
   pageLabel: string
   committees: CommitteeRecord[]
+  internalLinks: SiteInternalLink[]
   flash?: string
 }) {
   const label = pageLabel
@@ -40,6 +43,7 @@ export function AdminContentPageEditPage({
     key: committee.key,
     name: committee.name,
   })))
+  const internalLinksJson = JSON.stringify(internalLinks)
 
   return (
     <AdminShell
@@ -64,6 +68,9 @@ export function AdminContentPageEditPage({
         )}
       </p>
       {flash && <p class="admin-flash">{flash}</p>}
+      <p id="page-edit-unsaved" class="admin-flash admin-flash-warn" hidden>
+        You have unsaved changes.
+      </p>
       {page && isCustomPage(page) ? (
         <p class="admin-help">
           Public URL: <a href={publicPath}>{publicPath}</a>
@@ -104,14 +111,40 @@ export function AdminContentPageEditPage({
               <label>Page content</label>
               <p class="admin-help">
                 {slug === 'home'
-                  ? 'Build the home page with a hero banner, upcoming events list, and THE DIRT feed. Event and news items are pulled automatically from the calendar and THE DIRT content.'
-                  : 'Build the page with sections, headings, paragraphs, lists, callout boxes, and event calendars. Style text color, fonts, and section backgrounds. The preview updates as you edit.'}
+                  ? 'Build the home page with a hero banner, upcoming events list, THE DIRT feed, and any other content blocks (sections, headings, paragraphs, calendars, images, and more). Event and news feed items are pulled automatically from the calendar and THE DIRT content.'
+                  : slug === 'join'
+                    ? 'Build Join page content with benefits, stats, and membership types blocks. Application form chrome stays fixed below. Manage type labels in Membership types.'
+                    : slug === 'contact'
+                      ? 'Edit contact form labels and newsletter panel copy. Chapter contact details still come from Site settings.'
+                      : slug === 'resources'
+                        ? 'Edit the Resources intro below. Manage structured links separately in Resource links.'
+                        : 'Build the page with sections, headings, paragraphs, lists, callout boxes, and event calendars. Style text color, fonts, and section backgrounds. The preview updates as you edit.'}
               </p>
+              {slug === 'join' && (
+                <p class="admin-note">
+                  <a href="/admin/content/member-types">Manage membership types →</a>
+                </p>
+              )}
+              {slug === 'resources' && (
+                <p class="admin-note">
+                  <a href="/admin/content/resources">Manage resource links →</a>
+                </p>
+              )}
+              {(slug === 'faq' ||
+                slug === 'leadership' ||
+                slug === 'events' ||
+                slug === 'the-dirt') && (
+                <p class="admin-note">
+                  This edits the page title, lead, and intro. Item lists are managed in their Content
+                  admin screens.
+                </p>
+              )}
               <div
                 id="page-blocks-editor"
                 class="page-blocks-editor"
                 data-initial={blocksJson}
                 data-committees={committeesJson}
+                data-internal-links={internalLinksJson}
                 data-page-slug={slug}
               ></div>
               <input type="hidden" name="body_json" id="body_json" value={blocksJson} />
@@ -143,6 +176,7 @@ export function AdminContentPageEditPage({
               <div class="page-edit-preview-heading">
                 <h2 class="page-edit-preview-title">Live preview</h2>
                 <p class="admin-help">Updates automatically as you edit. Save to publish changes.</p>
+                <p id="page-edit-preview-error" class="form-hint-warn" hidden></p>
               </div>
               <div
                 class="page-edit-preview-modes"
@@ -182,7 +216,8 @@ export function AdminContentPageEditPage({
           </aside>
         </div>
       </form>
-      <script src="/page-blocks-editor.js?v=7" defer></script>
+      <script src="/admin-link-picker.js" defer></script>
+      <script src="/page-blocks-editor.js?v=10" defer></script>
     </AdminShell>
   )
 }

@@ -20,6 +20,7 @@ const contentSections: Array<{
   { href: '/admin/content/pages', title: 'Editable pages', desc: 'Built-in, committee, and custom pages' },
   { href: '/admin/content/leadership', title: 'Leadership', desc: 'Chapter officer roster' },
   { href: '/admin/content/resources', title: 'Resource links', desc: 'Structured links on Resources page' },
+  { href: '/admin/content/member-types', title: 'Membership types', desc: 'Join page types and member directory categories' },
   {
     href: '/admin/applications',
     title: 'Join applications',

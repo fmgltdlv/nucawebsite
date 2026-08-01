@@ -36,6 +36,7 @@ export function AdminShell({
     { href: '/admin/members', label: 'Member list' },
     { href: '/admin/events', label: 'Events' },
     { href: '/admin/users', label: 'Users' },
+    { href: '/admin/profile', label: 'Profile' },
     { href: '/admin/content', label: 'Content', badge: totalNew > 0 ? totalNew : undefined },
     { href: '/admin/assets', label: 'Assets' },
     { href: '/admin/applications', label: 'Applications', badge: inboxCounts.applications },
@@ -97,6 +98,7 @@ export function AdminShell({
         </div>
       </div>
       <AdminAssetLibraryDialog />
+      <script src="/admin-link-picker.js" defer></script>
       <script src="/admin-security.js" defer></script>
     </Layout>
   )

@@ -7,6 +7,12 @@ const PUBLIC_PATHS: Record<string, string> = {
   resources: '/resources',
   scholarships: '/scholarships',
   committees: '/about/committees',
+  faq: '/about/faq',
+  leadership: '/about/leadership',
+  events: '/events',
+  'the-dirt': '/the-dirt',
+  join: '/join',
+  contact: '/contact',
 }
 
 export function pagePublicPath(slug: string): string {

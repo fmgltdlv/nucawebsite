@@ -107,6 +107,8 @@ export function AdminContentResourcesPage({
         breadcrumb={
           <p class="admin-note">
             <a href="/admin/content">← Content</a> · <a href="/resources">View Resources page</a>
+            {' · '}
+            <a href="/admin/content/pages/resources">Edit page intro</a>
           </p>
         }
         flash={flash}

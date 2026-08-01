@@ -96,7 +96,41 @@ export type PageBlock =
       width?: ImageWidth
       height?: ImageHeight
       scroll?: ImageScroll
+      /** When true with fixed scroll, image spans the full viewport width. */
+      full_width?: boolean
     }
+  | {
+      type: 'benefits_grid'
+      title?: string
+      items: { title: string; body: string }[]
+    }
+  | {
+      type: 'stats_panel'
+      items: { value: string; label: string }[]
+    }
+  | {
+      type: 'member_types'
+      title?: string
+    }
+  | {
+      type: 'newsletter_panel'
+      title: string
+      body: string
+      consent_hint: string
+      button_label: string
+    }
+  | {
+      type: 'contact_form'
+      name_label: string
+      email_label: string
+      message_label: string
+      submit_label: string
+    }
+
+export type PageBlockRenderOptions = {
+  calendarEvents?: ExpandedEventRecord[]
+  membershipTypes?: { key: string; name: string; description: string }[]
+}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -310,8 +344,60 @@ function parseBlock(value: unknown, allowSection = true): PageBlock | null {
       const width = parseImageWidth(value.width)
       const height = parseImageHeight(value.height)
       const scroll = parseImageScroll(value.scroll)
-      return { type: 'image', asset_key, alt, caption, layout, align, width, height, scroll }
+      const full_width = value.full_width === true ? true : undefined
+      return { type: 'image', asset_key, alt, caption, layout, align, width, height, scroll, full_width }
     }
+    case 'benefits_grid': {
+      const title = typeof value.title === 'string' ? value.title : undefined
+      const items = Array.isArray(value.items)
+        ? value.items
+            .filter(isObject)
+            .map((item) => ({
+              title: typeof item.title === 'string' ? item.title : '',
+              body: typeof item.body === 'string' ? item.body : '',
+            }))
+            .filter((item) => item.title.trim() || item.body.trim())
+        : []
+      return { type: 'benefits_grid', title, items }
+    }
+    case 'stats_panel': {
+      const items = Array.isArray(value.items)
+        ? value.items
+            .filter(isObject)
+            .map((item) => ({
+              value: typeof item.value === 'string' ? item.value : '',
+              label: typeof item.label === 'string' ? item.label : '',
+            }))
+            .filter((item) => item.value.trim() || item.label.trim())
+        : []
+      return { type: 'stats_panel', items }
+    }
+    case 'member_types': {
+      const title = typeof value.title === 'string' ? value.title : undefined
+      return { type: 'member_types', title }
+    }
+    case 'newsletter_panel':
+      return {
+        type: 'newsletter_panel',
+        title: typeof value.title === 'string' ? value.title : 'Newsletter — THE DIRT',
+        body:
+          typeof value.body === 'string'
+            ? value.body
+            : 'Join the mailing list for chapter news and upcoming events.',
+        consent_hint:
+          typeof value.consent_hint === 'string'
+            ? value.consent_hint
+            : 'By subscribing you agree to receive chapter emails. We will not sell your information.',
+        button_label: typeof value.button_label === 'string' ? value.button_label : 'Subscribe',
+      }
+    case 'contact_form':
+      return {
+        type: 'contact_form',
+        name_label: typeof value.name_label === 'string' ? value.name_label : 'Name',
+        email_label: typeof value.email_label === 'string' ? value.email_label : 'Email',
+        message_label: typeof value.message_label === 'string' ? value.message_label : 'Message',
+        submit_label: typeof value.submit_label === 'string' ? value.submit_label : 'Send message',
+      }
     default:
       return null
   }
@@ -488,11 +574,15 @@ function sectionBackgroundClass(background: SectionBackground): string {
   return ` page-section--bg-${background}`
 }
 
-function renderBlocksHtml(blocks: PageBlock[], parentIndex = ''): string {
+function renderBlocksHtml(
+  blocks: PageBlock[],
+  parentIndex = '',
+  options?: PageBlockRenderOptions,
+): string {
   return blocks
     .map((block, i) => {
       const index = parentIndex === '' ? String(i) : `${parentIndex}-${i}`
-      const inner = renderBlockHtml(block, index)
+      const inner = renderBlockHtml(block, index, options)
       return `<div class="cms-preview-block" data-cms-block-index="${index}">${inner}</div>`
     })
     .join('\n')
@@ -523,8 +613,12 @@ function renderImageBlockHtml(block: PageBlock & { type: 'image' }): string {
   if (block.layout === 'background') {
     const scrollClass =
       block.scroll === 'fixed' ? ' page-block-image-background--fixed' : ''
+    const fullWidthClass =
+      block.scroll === 'fixed' && block.full_width === true
+        ? ' page-block-image-background--full-width'
+        : ''
     const heightClass = imageHeightClass(block.height) || ' page-block-image--height-medium'
-    return `<div class="page-block-image page-block-image-background${scrollClass}${heightClass}" style="background-image: url('${url}')" role="img" aria-label="${alt}">${caption ? `<div class="page-block-image-background-caption">${escapeHtml(caption)}</div>` : ''}</div>`
+    return `<div class="page-block-image page-block-image-background${scrollClass}${fullWidthClass}${heightClass}" style="background-image: url('${url}')" role="img" aria-label="${alt}">${caption ? `<div class="page-block-image-background-caption">${escapeHtml(caption)}</div>` : ''}</div>`
   }
 
   if (block.layout === 'section') {
@@ -549,7 +643,11 @@ function renderButtonBlockHtml(block: PageBlock & { type: 'button' }): string {
   return `<div class="page-block-buttons${align}"><a class="btn ${styleClass}" href="${href}"${target}>${escapeHtml(label)}</a></div>`
 }
 
-function renderBlockHtml(block: PageBlock, blockIndex: string): string {
+function renderBlockHtml(
+  block: PageBlock,
+  blockIndex: string,
+  options?: PageBlockRenderOptions,
+): string {
   switch (block.type) {
     case 'heading': {
       const tag = block.level === 2 ? 'h2' : block.level === 3 ? 'h3' : 'h4'
@@ -574,7 +672,7 @@ function renderBlockHtml(block: PageBlock, blockIndex: string): string {
       const title = block.title
         ? `<h2 class="page-section-title">${escapeHtml(block.title)}</h2>`
         : ''
-      const inner = renderBlocksHtml(block.blocks, blockIndex)
+      const inner = renderBlocksHtml(block.blocks, blockIndex, options)
       const background = sectionBackground(block)
       const legacyMuted = background === 'muted' ? ' page-section--muted' : ''
       return `<section class="page-section${legacyMuted}${sectionBackgroundClass(background)}">${title}<div class="page-section-inner">${inner}</div></section>`
@@ -585,6 +683,69 @@ function renderBlockHtml(block: PageBlock, blockIndex: string): string {
       return renderButtonBlockHtml(block)
     case 'image':
       return renderImageBlockHtml(block)
+    case 'benefits_grid': {
+      const title = block.title?.trim()
+        ? `<h2>${escapeHtml(block.title.trim())}</h2>`
+        : ''
+      const items = block.items
+        .map(
+          (item) =>
+            `<li><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.body)}</p></li>`,
+        )
+        .join('')
+      return `${title}<ul class="benefit-grid">${items}</ul>`
+    }
+    case 'stats_panel': {
+      const items = block.items
+        .map(
+          (item) =>
+            `<div class="stat"><span class="stat-value">${escapeHtml(item.value)}</span><span class="stat-label">${escapeHtml(item.label)}</span></div>`,
+        )
+        .join('')
+      return `<div class="stat-panel">${items}</div>`
+    }
+    case 'member_types': {
+      const types = options?.membershipTypes ?? []
+      const title = block.title?.trim()
+        ? `<h2>${escapeHtml(block.title.trim())}</h2>`
+        : ''
+      const cards = types
+        .map(
+          (type) =>
+            `<article class="type-card"><h3>${escapeHtml(type.name)}</h3><p>${escapeHtml(type.description)}</p></article>`,
+        )
+        .join('')
+      return `${title}<div class="type-cards">${cards}</div>`
+    }
+    case 'newsletter_panel':
+      return `<div class="newsletter-panel" id="newsletter">
+<h2>${escapeHtml(block.title)}</h2>
+<p>${escapeHtml(block.body)}</p>
+<form class="form" method="post" action="/newsletter/subscribe">
+<div class="form-field">
+<label for="newsletter_email">Email</label>
+<input type="email" name="newsletter_email" id="newsletter_email" required />
+</div>
+<p class="form-hint">${escapeHtml(block.consent_hint)}</p>
+<button type="submit" class="btn btn-secondary">${escapeHtml(block.button_label)}</button>
+</form>
+</div>`
+    case 'contact_form':
+      return `<form class="form" method="post" action="/contact">
+<div class="form-field">
+<label for="name">${escapeHtml(block.name_label)}</label>
+<input type="text" name="name" id="name" required />
+</div>
+<div class="form-field">
+<label for="email">${escapeHtml(block.email_label)}</label>
+<input type="email" name="email" id="email" required />
+</div>
+<div class="form-field">
+<label for="message">${escapeHtml(block.message_label)}</label>
+<textarea name="message" id="message" rows="5" required></textarea>
+</div>
+<button type="submit" class="btn btn-primary">${escapeHtml(block.submit_label)}</button>
+</form>`
     default:
       return ''
   }
@@ -601,7 +762,7 @@ function escapeHtml(text: string): string {
 export function renderPageContent(
   body_md: string,
   body_json: string | null | undefined,
-  options?: { calendarEvents?: ExpandedEventRecord[] },
+  options?: PageBlockRenderOptions,
 ) {
   const blocks = parsePageBlocks(body_json)
   if (blocks) {
@@ -610,7 +771,7 @@ export function renderPageContent(
       includeCalendar && options?.calendarEvents
         ? `<script type="application/json" id="page-calendar-events-data">${JSON.stringify(options.calendarEvents).replace(/</g, '\\u003c')}</script>${CALENDAR_MAP_ASSETS}`
         : ''
-    return raw(`<div class="page-blocks">${renderBlocksHtml(blocks)}</div>${calendarData}`)
+    return raw(`<div class="page-blocks">${renderBlocksHtml(blocks, '', options)}</div>${calendarData}`)
   }
   if (body_md.trim()) {
     return raw(`<div class="page-blocks">${renderMarkdown(body_md)}</div>`)
@@ -676,6 +837,25 @@ export function blocksToMarkdown(blocks: PageBlock[]): string {
         }
         break
       }
+      case 'benefits_grid': {
+        if (block.title) parts.push(`## ${block.title}`)
+        for (const item of block.items) {
+          parts.push(`### ${item.title}\n\n${item.body}`)
+        }
+        break
+      }
+      case 'stats_panel':
+        parts.push(block.items.map((item) => `**${item.value}** — ${item.label}`).join('\n'))
+        break
+      case 'member_types':
+        parts.push(`## ${block.title?.trim() || 'Membership types'}`)
+        break
+      case 'newsletter_panel':
+        parts.push(`## ${block.title}\n\n${block.body}`)
+        break
+      case 'contact_form':
+        parts.push('Contact form')
+        break
       default:
         break
     }

@@ -5,6 +5,7 @@ export type AssetType =
   | 'leadership_photo'
   | 'event_thumbnail'
   | 'event_flyer'
+  | 'library'
 
 export const ASSET_TYPES: AssetType[] = [
   'site_logo',
@@ -13,6 +14,7 @@ export const ASSET_TYPES: AssetType[] = [
   'leadership_photo',
   'event_thumbnail',
   'event_flyer',
+  'library',
 ]
 
 export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
@@ -22,6 +24,7 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   leadership_photo: 'Leadership photos',
   event_thumbnail: 'Event thumbnails',
   event_flyer: 'Event flyers',
+  library: 'Library uploads',
 }
 
 export type AssetContentKind = 'image' | 'pdf'
@@ -159,6 +162,30 @@ async function listEventImageAssets(
   }))
 }
 
+async function listLibraryUploadAssets(db: D1Database): Promise<AssetIndexEntry[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT id, r2_key, label, content_kind
+         FROM library_assets
+         ORDER BY created_at DESC`,
+      )
+      .all<{ id: string; r2_key: string; label: string; content_kind: string }>()
+
+    return (results ?? []).map((row) => ({
+      type: 'library' as const,
+      key: row.r2_key,
+      entityId: row.id,
+      label: row.label,
+      adminEditUrl: '/admin/assets?type=library',
+      contentKind: row.content_kind === 'pdf' ? ('pdf' as const) : ('image' as const),
+    }))
+  } catch {
+    // Table may not exist until migration 0023 is applied.
+    return []
+  }
+}
+
 export async function listIndexedAssets(
   db: D1Database,
   filterType?: AssetType,
@@ -170,6 +197,7 @@ export async function listIndexedAssets(
     leadership_photo: () => listLeadershipPhotoAssets(db),
     event_thumbnail: () => listEventImageAssets(db, 'thumbnail_r2_key', 'event_thumbnail'),
     event_flyer: () => listEventImageAssets(db, 'flyer_r2_key', 'event_flyer'),
+    library: () => listLibraryUploadAssets(db),
   }
 
   if (filterType) {

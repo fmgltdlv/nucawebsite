@@ -1,8 +1,9 @@
 import type { Member, MemberContact, MemberSummary, MemberType } from '../data/demo'
-import { memberTypeLabel } from '../data/demo'
+import { resolveMemberTypeLabel } from '../data/demo'
 import { parsePointsOfContactJson, visibleMemberContacts } from './member-contacts'
 import { getMemberById } from './members-db'
 import { memberLogoUrl } from './member-logos'
+import { membershipTypeLabelMap } from './membership-types-db'
 
 export type MemberPublicProfile = {
   id: string
@@ -43,10 +44,11 @@ export async function getActiveMemberPublicProfile(
   const member = await getMemberById(db, id)
   if (!member) return null
 
+  const labels = await membershipTypeLabelMap(db)
   return {
     id: member.id,
     company: member.company,
-    typeLabel: memberTypeLabel[member.type],
+    typeLabel: resolveMemberTypeLabel(member.type, labels),
     description: member.description ?? null,
     website: member.website ?? null,
     phone: member.phone ?? null,
