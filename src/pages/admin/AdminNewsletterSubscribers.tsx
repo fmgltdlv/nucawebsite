@@ -55,7 +55,6 @@ export function AdminNewsletterSubscribersPage({
     <AdminShell
       {...site}
       user={ctx.user}
-      chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}
       title="Newsletter subscribers"
       activePath="/admin/newsletter"

@@ -282,7 +282,6 @@ export function AdminEventsPage({
     <AdminShell
       {...site}
       user={ctx.user}
-      chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}
       title="Events"
       activePath="/admin/events"

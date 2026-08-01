@@ -94,7 +94,6 @@ export function AdminContentQaPage({
     <AdminShell
       {...site}
       user={ctx.user}
-      chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}
       title="FAQ"
       activePath="/admin/content"

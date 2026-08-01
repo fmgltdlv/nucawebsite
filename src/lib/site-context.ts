@@ -1,5 +1,5 @@
 import type { Env } from '../env'
-import { parseThemeId, type ThemeId } from '../config/themes'
+import type { ThemeId } from '../config/themes'
 import type { NavEntry } from '../nav/site-nav'
 import type { AdminInboxCounts } from './admin-inbox-counts'
 import { totalInboxCount } from './admin-inbox-counts'
@@ -32,11 +32,8 @@ export type AdminLayoutProps = PublicSiteContext & {
   staffInboxCount?: number
 }
 
-export async function loadPublicSiteContext(
-  env: Env,
-  cookieTheme?: string | null,
-): Promise<PublicSiteContext> {
-  const theme = cookieTheme ? parseThemeId(cookieTheme) : await getThemeId(env.DB)
+export async function loadPublicSiteContext(env: Env): Promise<PublicSiteContext> {
+  const theme = await getThemeId(env.DB)
   const [contact, footer, breakingNews, logoR2Key, logoSizePercent, navigation] = await Promise.all([
     getContactInfo(env.DB),
     getFooterInfo(env.DB),
@@ -58,11 +55,10 @@ export async function loadPublicSiteContext(
 
 export async function loadAdminLayoutProps(
   env: Env,
-  cookieTheme?: string | null,
   inboxCounts?: AdminInboxCounts,
 ): Promise<AdminLayoutProps> {
   await seedContentIfEmpty(env)
-  const site = await loadPublicSiteContext(env, cookieTheme)
+  const site = await loadPublicSiteContext(env)
   const total = inboxCounts ? totalInboxCount(inboxCounts) : 0
   return {
     ...site,

@@ -37,7 +37,6 @@ export function AdminContentSettingsPage({
       logoSizePercent={logoSizePercent}
       breakingNews={breakingNews}
       user={ctx.user}
-      chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}
       title="Site settings"
       activePath="/admin/content"

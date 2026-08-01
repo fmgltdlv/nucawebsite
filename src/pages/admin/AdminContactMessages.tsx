@@ -122,7 +122,6 @@ export function AdminContactMessagesPage({
     <AdminShell
       {...site}
       user={ctx.user}
-      chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}
       title="Contact messages"
       activePath="/admin/contact-messages"

@@ -168,7 +168,6 @@ export function AdminMembersPage({
     <AdminShell
       {...site}
       user={ctx.user}
-      chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}
       title="Member list"
       activePath="/admin/members"

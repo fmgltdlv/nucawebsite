@@ -146,7 +146,6 @@ export function AdminContentNavigationPage({
     <AdminShell
       {...site}
       user={ctx.user}
-      chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}
       title="Navigation"
       activePath="/admin/content"

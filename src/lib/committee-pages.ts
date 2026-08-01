@@ -1,3 +1,9 @@
+export const SCHOLARSHIPS_COMMITTEE_KEY = 'scholarships' as const
+
+export function committeePageSlug(key: string): string {
+  return key === SCHOLARSHIPS_COMMITTEE_KEY ? 'scholarships' : `committee-${key}`
+}
+
 export function parseCommitteeKey(key: string): string | null {
   const trimmed = key.trim()
   if (!/^[a-z][a-z0-9_]*$/.test(trimmed)) return null

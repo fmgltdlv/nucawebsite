@@ -108,7 +108,6 @@ export function AdminContentPostsPage({
     <AdminShell
       {...site}
       user={ctx.user}
-      chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}
       title="THE DIRT — web posts"
       activePath="/admin/content"

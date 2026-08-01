@@ -1,11 +1,9 @@
 import { Hono } from 'hono'
-import { getCookie } from 'hono/cookie'
 import type { ThemeId } from '../config/themes'
 import type { AdminLayoutProps } from '../lib/site-context'
 import { parseThemeId } from '../config/themes'
 import type { Env } from '../env'
-import { canAccessRole, resolveAdminContext } from '../lib/admin-context'
-import { chairCanEditPage } from '../lib/chair-pages'
+import { isAdmin, resolveAdminContext } from '../lib/admin-context'
 import {
   createDirtRelease,
   deleteDirtRelease,
@@ -21,7 +19,7 @@ import {
   updateLeadership,
 } from '../lib/leadership-db'
 import { createPost, deletePost, getPostById, listAllPosts, updatePost } from '../lib/posts-db'
-import { buildPageLabels, getPageBySlug, isKnownPageSlug, listPages, upsertPage } from '../lib/pages-db'
+import { buildPageLabels, getPageBySlug, listPages, upsertPage } from '../lib/pages-db'
 import { blocksToMarkdown, parsePageBlocks } from '../lib/page-blocks'
 import { loadCmsPageExtras } from '../lib/cms-page-extras'
 import { renderCmsPage } from '../lib/render-cms-page'
@@ -72,7 +70,6 @@ import {
 } from '../lib/site-settings'
 import { loadPublicSiteContext } from '../lib/site-context'
 import { seedContentIfEmpty } from '../lib/seed'
-import { THEME_COOKIE } from '../lib/theme'
 import { listNewsletterSubscribers, updateNewsletterSubscriberStatus, deleteNewsletterSubscriber, acknowledgeAllNewsletterSubscribers } from '../lib/newsletter-db'
 import { listContactSubmissions, updateContactSubmissionStatus, deleteContactSubmission, acknowledgeAllContactSubmissions } from '../lib/contact-db'
 import { parseDatetimeLocal } from '../lib/datetime'
@@ -143,7 +140,7 @@ function flashMessage(c: { req: { query: (k: string) => string | undefined } }, 
 async function requireAdmin(c: Parameters<typeof resolveAdminContext>[0]) {
   const ctx = await resolveAdminContext(c)
   if (!ctx) return { kind: 'redirect' as const, to: '/admin/login' }
-  if (!canAccessRole(ctx.user, ['admin'])) return { kind: 'redirect' as const, to: '/admin' }
+  if (!isAdmin(ctx.user)) return { kind: 'redirect' as const, to: '/admin' }
   return { kind: 'ok' as const, ctx }
 }
 
@@ -523,17 +520,15 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.get('/admin/content/pages/:slug/preview', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
+    const auth = await requireAdmin(c)
+    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
     const slug = c.req.param('slug')
-    if (!chairCanEditPage(ctx, slug)) return c.redirect('/admin', 303)
-    if (ctx.user.role !== 'admin' && !isKnownPageSlug(slug)) return c.redirect('/admin', 303)
 
     await seedContentIfEmpty(c.env)
     const page = await getPageBySlug(c.env.DB, slug)
     if (!page) return c.redirect(`/admin/content/pages/${slug}`, 303)
 
-    const site = await loadPublicSiteContext(c.env, getCookie(c, THEME_COOKIE))
+    const site = await loadPublicSiteContext(c.env)
     const extras = await loadCmsPageExtras(c.env.DB, slug, page)
 
     return c.html(
@@ -544,11 +539,9 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/pages/:slug/preview-draft', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.text('Unauthorized', 401)
+    const auth = await requireAdmin(c)
+    if (auth.kind === 'redirect') return c.text('Unauthorized', 401)
     const slug = c.req.param('slug')
-    if (!chairCanEditPage(ctx, slug)) return c.text('Forbidden', 403)
-    if (ctx.user.role !== 'admin' && !isKnownPageSlug(slug)) return c.text('Forbidden', 403)
 
     let payload: { title?: string; meta_description?: string; body_json?: string }
     try {
@@ -576,29 +569,25 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     }
 
     await seedContentIfEmpty(c.env)
-    const site = await loadPublicSiteContext(c.env, getCookie(c, THEME_COOKIE))
+    const site = await loadPublicSiteContext(c.env)
     const extras = await loadCmsPageExtras(c.env.DB, slug, page)
 
-    return c.html(
-      <PagePreviewFrame slug={slug} published={false} live>
-        {renderCmsPage(site, slug, page, extras)}
-      </PagePreviewFrame>,
-    )
+    // Return a single <html> document for iframe srcdoc — PagePreviewFrame would prepend a
+    // sibling <div> and break parsing/styles inside the live preview panel.
+    return c.html(renderCmsPage(site, slug, page, extras))
   })
 
   app.get('/admin/content/pages/:slug', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
+    const auth = await requireAdmin(c)
+    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
     const slug = c.req.param('slug')
-    if (!chairCanEditPage(ctx, slug)) return c.redirect('/admin', 303)
-    if (ctx.user.role !== 'admin' && !isKnownPageSlug(slug)) return c.redirect('/admin', 303)
     const page = await getPageBySlug(c.env.DB, slug)
     const committees = await listCommittees(c.env.DB)
     const pageLabels = buildPageLabels(committees)
     return c.html(
       <AdminContentPageEditPage
         {...c.get('adminSite')}
-        ctx={ctx}
+        ctx={auth.ctx}
         page={page}
         slug={slug}
         pageLabel={pageLabels[slug] ?? slug}
@@ -609,10 +598,9 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.post('/admin/content/pages/:slug', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
+    const auth = await requireAdmin(c)
+    if (auth.kind === 'redirect') return adminRedirect(c, auth.to)
     const slug = c.req.param('slug')
-    if (!chairCanEditPage(ctx, slug)) return c.redirect('/admin', 303)
     const body = await c.req.parseBody()
     const body_json = typeof body.body_json === 'string' ? body.body_json : null
     const blocks = parsePageBlocks(body_json)

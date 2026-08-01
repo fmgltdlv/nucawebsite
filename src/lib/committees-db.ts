@@ -1,5 +1,4 @@
-import { committeePageSlug } from './chair-pages'
-import { committeePublicPath, defaultCommitteeBlocks } from './committee-pages'
+import { committeePageSlug, committeePublicPath, defaultCommitteeBlocks } from './committee-pages'
 import { createNavItem, deleteNavItem, listNavItems } from './nav-items-db'
 import { blocksToMarkdown, serializePageBlocks } from './page-blocks'
 import { upsertPage } from './pages-db'
@@ -136,10 +135,6 @@ export async function teardownCommitteeResources(db: D1Database, key: string): P
     }
   }
 
-  await db
-    .prepare('DELETE FROM chair_committee_assignments WHERE committee_key = ?')
-    .bind(key)
-    .run()
   await db.prepare('UPDATE events SET committee_key = NULL WHERE committee_key = ?').bind(key).run()
 }
 

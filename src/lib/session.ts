@@ -1,5 +1,4 @@
 import { sign, verify } from 'hono/jwt'
-import type { UserRole } from '../config/roles'
 import type { Env } from '../env'
 
 const COOKIE_NAME = 'nuca_admin_session'
@@ -7,17 +6,13 @@ const MAX_AGE_SEC = 60 * 60 * 24 * 7
 
 export type SessionPayload = {
   sub: string
-  role: UserRole
+  role: 'admin'
   exp: number
 }
 
-export async function createSessionToken(
-  userId: string,
-  role: UserRole,
-  env: Env,
-): Promise<string> {
+export async function createSessionToken(userId: string, env: Env): Promise<string> {
   const exp = Math.floor(Date.now() / 1000) + MAX_AGE_SEC
-  return await sign({ sub: userId, role, exp }, env.JWT_SECRET, 'HS256')
+  return await sign({ sub: userId, role: 'admin', exp }, env.JWT_SECRET, 'HS256')
 }
 
 export async function verifySessionToken(
@@ -27,9 +22,8 @@ export async function verifySessionToken(
   if (!token) return null
   try {
     const payload = await verify(token, env.JWT_SECRET, 'HS256')
-    if (typeof payload.sub !== 'string' || typeof payload.role !== 'string') return null
-    if (payload.role !== 'admin' && payload.role !== 'chair' && payload.role !== 'member') return null
-    return { sub: payload.sub, role: payload.role as UserRole, exp: Number(payload.exp) }
+    if (typeof payload.sub !== 'string' || payload.role !== 'admin') return null
+    return { sub: payload.sub, role: 'admin', exp: Number(payload.exp) }
   } catch {
     return null
   }

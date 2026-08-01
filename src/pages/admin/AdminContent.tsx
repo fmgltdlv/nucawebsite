@@ -45,7 +45,6 @@ export function AdminContentPage({ ctx, ...site }: PageProps & { ctx: AdminConte
     <AdminShell
       {...site}
       user={ctx.user}
-      chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}
       title="Content"
       activePath="/admin/content"

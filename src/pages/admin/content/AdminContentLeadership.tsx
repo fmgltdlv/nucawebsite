@@ -178,7 +178,6 @@ export function AdminContentLeadershipPage({
     <AdminShell
       {...site}
       user={ctx.user}
-      chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}
       title="Leadership"
       activePath="/admin/content"

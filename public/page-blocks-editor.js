@@ -1,4 +1,49 @@
 (function () {
+  const PREVIEW_MODE_KEY = 'page-preview-mode'
+
+  window.initPagePreviewMode = function initPagePreviewMode() {
+    const toggle = document.querySelector('[data-preview-mode-toggle]')
+    const viewport = document.querySelector('[data-preview-viewport]')
+    if (!(toggle instanceof HTMLElement) || !(viewport instanceof HTMLElement)) return
+    if (toggle.dataset.previewModeWired === '1') return
+    toggle.dataset.previewModeWired = '1'
+
+    /** @param {'desktop' | 'mobile'} mode */
+    function applyMode(mode) {
+      const isMobile = mode === 'mobile'
+      viewport.classList.toggle('page-edit-preview-viewport--mobile', isMobile)
+      viewport.classList.toggle('page-edit-preview-viewport--desktop', !isMobile)
+      toggle.querySelectorAll('[data-preview-mode]').forEach((button) => {
+        if (!(button instanceof HTMLButtonElement)) return
+        const active = button.dataset.previewMode === mode
+        button.classList.toggle('is-active', active)
+        button.setAttribute('aria-pressed', active ? 'true' : 'false')
+      })
+      try {
+        sessionStorage.setItem(PREVIEW_MODE_KEY, mode)
+      } catch {
+        // Ignore storage errors in private browsing.
+      }
+    }
+
+    toggle.addEventListener('click', (event) => {
+      const button =
+        event.target instanceof Element ? event.target.closest('[data-preview-mode]') : null
+      if (!(button instanceof HTMLButtonElement)) return
+      const mode = button.dataset.previewMode
+      if (mode === 'mobile' || mode === 'desktop') applyMode(mode)
+    })
+
+    let saved = 'desktop'
+    try {
+      const stored = sessionStorage.getItem(PREVIEW_MODE_KEY)
+      if (stored === 'mobile' || stored === 'desktop') saved = stored
+    } catch {
+      // Ignore storage errors in private browsing.
+    }
+    applyMode(saved)
+  }
+
   window.initPageBlocksEditor = function initPageBlocksEditor() {
   const root = document.getElementById('page-blocks-editor')
   const hiddenInput = document.getElementById('body_json')
@@ -33,8 +78,219 @@
   let blocks = []
   let previewTimer = 0
   let previewRequestId = 0
+  /** @type {string | null} */
+  let activeBlockIndex = null
+  /** @type {Set<string>} */
+  const collapsedBlocks = new Set()
   const pageSlug = root.dataset.pageSlug || ''
   const isHomePage = pageSlug === 'home'
+
+  const BLOCK_TYPE_LABELS = {
+    heading: 'Heading',
+    text: 'Paragraph',
+    list: 'List',
+    callout: 'Callout box',
+    section: 'Section',
+    calendar: 'Events calendar',
+    hero: 'Hero banner',
+    events_feed: 'Events list',
+    dirt_feed: 'THE DIRT feed',
+  }
+
+  function blockTypeLabel(type) {
+    return BLOCK_TYPE_LABELS[type] || type
+  }
+
+  function truncate(text, max = 72) {
+    const trimmed = text.replace(/\s+/g, ' ').trim()
+    if (!trimmed) return 'Empty'
+    return trimmed.length > max ? `${trimmed.slice(0, max - 1)}…` : trimmed
+  }
+
+  /** @param {PageBlock} block */
+  function blockSummary(block) {
+    switch (block.type) {
+      case 'heading':
+        return truncate(block.text)
+      case 'text':
+        return truncate(block.body)
+      case 'list':
+        return block.items.length === 1
+          ? truncate(block.items[0])
+          : `List · ${block.items.length} items`
+      case 'callout':
+        return truncate(block.title || block.body)
+      case 'section':
+        return block.title
+          ? truncate(block.title)
+          : `Section · ${block.blocks.length} block${block.blocks.length === 1 ? '' : 's'}`
+      case 'calendar':
+        return truncate(block.title || 'Events calendar')
+      case 'hero':
+        return truncate(block.title || block.eyebrow)
+      case 'events_feed':
+        return truncate(block.title || 'Events list')
+      case 'dirt_feed':
+        return truncate(block.title || 'THE DIRT feed')
+      default:
+        return blockTypeLabel(block.type)
+    }
+  }
+
+  function escapeHtml(text) {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+  }
+
+  function initCollapsedState() {
+    collapsedBlocks.clear()
+    blocks.forEach((block, index) => {
+      collapsedBlocks.add(String(index))
+      if (block.type === 'section') {
+        block.blocks.forEach((_, childIndex) => {
+          collapsedBlocks.add(`${index}-${childIndex}`)
+        })
+      }
+    })
+  }
+
+  /** @param {string} index */
+  function toggleCollapse(index) {
+    if (collapsedBlocks.has(index)) {
+      collapsedBlocks.delete(index)
+      activeBlockIndex = index
+    } else {
+      collapsedBlocks.add(index)
+      if (activeBlockIndex === index) activeBlockIndex = null
+    }
+    updateSelectionUi()
+  }
+
+  /**
+   * @param {string} index
+   * @param {{ expand?: boolean, scrollEditor?: boolean, scrollPreview?: boolean }} [options]
+   */
+  function selectBlock(index, options = {}) {
+    activeBlockIndex = index
+    if (options.expand) {
+      collapsedBlocks.delete(index)
+      const parentIndex = index.includes('-') ? index.split('-')[0] : null
+      if (parentIndex) collapsedBlocks.delete(parentIndex)
+    }
+    updateSelectionUi()
+    if (options.scrollEditor) {
+      const card = root.querySelector(`[data-block-index="${index}"]`)
+      card?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+    if (options.scrollPreview !== false) highlightPreviewBlock(index)
+  }
+
+  function updateSelectionUi() {
+    root.querySelectorAll('[data-block-index]').forEach((card) => {
+      if (!(card instanceof HTMLElement)) return
+      const index = card.getAttribute('data-block-index')
+      if (!index) return
+      card.classList.toggle('page-block-card--active', index === activeBlockIndex)
+      card.classList.toggle('is-collapsed', collapsedBlocks.has(index))
+      const toggle = card.querySelector('[data-collapse-toggle]')
+      if (toggle instanceof HTMLButtonElement) {
+        const collapsed = collapsedBlocks.has(index)
+        toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true')
+        toggle.setAttribute('aria-label', collapsed ? 'Expand block' : 'Collapse block')
+        toggle.textContent = collapsed ? '▸' : '▾'
+      }
+    })
+    if (activeBlockIndex) highlightPreviewBlock(activeBlockIndex)
+  }
+
+  /** @param {string | null} index */
+  function highlightPreviewBlock(index) {
+    if (!(previewFrame instanceof HTMLIFrameElement)) return
+    const doc = previewFrame.contentDocument
+    if (!doc) return
+    doc.querySelectorAll('[data-cms-block-index]').forEach((element) => {
+      element.classList.toggle(
+        'cms-preview-block--active',
+        element.getAttribute('data-cms-block-index') === index,
+      )
+    })
+    if (!index) return
+    const active = doc.querySelector(`[data-cms-block-index="${index}"]`)
+    active?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  function injectPreviewStyles(doc) {
+    if (doc.getElementById('cms-preview-block-styles')) return
+    const style = doc.createElement('style')
+    style.id = 'cms-preview-block-styles'
+    style.textContent = `
+      .cms-preview-block { cursor: pointer; transition: outline-color 0.15s ease, box-shadow 0.15s ease; }
+      .cms-preview-block:hover { outline: 2px dashed rgba(37, 99, 235, 0.55); outline-offset: 3px; }
+      .cms-preview-block--active { outline: 3px solid #2563eb; outline-offset: 3px; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15); }
+    `
+    doc.head.append(style)
+  }
+
+  function wirePreviewFrame() {
+    if (!(previewFrame instanceof HTMLIFrameElement)) return
+    const doc = previewFrame.contentDocument
+    if (!doc?.body) return
+    injectPreviewStyles(doc)
+    if (doc.body.dataset.cmsPreviewWired === '1') return
+    doc.body.dataset.cmsPreviewWired = '1'
+    doc.addEventListener(
+      'click',
+      (event) => {
+        const target =
+          event.target instanceof Element ? event.target.closest('[data-cms-block-index]') : null
+        if (!(target instanceof HTMLElement)) return
+        event.preventDefault()
+        event.stopPropagation()
+        const index = target.getAttribute('data-cms-block-index')
+        if (!index) return
+        selectBlock(index, { expand: true, scrollEditor: true, scrollPreview: false })
+      },
+      true,
+    )
+  }
+
+  /**
+   * @param {string} index
+   * @param {PageBlock} block
+   * @param {PageBlock[]} list
+   * @param {boolean} [includeActions]
+   */
+  function renderBlockHeader(index, block, list, includeActions = true) {
+    const header = document.createElement('div')
+    header.className = 'page-block-card-header'
+
+    const toggle = document.createElement('button')
+    toggle.type = 'button'
+    toggle.className = 'page-block-collapse-toggle'
+    toggle.dataset.collapseToggle = '1'
+    toggle.setAttribute('aria-expanded', collapsedBlocks.has(index) ? 'false' : 'true')
+    toggle.setAttribute('aria-label', collapsedBlocks.has(index) ? 'Expand block' : 'Collapse block')
+    toggle.textContent = collapsedBlocks.has(index) ? '▸' : '▾'
+    toggle.addEventListener('click', (event) => {
+      event.stopPropagation()
+      toggleCollapse(index)
+    })
+
+    const summary = document.createElement('button')
+    summary.type = 'button'
+    summary.className = 'page-block-card-summary'
+    summary.innerHTML = `<span class="page-block-card-type">${escapeHtml(blockTypeLabel(block.type))}</span><span class="page-block-card-preview">${escapeHtml(blockSummary(block))}</span>`
+    summary.addEventListener('click', () => {
+      selectBlock(index, { expand: true, scrollPreview: true })
+    })
+
+    header.append(toggle, summary)
+    if (includeActions) header.append(renderActions(index, list))
+    return header
+  }
 
   /** @type {{ key: string, name: string }[]} */
   let committees = []
@@ -114,6 +370,8 @@
       const html = await response.text()
       if (requestId !== previewRequestId) return
       previewFrame.srcdoc = html
+      wirePreviewFrame()
+      if (activeBlockIndex) highlightPreviewBlock(activeBlockIndex)
     } catch {
       // Ignore transient preview errors while typing.
     }
@@ -217,11 +475,42 @@
       btn.className = 'btn btn-secondary btn-sm'
       btn.textContent = `+ ${label}`
       btn.addEventListener('click', () => {
+        const newIndex = blocks.length
         blocks = [...blocks, defaultBlock(type)]
+        activeBlockIndex = String(newIndex)
+        collapsedBlocks.delete(String(newIndex))
         render()
       })
       toolbar.append(btn)
     })
+
+    if (blocks.length > 0) {
+      const listControls = document.createElement('div')
+      listControls.className = 'page-blocks-list-controls'
+
+      const expandAll = document.createElement('button')
+      expandAll.type = 'button'
+      expandAll.className = 'btn btn-secondary btn-sm'
+      expandAll.textContent = 'Expand all'
+      expandAll.addEventListener('click', () => {
+        collapsedBlocks.clear()
+        updateSelectionUi()
+      })
+
+      const collapseAll = document.createElement('button')
+      collapseAll.type = 'button'
+      collapseAll.className = 'btn btn-secondary btn-sm'
+      collapseAll.textContent = 'Collapse all'
+      collapseAll.addEventListener('click', () => {
+        initCollapsedState()
+        activeBlockIndex = null
+        updateSelectionUi()
+      })
+
+      listControls.append(expandAll, collapseAll)
+      toolbar.append(listControls)
+    }
+
     return toolbar
   }
 
@@ -347,10 +636,15 @@
       btn.className = 'btn btn-secondary btn-sm'
       btn.textContent = `+ ${label}`
       btn.addEventListener('click', () => {
+        const childIndex = sectionBlock.blocks.length
+        const indexKey = `${sectionIndex}-${childIndex}`
         const next = {
           ...sectionBlock,
           blocks: [...sectionBlock.blocks, defaultBlock(type)],
         }
+        activeBlockIndex = indexKey
+        collapsedBlocks.delete(String(sectionIndex))
+        collapsedBlocks.delete(indexKey)
         updateBlock(sectionIndex, next)
         render()
       })
@@ -359,33 +653,38 @@
     nested.append(nestedToolbar)
 
     sectionBlock.blocks.forEach((child, childIndex) => {
-      const card = document.createElement('div')
-      card.className = 'page-block-card page-block-card-nested'
-      card.append(renderNestedBlockEditor(child, sectionIndex, childIndex))
-      nested.append(card)
+      nested.append(renderNestedBlockEditor(child, sectionIndex, childIndex))
     })
 
     return nested
   }
 
   function renderNestedBlockEditor(block, sectionIndex, childIndex) {
-    const wrap = document.createElement('div')
+    const indexKey = `${sectionIndex}-${childIndex}`
+    const card = document.createElement('article')
+    card.className = 'page-block-card page-block-card-nested'
+    card.dataset.blockIndex = indexKey
+    if (collapsedBlocks.has(indexKey)) card.classList.add('is-collapsed')
+    if (activeBlockIndex === indexKey) card.classList.add('page-block-card--active')
+
+    const body = document.createElement('div')
+    body.className = 'page-block-card-body'
 
     function updateChild(next) {
       const section = blocks[sectionIndex]
       if (section.type !== 'section') return
       const nextBlocks = section.blocks.map((item, i) => (i === childIndex ? next : item))
       updateBlock(sectionIndex, { ...section, blocks: nextBlocks })
+      updateSummaryText(card, next)
     }
 
-    const header = document.createElement('div')
-    header.className = 'page-block-card-header'
-    header.innerHTML = `<strong>${block.type}</strong>`
+    const header = renderBlockHeader(indexKey, block, blocks, false)
     const remove = document.createElement('button')
     remove.type = 'button'
     remove.className = 'btn btn-secondary btn-sm'
     remove.textContent = 'Remove'
-    remove.addEventListener('click', () => {
+    remove.addEventListener('click', (event) => {
+      event.stopPropagation()
       const section = blocks[sectionIndex]
       if (section.type !== 'section') return
       updateBlock(sectionIndex, {
@@ -395,10 +694,10 @@
       render()
     })
     header.append(remove)
-    wrap.append(header)
+    card.append(header)
 
     if (block.type === 'heading') {
-      wrap.append(
+      body.append(
         field('Text', textInput(block.text, (text) => updateChild({ ...block, text }))),
         field(
           'Level',
@@ -414,16 +713,16 @@
         ),
         field('Alignment', alignSelect(block.align, (align) => updateChild({ ...block, align }))),
       )
-      applyTextStyleFields(wrap, block, updateChild)
+      applyTextStyleFields(body, block, updateChild)
     } else if (block.type === 'text') {
-      wrap.append(
-        field('Paragraph', textArea(block.body, (body) => updateChild({ ...block, body }), 4)),
+      body.append(
+        field('Paragraph', textArea(block.body, (value) => updateChild({ ...block, body: value }), 4)),
         field(
           'Alignment',
           alignSelect(block.align || 'left', (align) => updateChild({ ...block, align })),
         ),
       )
-      applyTextStyleFields(wrap, block, updateChild)
+      applyTextStyleFields(body, block, updateChild)
     } else if (block.type === 'list') {
       const itemsArea = textArea(block.items.join('\n'), (value) => {
         const items = value
@@ -432,7 +731,7 @@
           .filter(Boolean)
         updateChild({ ...block, items: items.length > 0 ? items : [''] })
       }, 4)
-      wrap.append(
+      body.append(
         field('List items (one per line)', itemsArea),
         field(
           'Style',
@@ -447,9 +746,9 @@
         ),
       )
     } else if (block.type === 'callout') {
-      wrap.append(
+      body.append(
         field('Title', textInput(block.title || '', (title) => updateChild({ ...block, title }))),
-        field('Body', textArea(block.body, (body) => updateChild({ ...block, body }), 4)),
+        field('Body', textArea(block.body, (value) => updateChild({ ...block, body: value }), 4)),
         field(
           'Style',
           selectField(
@@ -465,7 +764,14 @@
       )
     }
 
-    return wrap
+    card.append(body)
+    return card
+  }
+
+  /** @param {HTMLElement} card @param {PageBlock} block */
+  function updateSummaryText(card, block) {
+    const preview = card.querySelector('.page-block-card-preview')
+    if (preview) preview.textContent = blockSummary(block)
   }
 
   function renderCalendarCommitteeField(block, update) {
@@ -546,19 +852,26 @@
   }
 
   function renderBlockEditor(block, index) {
+    const indexKey = String(index)
     const card = document.createElement('article')
     card.className = 'page-block-card'
     card.dataset.blockType = block.type
+    card.dataset.blockIndex = indexKey
+    if (collapsedBlocks.has(indexKey)) card.classList.add('is-collapsed')
+    if (activeBlockIndex === indexKey) card.classList.add('page-block-card--active')
 
-    const header = document.createElement('div')
-    header.className = 'page-block-card-header'
-    header.innerHTML = `<strong>${block.type}</strong>`
-    header.append(renderActions(index, blocks))
-    card.append(header)
+    const body = document.createElement('div')
+    body.className = 'page-block-card-body'
+
+    card.append(renderBlockHeader(indexKey, block, blocks))
 
     if (block.type === 'heading') {
-      card.append(
-        field('Text', textInput(block.text, (text) => updateBlock(index, { ...block, text }))),
+      body.append(
+        field('Text', textInput(block.text, (text) => {
+          const next = { ...block, text }
+          updateBlock(index, next)
+          updateSummaryText(card, next)
+        })),
         field(
           'Level',
           selectField(
@@ -576,25 +889,31 @@
           alignSelect(block.align, (align) => updateBlock(index, { ...block, align })),
         ),
       )
-      applyTextStyleFields(card, block, (next) => updateBlock(index, next))
+      applyTextStyleFields(body, block, (next) => updateBlock(index, next))
     } else if (block.type === 'text') {
-      card.append(
-        field('Paragraph', textArea(block.body, (body) => updateBlock(index, { ...block, body }), 5)),
+      body.append(
+        field('Paragraph', textArea(block.body, (value) => {
+          const next = { ...block, body: value }
+          updateBlock(index, next)
+          updateSummaryText(card, next)
+        }, 5)),
         field(
           'Alignment',
           alignSelect(block.align || 'left', (align) => updateBlock(index, { ...block, align })),
         ),
       )
-      applyTextStyleFields(card, block, (next) => updateBlock(index, next))
+      applyTextStyleFields(body, block, (next) => updateBlock(index, next))
     } else if (block.type === 'list') {
       const itemsArea = textArea(block.items.join('\n'), (value) => {
         const items = value
           .split('\n')
           .map((line) => line.trim())
           .filter(Boolean)
-        updateBlock(index, { ...block, items: items.length > 0 ? items : [''] })
+        const next = { ...block, items: items.length > 0 ? items : [''] }
+        updateBlock(index, next)
+        updateSummaryText(card, next)
       }, 5)
-      card.append(
+      body.append(
         field('List items (one per line)', itemsArea),
         field(
           'Style',
@@ -609,9 +928,17 @@
         ),
       )
     } else if (block.type === 'callout') {
-      card.append(
-        field('Title', textInput(block.title || '', (title) => updateBlock(index, { ...block, title }))),
-        field('Body', textArea(block.body, (body) => updateBlock(index, { ...block, body }), 5)),
+      body.append(
+        field('Title', textInput(block.title || '', (title) => {
+          const next = { ...block, title }
+          updateBlock(index, next)
+          updateSummaryText(card, next)
+        })),
+        field('Body', textArea(block.body, (value) => {
+          const next = { ...block, body: value }
+          updateBlock(index, next)
+          updateSummaryText(card, next)
+        }, 5)),
         field(
           'Style',
           selectField(
@@ -626,7 +953,7 @@
         ),
       )
     } else if (block.type === 'calendar') {
-      card.append(
+      body.append(
         field(
           'Title (optional)',
           textInput(block.title || '', (title) => updateBlock(index, { ...block, title })),
@@ -647,10 +974,14 @@
       )
     } else if (block.type === 'section') {
       const bg = sectionBackground(block)
-      card.append(
+      body.append(
         field(
           'Section title',
-          textInput(block.title || '', (title) => updateBlock(index, { ...block, title })),
+          textInput(block.title || '', (title) => {
+            const next = { ...block, title }
+            updateBlock(index, next)
+            updateSummaryText(card, next)
+          }),
         ),
         field(
           'Background',
@@ -665,10 +996,22 @@
         renderNestedBlocks(block, index),
       )
     } else if (block.type === 'hero') {
-      card.append(
-        field('Eyebrow', textInput(block.eyebrow, (eyebrow) => updateBlock(index, { ...block, eyebrow }))),
-        field('Headline', textInput(block.title, (title) => updateBlock(index, { ...block, title }))),
-        field('Lead paragraph', textArea(block.lead, (lead) => updateBlock(index, { ...block, lead }), 4)),
+      body.append(
+        field('Eyebrow', textInput(block.eyebrow, (eyebrow) => {
+          const next = { ...block, eyebrow }
+          updateBlock(index, next)
+          updateSummaryText(card, next)
+        })),
+        field('Headline', textInput(block.title, (title) => {
+          const next = { ...block, title }
+          updateBlock(index, next)
+          updateSummaryText(card, next)
+        })),
+        field('Lead paragraph', textArea(block.lead, (lead) => {
+          const next = { ...block, lead }
+          updateBlock(index, next)
+          updateSummaryText(card, next)
+        }, 4)),
         field(
           'Primary button label',
           textInput(block.cta_primary_label, (cta_primary_label) =>
@@ -696,9 +1039,17 @@
       )
     } else if (block.type === 'events_feed' || block.type === 'dirt_feed') {
       const feedLabel = block.type === 'events_feed' ? 'events' : 'THE DIRT items'
-      card.append(
-        field('Section title', textInput(block.title, (title) => updateBlock(index, { ...block, title }))),
-        field('Lead paragraph', textArea(block.lead, (lead) => updateBlock(index, { ...block, lead }), 3)),
+      body.append(
+        field('Section title', textInput(block.title, (title) => {
+          const next = { ...block, title }
+          updateBlock(index, next)
+          updateSummaryText(card, next)
+        })),
+        field('Lead paragraph', textArea(block.lead, (lead) => {
+          const next = { ...block, lead }
+          updateBlock(index, next)
+          updateSummaryText(card, next)
+        }, 3)),
         field(
           `Number of ${feedLabel} to show`,
           textInput(String(block.limit), (value) => {
@@ -709,6 +1060,7 @@
       )
     }
 
+    card.append(body)
     return card
   }
 
@@ -733,12 +1085,31 @@
   }
 
   parseInitial()
+  initCollapsedState()
   render()
+
+  root.addEventListener('focusin', (event) => {
+    const card =
+      event.target instanceof Element ? event.target.closest('[data-block-index]') : null
+    if (!(card instanceof HTMLElement)) return
+    const index = card.getAttribute('data-block-index')
+    if (!index || index === activeBlockIndex) return
+    selectBlock(index, { scrollPreview: true, scrollEditor: false })
+  })
+
+  if (previewFrame instanceof HTMLIFrameElement) {
+    previewFrame.addEventListener('load', () => {
+      wirePreviewFrame()
+      if (activeBlockIndex) highlightPreviewBlock(activeBlockIndex)
+    })
+  }
 
   form?.addEventListener('submit', syncHidden)
   titleInput?.addEventListener('input', schedulePreview)
   metaInput?.addEventListener('input', schedulePreview)
+  window.initPagePreviewMode()
   }
 
   window.initPageBlocksEditor()
+  window.initPagePreviewMode()
 })()

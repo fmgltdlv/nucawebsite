@@ -131,23 +131,32 @@ function renderHomeBlock(
     posts: PostRecord[]
   },
 ) {
+  let content = null
   switch (block.type) {
     case 'hero':
-      return <HomeHeroBlock block={block} key={`hero-${index}`} />
+      content = <HomeHeroBlock block={block} />
+      break
     case 'events_feed':
-      return <HomeEventsFeedBlock block={block} events={data.events} key={`events-${index}`} />
+      content = <HomeEventsFeedBlock block={block} events={data.events} />
+      break
     case 'dirt_feed':
-      return (
+      content = (
         <HomeDirtFeedBlock
           block={block}
           dirtReleases={data.dirtReleases}
           posts={data.posts}
-          key={`dirt-${index}`}
         />
       )
+      break
     default:
       return null
   }
+
+  return (
+    <div class="cms-preview-block" data-cms-block-index={String(index)} key={`block-${index}`}>
+      {content}
+    </div>
+  )
 }
 
 export function HomePage({

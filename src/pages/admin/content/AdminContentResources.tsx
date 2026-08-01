@@ -98,7 +98,6 @@ export function AdminContentResourcesPage({
     <AdminShell
       {...site}
       user={ctx.user}
-      chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}
       title="Resource links"
       activePath="/admin/content"

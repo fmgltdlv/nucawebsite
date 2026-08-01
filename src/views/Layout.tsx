@@ -7,7 +7,6 @@ import { siteNavigation } from '../nav/site-nav'
 import { BreakingNewsBanner } from './BreakingNewsBanner'
 import { SiteNav } from './SiteNav'
 import { StaffPortalLink } from './StaffPortalLink'
-import { ThemeSwitcher } from './ThemeSwitcher'
 import type { SiteLayoutProps } from '../types/page'
 
 type LayoutProps = SiteLayoutProps & {
@@ -68,7 +67,7 @@ export function Layout({
           href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&family=Barlow+Condensed:wght@400;600;700&family=Barlow:ital,wght@0,400;0,600;0,700;1,400&family=Bebas+Neue&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Outfit:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&family=Work+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
           rel="stylesheet"
         />
-        <link rel="stylesheet" href="/styles.css?v=16" />
+        <link rel="stylesheet" href="/styles.css?v=19" />
       </head>
       <body>
         <a class="skip-link" href="#main">Skip to content</a>
@@ -132,12 +131,11 @@ export function Layout({
               <a class="footer-link" href="/contact#newsletter">Subscribe by email</a>
             </div>
           </div>
-          <div class="container footer-bottom footer-bottom-row">
+          <div class="container footer-bottom">
             <p>
               © {new Date().getFullYear()} {contact.name}.
               {copyrightNote ? ` ${copyrightNote}` : ''}
             </p>
-            <ThemeSwitcher activeTheme={theme} />
           </div>
         </footer>
         <script src="/site.js?v=15" defer></script>

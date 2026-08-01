@@ -44,7 +44,6 @@ export function AdminContentPageEditPage({
     <AdminShell
       {...site}
       user={ctx.user}
-      chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}
       title={`Edit: ${label}`}
       activePath="/admin/content"
@@ -64,7 +63,7 @@ export function AdminContentPageEditPage({
       </p>
       {flash && <p class="admin-flash">{flash}</p>}
       <form
-        class="form admin-form-section page-edit-form"
+        class="form form-wide admin-form-section page-edit-form"
         method="post"
         action={`/admin/content/pages/${slug}`}
         data-preview-draft-url={previewDraftPath}
@@ -125,19 +124,49 @@ export function AdminContentPageEditPage({
 
           <aside class="page-edit-panel page-edit-panel--preview" aria-label="Live page preview">
             <div class="page-edit-preview-header">
-              <h2 class="page-edit-preview-title">Live preview</h2>
-              <p class="admin-help">Updates automatically as you edit. Save to publish changes.</p>
+              <div class="page-edit-preview-heading">
+                <h2 class="page-edit-preview-title">Live preview</h2>
+                <p class="admin-help">Updates automatically as you edit. Save to publish changes.</p>
+              </div>
+              <div
+                class="page-edit-preview-modes"
+                role="group"
+                aria-label="Preview screen size"
+                data-preview-mode-toggle
+              >
+                <button
+                  type="button"
+                  class="page-edit-preview-mode is-active"
+                  data-preview-mode="desktop"
+                  aria-pressed="true"
+                >
+                  Desktop
+                </button>
+                <button
+                  type="button"
+                  class="page-edit-preview-mode"
+                  data-preview-mode="mobile"
+                  aria-pressed="false"
+                >
+                  Mobile
+                </button>
+              </div>
             </div>
-            <iframe
-              id="page-live-preview"
-              class="page-edit-preview-frame"
-              title={`Live preview: ${label}`}
-              sandbox="allow-same-origin allow-scripts"
-            ></iframe>
+            <div
+              class="page-edit-preview-viewport page-edit-preview-viewport--desktop"
+              data-preview-viewport
+            >
+              <iframe
+                id="page-live-preview"
+                class="page-edit-preview-frame"
+                title={`Live preview: ${label}`}
+                sandbox="allow-same-origin allow-scripts"
+              ></iframe>
+            </div>
           </aside>
         </div>
       </form>
-      <script src="/page-blocks-editor.js?v=4" defer></script>
+      <script src="/page-blocks-editor.js?v=7" defer></script>
     </AdminShell>
   )
 }

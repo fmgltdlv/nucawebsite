@@ -116,7 +116,6 @@ export function AdminContentDirtPage({
     <AdminShell
       {...site}
       user={ctx.user}
-      chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}
       title="THE DIRT"
       activePath="/admin/content"

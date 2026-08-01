@@ -1,11 +1,10 @@
 import { Hono } from 'hono'
 import type { ThemeId } from '../config/themes'
 import type { AdminLayoutProps } from '../lib/site-context'
-import { committeeAssignmentKeys, USER_ROLES, type UserRole } from '../config/roles'
 import { MEMBER_TYPES, type MemberType } from '../data/demo'
 import type { Env } from '../env'
-import { assignChairCommittees, approveMemberLink, createUser, listUsersWithMemberInfo, rejectMemberLink, requestMemberLink, verifyUserLogin } from '../lib/auth'
-import { canAccessRole, resolveAdminContext } from '../lib/admin-context'
+import { createUser, listUsers, verifyUserLogin } from '../lib/auth'
+import { isAdmin, resolveAdminContext } from '../lib/admin-context'
 import { parseRepeatRule, parseRepeatUntil } from '../lib/event-repeat'
 import {
   applyEventImageUploads,
@@ -23,15 +22,12 @@ import { listCommittees } from '../lib/committees-db'
 import { geocodeClarkCountyAddress } from '../lib/geocode'
 import { parseDatetimeLocal } from '../lib/datetime'
 import { registerAdminContentRoutes } from './admin-content'
-import { listActiveMembers } from '../lib/members'
 import {
   createMember,
-  getMemberById,
   getMemberLogoR2Key,
   listMembersForAdmin,
   updateMember,
   updateMemberLogoKey,
-  updateMemberProfile,
 } from '../lib/members-db'
 import { applyMemberLogoChange } from '../lib/member-logos'
 import { parsePointsOfContactFromForm } from '../lib/member-contacts'
@@ -45,11 +41,9 @@ import {
 } from '../lib/session'
 import { AdminLoginPage } from '../pages/AdminAuth'
 import { AdminAssetsPage } from '../pages/admin/AdminAssets'
-import { AdminCommitteesPage } from '../pages/admin/AdminCommittees'
 import { AdminEventsPage } from '../pages/admin/AdminEvents'
 import { AdminHomePage } from '../pages/admin/AdminHome'
 import { AdminMembersPage } from '../pages/admin/AdminMembers'
-import { AdminProfilePage } from '../pages/admin/AdminProfile'
 import { AdminUsersPage } from '../pages/admin/AdminUsers'
 
 type AdminVariables = { theme: ThemeId; adminSite: AdminLayoutProps }
@@ -82,6 +76,10 @@ function parseMemberFormBody(body: Record<string, File | string>) {
   }
 }
 
+function requireAdmin(ctx: Awaited<ReturnType<typeof resolveAdminContext>>) {
+  return ctx && isAdmin(ctx.user)
+}
+
 export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminVariables }>) {
   registerAdminContentRoutes(app)
   app.get('/admin/login', async (c) => {
@@ -103,7 +101,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
         401,
       )
     }
-    const token = await createSessionToken(user.id, user.role, c.env)
+    const token = await createSessionToken(user.id, c.env)
     c.header('Set-Cookie', sessionCookieHeader(token))
     return c.redirect('/admin', 303)
   })
@@ -122,8 +120,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
 
   app.get('/admin/assets', async (c) => {
     const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
-    if (!canAccessRole(ctx.user, ['admin'])) return c.redirect('/admin', 303)
+    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
 
     const allAssets = await listIndexedAssets(c.env.DB)
     const filterType = parseAssetType(c.req.query('type'))
@@ -144,14 +141,9 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
 
   app.get('/admin/api/assets', async (c) => {
     const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.json({ error: 'Unauthorized' }, 401)
-    if (!canAccessRole(ctx.user, ['admin', 'chair'])) return c.json({ error: 'Forbidden' }, 403)
+    if (!requireAdmin(ctx)) return c.json({ error: 'Unauthorized' }, 401)
 
     const kind = c.req.query('kind') === 'pdf' ? 'pdf' : 'image'
-    if (kind === 'pdf' && !canAccessRole(ctx.user, ['admin'])) {
-      return c.json({ error: 'Forbidden' }, 403)
-    }
-
     const allAssets = await listIndexedAssets(c.env.DB)
     const assets = dedupeAssetsByKey(filterAssetsByKind(allAssets, kind)).map((asset) => ({
       key: asset.key,
@@ -165,8 +157,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
 
   app.get('/admin/api/geocode', async (c) => {
     const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.json({ error: 'Unauthorized' }, 401)
-    if (!canAccessRole(ctx.user, ['admin', 'chair'])) return c.json({ error: 'Forbidden' }, 403)
+    if (!requireAdmin(ctx)) return c.json({ error: 'Unauthorized' }, 401)
 
     const address = c.req.query('address')?.trim() ?? ''
     if (!address) return c.json({ ok: false })
@@ -184,97 +175,45 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
 
   app.get('/admin/users', async (c) => {
     const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
-    if (!canAccessRole(ctx.user, ['admin'])) return c.redirect('/admin', 303)
-    const users = await listUsersWithMemberInfo(c.env.DB)
-    const members = await listActiveMembers(c.env.DB)
-    const committees = await listCommittees(c.env.DB)
-    const ok = c.req.query('ok')
-    const message =
-      ok === '1'
-        ? 'User created.'
-        : ok === 'approved'
-          ? 'Company link approved.'
-          : ok === 'rejected'
-            ? 'Company link rejected.'
-            : undefined
+    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
+    const users = await listUsers(c.env.DB)
+    const message = c.req.query('ok') === '1' ? 'User created.' : undefined
     return c.html(
-      <AdminUsersPage
-        {...c.get('adminSite')}
-        ctx={ctx}
-        users={users}
-        members={members}
-        committees={committees}
-        message={message}
-      />,
+      <AdminUsersPage {...c.get('adminSite')} ctx={ctx} users={users} message={message} />,
     )
   })
 
   app.post('/admin/users', async (c) => {
     const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
-    if (!canAccessRole(ctx.user, ['admin'])) return c.redirect('/admin', 303)
+    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
 
     const body = await c.req.parseBody()
     const email = typeof body.email === 'string' ? body.email : ''
     const password = typeof body.password === 'string' ? body.password : ''
-    const roleRaw = typeof body.role === 'string' ? body.role : ''
-    const role = USER_ROLES.includes(roleRaw as UserRole) ? (roleRaw as UserRole) : 'member'
-    const member_id = typeof body.member_id === 'string' ? body.member_id.trim() : ''
     const display_name = typeof body.display_name === 'string' ? body.display_name.trim() : ''
 
     if (!email || password.length < 10) {
-      const users = await listUsersWithMemberInfo(c.env.DB)
-      const members = await listActiveMembers(c.env.DB)
-      const committees = await listCommittees(c.env.DB)
+      const users = await listUsers(c.env.DB)
       return c.html(
         <AdminUsersPage
           {...c.get('adminSite')}
           ctx={ctx}
           users={users}
-          members={members}
-          committees={committees}
           message="Email and password (10+ characters) are required."
         />,
       )
     }
 
-    const userId = await createUser(c.env.DB, email, password, role, {
-      member_id: member_id || undefined,
+    await createUser(c.env.DB, email, password, {
       display_name: display_name || undefined,
     })
-
-    if (role === 'chair') {
-      const assignmentKeys = committeeAssignmentKeys(await listCommittees(c.env.DB))
-      const keys = assignmentKeys.filter((key) => body[`committee_${key}`] === '1')
-      await assignChairCommittees(c.env.DB, userId, keys)
-    }
 
     return c.redirect('/admin/users?ok=1', 303)
   })
 
-  app.post('/admin/users/:userId/approve-link', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
-    if (!canAccessRole(ctx.user, ['admin'])) return c.redirect('/admin', 303)
-
-    const result = await approveMemberLink(c.env.DB, c.req.param('userId'))
-    return c.redirect(result.ok ? '/admin/users?ok=approved' : '/admin/users', 303)
-  })
-
-  app.post('/admin/users/:userId/reject-link', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
-    if (!canAccessRole(ctx.user, ['admin'])) return c.redirect('/admin', 303)
-
-    const result = await rejectMemberLink(c.env.DB, c.req.param('userId'))
-    return c.redirect(result.ok ? '/admin/users?ok=rejected' : '/admin/users', 303)
-  })
-
   app.get('/admin/members', async (c) => {
     const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
-    if (!canAccessRole(ctx.user, ['admin'])) return c.redirect('/admin', 303)
+    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
     const members = await listMembersForAdmin(c.env.DB)
     const flash =
       c.req.query('ok') === '1'
@@ -289,8 +228,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
 
   app.post('/admin/members', async (c) => {
     const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
-    if (!canAccessRole(ctx.user, ['admin'])) return c.redirect('/admin', 303)
+    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
 
     const body = await c.req.parseBody()
     const data = parseMemberFormBody(body)
@@ -331,8 +269,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
 
   app.post('/admin/members/:id', async (c) => {
     const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
-    if (!canAccessRole(ctx.user, ['admin'])) return c.redirect('/admin', 303)
+    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
 
     const id = c.req.param('id')
     const body = await c.req.parseBody()
@@ -376,8 +313,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
 
   app.get('/admin/events', async (c) => {
     const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
-    if (!canAccessRole(ctx.user, ['admin', 'chair'])) return c.redirect('/admin', 303)
+    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
     const events = await listAllEventsForAdmin(c.env.DB)
     const committees = await listCommittees(c.env.DB)
     const flash =
@@ -399,8 +335,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
 
   app.post('/admin/events', async (c) => {
     const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
-    if (!canAccessRole(ctx.user, ['admin', 'chair'])) return c.redirect('/admin', 303)
+    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
 
     const body = await c.req.parseBody()
     const title = typeof body.title === 'string' ? body.title.trim() : ''
@@ -464,8 +399,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
 
   app.post('/admin/events/:id', async (c) => {
     const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
-    if (!canAccessRole(ctx.user, ['admin', 'chair'])) return c.redirect('/admin', 303)
+    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
 
     const id = c.req.param('id')
     const existing = await getEventById(c.env.DB, id)
@@ -518,108 +452,11 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
 
   app.post('/admin/events/:id/delete', async (c) => {
     const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
-    if (!canAccessRole(ctx.user, ['admin', 'chair'])) return c.redirect('/admin', 303)
+    if (!requireAdmin(ctx)) return c.redirect('/admin/login', 303)
     const id = c.req.param('id')
     const existing = await getEventById(c.env.DB, id)
     if (existing) await deleteEventAssets(c.env.R2, c.env.DB, existing)
     await deleteEvent(c.env.DB, id)
     return c.redirect('/admin/events?ok=1', 303)
-  })
-
-  app.get('/admin/committees', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
-    if (!canAccessRole(ctx.user, ['chair'])) return c.redirect('/admin', 303)
-    const committees = await listCommittees(c.env.DB)
-    return c.html(<AdminCommitteesPage {...c.get('adminSite')} ctx={ctx} committees={committees} />)
-  })
-
-  app.get('/admin/profile', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
-    if (!canAccessRole(ctx.user, ['member'])) return c.redirect('/admin', 303)
-
-    const companies = await listActiveMembers(c.env.DB)
-    const member = ctx.user.member_id
-      ? await getMemberById(c.env.DB, ctx.user.member_id)
-      : null
-    const pendingMember = ctx.user.pending_member_id
-      ? await getMemberById(c.env.DB, ctx.user.pending_member_id)
-      : null
-    const ok = c.req.query('ok')
-    const flash =
-      ok === '1'
-        ? 'Profile updated.'
-        : ok === 'link'
-          ? 'Company link request submitted for admin approval.'
-          : undefined
-    return c.html(
-      <AdminProfilePage
-        {...c.get('adminSite')}
-        ctx={ctx}
-        member={member}
-        pendingMember={pendingMember}
-        companies={companies}
-        flash={flash}
-      />,
-    )
-  })
-
-  app.post('/admin/profile/link', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
-    if (!canAccessRole(ctx.user, ['member'])) return c.redirect('/admin', 303)
-
-    const body = await c.req.parseBody()
-    const member_id = typeof body.member_id === 'string' ? body.member_id.trim() : ''
-    if (!member_id) return c.redirect('/admin/profile', 303)
-
-    const result = await requestMemberLink(c.env.DB, ctx.user.id, member_id)
-    if (!result.ok) {
-      const companies = await listActiveMembers(c.env.DB)
-      const member = ctx.user.member_id
-        ? await getMemberById(c.env.DB, ctx.user.member_id)
-        : null
-      const pendingMember = ctx.user.pending_member_id
-        ? await getMemberById(c.env.DB, ctx.user.pending_member_id)
-        : null
-      return c.html(
-        <AdminProfilePage
-          {...c.get('adminSite')}
-          ctx={ctx}
-          member={member}
-          pendingMember={pendingMember}
-          companies={companies}
-          error={result.error}
-        />,
-      )
-    }
-
-    return c.redirect('/admin/profile?ok=link', 303)
-  })
-
-  app.post('/admin/profile', async (c) => {
-    const ctx = await resolveAdminContext(c)
-    if (!ctx) return c.redirect('/admin/login', 303)
-    if (!canAccessRole(ctx.user, ['member'])) return c.redirect('/admin', 303)
-    if (!ctx.user.member_id || ctx.user.member_link_status === 'none') {
-      return c.redirect('/admin/profile', 303)
-    }
-
-    const body = await c.req.parseBody()
-    const website = typeof body.website === 'string' ? body.website.trim() : ''
-    const phone = typeof body.phone === 'string' ? body.phone.trim() : ''
-    const email = typeof body.email === 'string' ? body.email.trim() : ''
-    const contacts = parsePointsOfContactFromForm(body)
-
-    await updateMemberProfile(c.env.DB, ctx.user.member_id, {
-      website: website || undefined,
-      phone: phone || undefined,
-      email: email || undefined,
-      contacts,
-    })
-
-    return c.redirect('/admin/profile?ok=1', 303)
   })
 }

@@ -20,7 +20,7 @@ export async function seedAdminIfNeeded(env: Env): Promise<void> {
   const email = env.ADMIN_EMAIL?.trim() || 'info@nucalasvegas.com'
   const password = env.ADMIN_PASSWORD
   if (!password) return
-  await createUser(env.DB, email, password, 'admin', { display_name: 'Chapter Admin' })
+  await createUser(env.DB, email, password, { display_name: 'Chapter Admin' })
 }
 
 export async function seedDemoMembersIfEmpty(env: Env): Promise<void> {

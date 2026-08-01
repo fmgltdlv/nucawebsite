@@ -131,6 +131,9 @@
     if (typeof window.initPageBlocksEditor === 'function') {
       window.initPageBlocksEditor()
     }
+    if (typeof window.initPagePreviewMode === 'function') {
+      window.initPagePreviewMode()
+    }
   }
 
   async function navigateTo(href, { push = true, scroll = true } = {}) {

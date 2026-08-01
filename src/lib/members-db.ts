@@ -154,23 +154,3 @@ export async function updateMemberLogoKey(
     .run()
 }
 
-export async function updateMemberProfile(
-  db: D1Database,
-  id: string,
-  data: { website?: string; phone?: string; email?: string; contacts?: MemberContact[] },
-): Promise<void> {
-  await db
-    .prepare(
-      `UPDATE members
-       SET website = ?, phone = ?, email = ?, points_of_contact_json = ?, updated_at = datetime('now')
-       WHERE id = ?`,
-    )
-    .bind(
-      data.website ?? null,
-      data.phone ?? null,
-      data.email ?? null,
-      serializePointsOfContact(data.contacts ?? []),
-      id,
-    )
-    .run()
-}

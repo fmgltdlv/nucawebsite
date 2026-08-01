@@ -109,7 +109,6 @@ export function AdminApplicationsPage({
     <AdminShell
       {...site}
       user={ctx.user}
-      chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}
       title="Join applications"
       activePath="/admin/applications"

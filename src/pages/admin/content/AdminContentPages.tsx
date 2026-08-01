@@ -16,7 +16,6 @@ export function AdminContentPagesPage({
     <AdminShell
       {...site}
       user={ctx.user}
-      chairCommittees={ctx.chairCommittees}
       inboxCounts={ctx.inboxCounts}
       title="Editable pages"
       activePath="/admin/content"

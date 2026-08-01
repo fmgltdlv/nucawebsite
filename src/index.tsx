@@ -1,7 +1,6 @@
 import { Hono, type Context } from 'hono'
-import { getCookie, setCookie } from 'hono/cookie'
 import type { MemberType } from './data/demo'
-import { parseThemeId, type ThemeId } from './config/themes'
+import type { ThemeId } from './config/themes'
 import type { Env } from './env'
 import { createApplication } from './lib/applications-db'
 import { createContactSubmission } from './lib/contact-db'
@@ -21,8 +20,7 @@ import {
   getActiveMemberPublicProfile,
   listActiveMemberSummaries,
 } from './lib/members'
-import { committeePageSlug } from './lib/chair-pages'
-import { parseCommitteeKey } from './lib/committee-pages'
+import { committeePageSlug, parseCommitteeKey } from './lib/committee-pages'
 import { getCommitteeByKey, listCommittees } from './lib/committees-db'
 import { loadPageCalendarEvents } from './lib/cms-page-extras'
 import { getPageBySlug } from './lib/pages-db'
@@ -35,7 +33,6 @@ import { loadAdminLayoutProps, loadPublicSiteContext, type AdminLayoutProps } fr
 import { resolveAdminContext } from './lib/admin-context'
 import { totalInboxCount } from './lib/admin-inbox-counts'
 import { seedContentIfEmpty, seedDemoMembersIfEmpty, seedDirtIfEmpty } from './lib/seed'
-import { THEME_COOKIE } from './lib/theme'
 import { registerAdminRoutes } from './routes/admin'
 import { CommitteesPage } from './pages/Committees'
 import { CommitteeDetailPage } from './pages/CommitteeDetail'
@@ -71,7 +68,7 @@ async function ensureSeeded(env: Env) {
 
 async function siteProps(c: Context<{ Bindings: Env; Variables: Variables }>) {
   await ensureSeeded(c.env)
-  const site = await loadPublicSiteContext(c.env, getCookie(c, THEME_COOKIE))
+  const site = await loadPublicSiteContext(c.env)
   const adminCtx = await resolveAdminContext(c)
   const total = adminCtx?.inboxCounts ? totalInboxCount(adminCtx.inboxCounts) : 0
   return {
@@ -79,19 +76,6 @@ async function siteProps(c: Context<{ Bindings: Env; Variables: Variables }>) {
     staffInboxCount: total > 0 ? total : undefined,
   }
 }
-
-app.post('/theme', async (c) => {
-  const body = await c.req.parseBody()
-  const id = parseThemeId(typeof body.theme === 'string' ? body.theme : undefined)
-  setCookie(c, THEME_COOKIE, id, {
-    path: '/',
-    maxAge: 60 * 60 * 24 * 365,
-    sameSite: 'Lax',
-    httpOnly: true,
-  })
-  const referer = c.req.header('Referer')
-  return c.redirect(referer && referer.startsWith('http') ? referer : '/', 303)
-})
 
 app.get('/assets/*', async (c) => {
   const key = c.req.path.replace(/^\/assets\//, '')
@@ -107,7 +91,7 @@ app.get('/assets/*', async (c) => {
 app.use(async (c, next) => {
   if (!c.req.path.startsWith('/admin')) return next()
   const ctx = await resolveAdminContext(c)
-  const adminSite = await loadAdminLayoutProps(c.env, getCookie(c, THEME_COOKIE), ctx?.inboxCounts)
+  const adminSite = await loadAdminLayoutProps(c.env, ctx?.inboxCounts)
   c.set('theme', adminSite.theme)
   c.set('adminSite', adminSite)
   await next()

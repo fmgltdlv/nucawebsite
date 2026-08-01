@@ -377,11 +377,17 @@ function sectionBackgroundClass(background: SectionBackground): string {
   return ` page-section--bg-${background}`
 }
 
-function renderBlocksHtml(blocks: PageBlock[]): string {
-  return blocks.map((block) => renderBlockHtml(block)).join('\n')
+function renderBlocksHtml(blocks: PageBlock[], parentIndex = ''): string {
+  return blocks
+    .map((block, i) => {
+      const index = parentIndex === '' ? String(i) : `${parentIndex}-${i}`
+      const inner = renderBlockHtml(block, index)
+      return `<div class="cms-preview-block" data-cms-block-index="${index}">${inner}</div>`
+    })
+    .join('\n')
 }
 
-function renderBlockHtml(block: PageBlock): string {
+function renderBlockHtml(block: PageBlock, blockIndex: string): string {
   switch (block.type) {
     case 'heading': {
       const tag = block.level === 2 ? 'h2' : block.level === 3 ? 'h3' : 'h4'
@@ -406,7 +412,7 @@ function renderBlockHtml(block: PageBlock): string {
       const title = block.title
         ? `<h2 class="page-section-title">${escapeHtml(block.title)}</h2>`
         : ''
-      const inner = renderBlocksHtml(block.blocks)
+      const inner = renderBlocksHtml(block.blocks, blockIndex)
       const background = sectionBackground(block)
       const legacyMuted = background === 'muted' ? ' page-section--muted' : ''
       return `<section class="page-section${legacyMuted}${sectionBackgroundClass(background)}">${title}<div class="page-section-inner">${inner}</div></section>`
