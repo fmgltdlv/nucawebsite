@@ -90,6 +90,7 @@ export function AdminContentPageEditPage({
         method="post"
         action={`/admin/content/pages/${slug}`}
         data-preview-draft-url={previewDraftPath}
+        novalidate
       >
         <div class="page-edit-layout">
           <div class="page-edit-panel page-edit-panel--editor">
@@ -217,7 +218,7 @@ export function AdminContentPageEditPage({
         </div>
       </form>
       <script src="/admin-link-picker.js" defer></script>
-      <script src="/page-blocks-editor.js?v=10" defer></script>
+      <script src="/page-blocks-editor.js?v=13" defer></script>
     </AdminShell>
   )
 }

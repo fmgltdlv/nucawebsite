@@ -354,6 +354,13 @@
     return file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')
   }
 
+  function isRasterImageFile(file) {
+    if (isSvgFile(file)) return false
+    if (file.type === 'application/pdf') return false
+    if (file.type.startsWith('image/')) return true
+    return /\.(jpe?g|png|webp|gif)$/i.test(file.name)
+  }
+
   function loadImageFromFile(file) {
     return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(file)
@@ -390,10 +397,15 @@
     return canvasToBlob(canvas, mime, quality)
   }
 
-  async function compressMemberLogo(file) {
-    if (file.size <= MEMBER_LOGO_MAX_BYTES) return file
+  async function compressImageToMaxBytes(file, maxBytes, defaultBaseName = 'image') {
+    if (file.size <= maxBytes) return file
     if (isSvgFile(file)) {
-      throw new Error('SVG logos must be 2 MB or smaller. Please optimize the file first.')
+      throw new Error(
+        `SVG files must be ${Math.round(maxBytes / 1024 / 1024)} MB or smaller. Please optimize the file first.`,
+      )
+    }
+    if (!isRasterImageFile(file)) {
+      throw new Error(`File must be ${Math.round(maxBytes / 1024 / 1024)} MB or smaller.`)
     }
 
     const img = await loadImageFromFile(file)
@@ -404,8 +416,8 @@
 
     for (let attempt = 0; attempt < 30; attempt += 1) {
       const blob = await renderToBlob(img, width, height, mime, quality)
-      if (blob.size <= MEMBER_LOGO_MAX_BYTES) {
-        const baseName = file.name.replace(/\.[^.]+$/, '') || 'logo'
+      if (blob.size <= maxBytes) {
+        const baseName = file.name.replace(/\.[^.]+$/, '') || defaultBaseName
         return new File([blob], `${baseName}.${extForMime(mime)}`, {
           type: mime,
           lastModified: Date.now(),
@@ -424,7 +436,13 @@
       if (width <= 64 && height <= 64) break
     }
 
-    throw new Error('Could not compress logo below 2 MB. Try a smaller image.')
+    throw new Error(
+      `Could not compress image below ${Math.round(maxBytes / 1024 / 1024)} MB. Try a smaller image.`,
+    )
+  }
+
+  async function compressMemberLogo(file) {
+    return compressImageToMaxBytes(file, MEMBER_LOGO_MAX_BYTES, 'logo')
   }
 
   function replaceFileInput(fileInput, file) {
@@ -453,6 +471,7 @@
     if (lower.includes('delete')) return 'Deleting…'
     if (lower.includes('approve')) return 'Approving…'
     if (lower.includes('reject')) return 'Rejecting…'
+    if (lower.includes('upload')) return 'Uploading…'
     if (lower.includes('add')) return 'Adding…'
     if (lower.includes('update')) return 'Updating…'
     if (lower.includes('sign out') || lower.includes('sign in')) return 'Please wait…'
@@ -553,6 +572,122 @@
     })
   }
 
+  const ADMIN_IMAGE_MAX_BYTES = 5 * 1024 * 1024
+  const ADMIN_PDF_MAX_BYTES = 25 * 1024 * 1024
+
+  function adminCsrfToken() {
+    if (!(adminShell instanceof HTMLElement)) return ''
+    return adminShell.dataset.csrfToken ?? ''
+  }
+
+  function formHasFileToUpload(form) {
+    return Array.from(form.querySelectorAll('input[type="file"]')).some(
+      (input) => input instanceof HTMLInputElement && input.files?.length > 0,
+    )
+  }
+
+  function adminImageMaxBytes(form) {
+    return form.hasAttribute('data-member-logo-form') ? MEMBER_LOGO_MAX_BYTES : ADMIN_IMAGE_MAX_BYTES
+  }
+
+  function adminFormNeedsImageCompression(form) {
+    const maxBytes = adminImageMaxBytes(form)
+    return Array.from(form.querySelectorAll('input[type="file"]')).some((input) => {
+      if (!(input instanceof HTMLInputElement)) return false
+      const file = input.files?.[0]
+      if (!file) return false
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+      if (isPdf) return false
+      return isRasterImageFile(file) && file.size > maxBytes
+    })
+  }
+
+  async function prepareAdminFileUploads(form) {
+    const maxBytes = adminImageMaxBytes(form)
+    const isLogoForm = maxBytes === MEMBER_LOGO_MAX_BYTES
+
+    for (const input of form.querySelectorAll('input[type="file"]')) {
+      if (!(input instanceof HTMLInputElement)) continue
+      const file = input.files?.[0]
+      if (!file) continue
+
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+      if (isPdf) {
+        if (file.size > ADMIN_PDF_MAX_BYTES) {
+          throw new Error(`PDF too large (max ${Math.round(ADMIN_PDF_MAX_BYTES / 1024 / 1024)} MB).`)
+        }
+        continue
+      }
+
+      if (isRasterImageFile(file) && file.size > maxBytes) {
+        const compressed = isLogoForm
+          ? await compressMemberLogo(file)
+          : await compressImageToMaxBytes(
+              file,
+              maxBytes,
+              file.name.replace(/\.[^.]+$/, '') || 'image',
+            )
+        replaceFileInput(input, compressed)
+      }
+    }
+  }
+
+  async function submitAdminFormWithFetch(form, submitter) {
+    const submitBtn =
+      submitter instanceof HTMLButtonElement || submitter instanceof HTMLInputElement
+        ? submitter
+        : getFormSubmitButtons(form).find((btn) => btn.classList?.contains('btn-primary')) ??
+          getFormSubmitButtons(form)[0]
+    const needsCompress = adminFormNeedsImageCompression(form)
+
+    setFormSavingState(form, submitter)
+    if (needsCompress && submitBtn) setButtonBusy(submitBtn, true, 'Compressing image…')
+
+    try {
+      await prepareAdminFileUploads(form)
+    } catch (error) {
+      resetFormBusyState(form)
+      window.alert(error instanceof Error ? error.message : 'File could not be prepared for upload.')
+      return
+    }
+
+    if (needsCompress && submitBtn) {
+      setButtonBusy(submitBtn, true, pendingLabelForButton(submitBtn))
+    }
+
+    const formData = new FormData(form)
+    const token = adminCsrfToken()
+    if (token && !formData.has('_csrf')) {
+      formData.set('_csrf', token)
+    }
+
+    try {
+      const response = await fetch(form.action, {
+        method: form.method || 'POST',
+        body: formData,
+        headers: token ? { 'X-CSRF-Token': token } : undefined,
+      })
+
+      // POST handlers redirect on success (303). Let fetch follow the redirect, then navigate
+      // so we land on the flash message page. manual redirect mode hides Location on some browsers.
+      if (response.redirected || response.ok) {
+        window.location.assign(response.url || window.location.href)
+        return
+      }
+
+      resetFormBusyState(form)
+      const body = await response.text()
+      window.alert(
+        body.trim() && body.length < 200
+          ? body.trim()
+          : 'Upload failed. Please try again or use a smaller file.',
+      )
+    } catch {
+      resetFormBusyState(form)
+      window.alert('Upload failed. Please check your connection and try again.')
+    }
+  }
+
   const adminShell = document.querySelector('.admin-shell')
   if (adminShell) {
     adminShell.addEventListener('submit', (event) => {
@@ -560,6 +695,13 @@
       const form = event.target
       if (!(form instanceof HTMLFormElement)) return
       if (form.classList.contains('admin-logout')) return
+
+      if (formHasFileToUpload(form)) {
+        event.preventDefault()
+        submitAdminFormWithFetch(form, event.submitter)
+        return
+      }
+
       setFormSavingState(form, event.submitter)
     })
   }

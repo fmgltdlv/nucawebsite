@@ -134,10 +134,11 @@
     externalPanel.dataset.linkPickerExternal = '1'
     externalPanel.hidden = true
     const externalInput = document.createElement('input')
-    externalInput.type = 'url'
+    externalInput.type = 'text'
     externalInput.className = options.inputClass || ''
     externalInput.placeholder = 'example.com'
     externalInput.setAttribute('aria-label', 'External website URL')
+    externalInput.setAttribute('inputmode', 'url')
     externalPanel.append(externalInput)
 
     const output =
@@ -174,6 +175,8 @@
       externalRadio.checked = isExternal
       internalPanel.hidden = isExternal
       externalPanel.hidden = !isExternal
+      internalSelect.disabled = isExternal
+      externalInput.disabled = !isExternal
       if (isExternal) {
         if (!externalInput.value.trim() || !isExternalHref(externalInput.value)) {
           externalInput.value = EXTERNAL_DEFAULT
@@ -190,6 +193,8 @@
         externalRadio.checked = false
         internalPanel.hidden = false
         externalPanel.hidden = true
+        internalSelect.disabled = false
+        externalInput.disabled = true
         internalSelect.value = ''
         externalInput.value = EXTERNAL_DEFAULT
         return
@@ -199,6 +204,8 @@
         externalRadio.checked = true
         internalPanel.hidden = true
         externalPanel.hidden = false
+        internalSelect.disabled = true
+        externalInput.disabled = false
         externalInput.value = trimmed
         return
       }
@@ -206,6 +213,8 @@
       externalRadio.checked = false
       internalPanel.hidden = false
       externalPanel.hidden = true
+      internalSelect.disabled = false
+      externalInput.disabled = true
       fillInternalSelect(internalSelect, internalLinks, allowEmpty, trimmed)
       internalSelect.value = resolveInternalHref(internalLinks, trimmed)
       externalInput.value = EXTERNAL_DEFAULT

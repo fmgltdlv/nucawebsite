@@ -4529,6 +4529,29 @@ button.pill {
   cursor: pointer;
 }
 
+.page-block-drag-handle {
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-surface, #fff);
+  color: var(--color-text-muted, #64748b);
+  font: inherit;
+  line-height: 1;
+  cursor: grab;
+}
+
+.page-block-drag-handle:active {
+  cursor: grabbing;
+}
+
+.page-block-drag-handle:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+}
+
 .page-block-collapse-toggle:hover {
   border-color: var(--color-primary);
   color: var(--color-primary);

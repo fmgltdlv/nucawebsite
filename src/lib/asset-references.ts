@@ -1,5 +1,36 @@
 import { deleteAsset } from './r2-assets'
 
+/** Count image block references to an asset key inside parsed page block JSON. */
+function countAssetKeyInBlocks(blocks: unknown, key: string): number {
+  if (!Array.isArray(blocks)) return 0
+  let count = 0
+  for (const block of blocks) {
+    if (!block || typeof block !== 'object') continue
+    const record = block as Record<string, unknown>
+    if (record.type === 'image' && record.asset_key === key) count++
+    if (record.type === 'section' && Array.isArray(record.blocks)) {
+      count += countAssetKeyInBlocks(record.blocks, key)
+    }
+  }
+  return count
+}
+
+async function countPageBodyAssetKeyReferences(db: D1Database, key: string): Promise<number> {
+  const { results } = await db
+    .prepare('SELECT body_json FROM pages WHERE body_json IS NOT NULL')
+    .all<{ body_json: string }>()
+
+  let count = 0
+  for (const row of results ?? []) {
+    try {
+      count += countAssetKeyInBlocks(JSON.parse(row.body_json), key)
+    } catch {
+      // Ignore invalid JSON rows.
+    }
+  }
+  return count
+}
+
 /** Count how many site records reference the same R2 object key. */
 export async function countAssetKeyReferences(db: D1Database, key: string): Promise<number> {
   const row = await db
@@ -17,7 +48,9 @@ export async function countAssetKeyReferences(db: D1Database, key: string): Prom
     .bind(key, JSON.stringify(key))
     .first<{ total: number }>()
 
-  return row?.total ?? 0
+  const tableRefs = row?.total ?? 0
+  const pageRefs = await countPageBodyAssetKeyReferences(db, key)
+  return tableRefs + pageRefs
 }
 
 /**

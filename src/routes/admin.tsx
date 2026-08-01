@@ -59,6 +59,7 @@ import {
   libraryAssetKey,
 } from '../lib/library-assets-db'
 import { uploadImage, uploadPdf } from '../lib/r2-assets'
+import { applyAssetManage, parseAssetManageRequest } from '../lib/asset-manage'
 import { deleteAssetIfUnreferenced } from '../lib/asset-references'
 
 type AdminVariables = { theme: ThemeId; adminSite: AdminLayoutProps; adminCtx: import('../lib/admin-context').AdminContext | null }
@@ -197,7 +198,9 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const assets = filterType ? allAssets.filter((asset) => asset.type === filterType) : allAssets
     const flash =
       c.req.query('ok') === '1'
-        ? 'Asset uploaded.'
+        ? 'Asset updated.'
+        : c.req.query('uploaded') === '1'
+          ? 'Asset uploaded.'
         : c.req.query('deleted') === '1'
           ? 'Library asset deleted.'
           : undefined
@@ -251,7 +254,28 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       label,
       content_kind: isPdf ? 'pdf' : 'image',
     })
-    return c.redirect('/admin/assets?type=library&ok=1', 303)
+    return c.redirect('/admin/assets?type=library&uploaded=1', 303)
+  })
+
+  app.post('/admin/assets/manage', async (c) => {
+    getAdminCtx(c)
+    const body = await c.req.parseBody()
+    const { type, entityId, currentKey, returnType } = parseAssetManageRequest(body)
+
+    const redirectBase = returnType ? `/admin/assets?type=${returnType}` : '/admin/assets'
+    const redirectWithQuery = (query: string) =>
+      redirectBase.includes('?') ? `${redirectBase}&${query}` : `${redirectBase}?${query}`
+
+    if (!type || !entityId) {
+      return c.redirect(redirectWithQuery(`error=${encodeURIComponent('Invalid asset.')}`), 303)
+    }
+
+    const result = await applyAssetManage(c.env.R2, c.env.DB, type, entityId, currentKey, body)
+    if (!result.ok) {
+      return c.redirect(redirectWithQuery(`error=${encodeURIComponent(result.error)}`), 303)
+    }
+
+    return c.redirect(redirectWithQuery('ok=1'), 303)
   })
 
   app.post('/admin/assets/library/:id/delete', async (c) => {

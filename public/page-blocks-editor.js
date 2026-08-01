@@ -221,7 +221,7 @@
     if (options.scrollPreview !== false) highlightPreviewBlock(index)
   }
 
-  function updateSelectionUi() {
+  function updateSelectionUi(options = {}) {
     root.querySelectorAll('[data-block-index]').forEach((card) => {
       if (!(card instanceof HTMLElement)) return
       const index = card.getAttribute('data-block-index')
@@ -236,7 +236,9 @@
         toggle.textContent = collapsed ? '▸' : '▾'
       }
     })
-    if (activeBlockIndex) highlightPreviewBlock(activeBlockIndex)
+    if (activeBlockIndex && !options.skipPreviewHighlight) {
+      highlightPreviewBlock(activeBlockIndex)
+    }
   }
 
   /** @param {string | null} index */
@@ -305,6 +307,24 @@
     const header = document.createElement('div')
     header.className = 'page-block-card-header'
 
+    const dragHandle = document.createElement('button')
+    dragHandle.type = 'button'
+    dragHandle.className = 'page-block-drag-handle'
+    dragHandle.draggable = true
+    dragHandle.setAttribute('aria-label', 'Drag to reorder')
+    dragHandle.title = 'Drag to reorder'
+    dragHandle.textContent = '⠿'
+    dragHandle.addEventListener('dragstart', (event) => {
+      const card = dragHandle.closest('[data-block-index]')
+      if (card instanceof HTMLElement) card.classList.add('is-dragging')
+      event.dataTransfer?.setData('text/plain', index)
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+    })
+    dragHandle.addEventListener('dragend', () => {
+      const card = dragHandle.closest('[data-block-index]')
+      if (card instanceof HTMLElement) card.classList.remove('is-dragging')
+    })
+
     const toggle = document.createElement('button')
     toggle.type = 'button'
     toggle.className = 'page-block-collapse-toggle'
@@ -325,8 +345,10 @@
       selectBlock(index, { expand: true, scrollPreview: true })
     })
 
-    header.append(toggle, summary)
-    if (includeActions) header.append(renderActions(index, list))
+    header.append(dragHandle, toggle, summary)
+    if (includeActions && !String(index).includes('-')) {
+      header.append(renderActions(Number(index), list))
+    }
     return header
   }
 
@@ -652,6 +674,7 @@
     const [item] = copy.splice(index, 1)
     copy.splice(next, 0, item)
     blocks = copy
+    activeBlockIndex = String(next)
     render()
   }
 
@@ -763,20 +786,29 @@
     up.className = 'btn btn-secondary btn-sm'
     up.textContent = '↑'
     up.disabled = index === 0
-    up.addEventListener('click', () => moveBlock(index, -1))
+    up.addEventListener('click', (event) => {
+      event.stopPropagation()
+      moveBlock(index, -1)
+    })
 
     const down = document.createElement('button')
     down.type = 'button'
     down.className = 'btn btn-secondary btn-sm'
     down.textContent = '↓'
     down.disabled = index === list.length - 1
-    down.addEventListener('click', () => moveBlock(index, 1))
+    down.addEventListener('click', (event) => {
+      event.stopPropagation()
+      moveBlock(index, 1)
+    })
 
     const del = document.createElement('button')
     del.type = 'button'
     del.className = 'btn btn-secondary btn-sm'
     del.textContent = 'Remove'
-    del.addEventListener('click', () => deleteBlock(index))
+    del.addEventListener('click', (event) => {
+      event.stopPropagation()
+      deleteBlock(index)
+    })
 
     actions.append(up, down, del)
     return actions
@@ -1435,16 +1467,9 @@
     card.className = 'page-block-card'
     card.dataset.blockType = block.type
     card.dataset.blockIndex = indexKey
-    card.draggable = true
     if (collapsedBlocks.has(indexKey)) card.classList.add('is-collapsed')
     if (activeBlockIndex === indexKey) card.classList.add('page-block-card--active')
 
-    card.addEventListener('dragstart', (event) => {
-      card.classList.add('is-dragging')
-      event.dataTransfer?.setData('text/plain', indexKey)
-      if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
-    })
-    card.addEventListener('dragend', () => card.classList.remove('is-dragging'))
     card.addEventListener('dragover', (event) => {
       event.preventDefault()
       card.classList.add('is-drag-over')
@@ -1898,12 +1923,15 @@
   if (unsavedBanner) unsavedBanner.hidden = true
 
   root.addEventListener('focusin', (event) => {
+    const target = event.target
+    if (target instanceof HTMLButtonElement) return
     const card =
-      event.target instanceof Element ? event.target.closest('[data-block-index]') : null
+      target instanceof Element ? target.closest('[data-block-index]') : null
     if (!(card instanceof HTMLElement)) return
     const index = card.getAttribute('data-block-index')
     if (!index || index === activeBlockIndex) return
-    selectBlock(index, { scrollPreview: true, scrollEditor: false })
+    activeBlockIndex = index
+    updateSelectionUi({ skipPreviewHighlight: true })
   })
 
   if (previewFrame instanceof HTMLIFrameElement) {
@@ -1913,8 +1941,18 @@
     })
   }
 
-  form?.addEventListener('submit', () => {
+  form?.addEventListener('submit', (event) => {
     syncHidden()
+    if (titleInput instanceof HTMLInputElement) {
+      const title = titleInput.value.trim()
+      if (!title) {
+        event.preventDefault()
+        titleInput.setCustomValidity('Page title is required.')
+        titleInput.reportValidity()
+        titleInput.setCustomValidity('')
+        return
+      }
+    }
     isDirty = false
     try {
       sessionStorage.removeItem(draftStorageKey)

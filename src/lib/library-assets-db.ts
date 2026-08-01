@@ -46,6 +46,30 @@ export async function getLibraryAsset(
   )
 }
 
+export async function updateLibraryAsset(
+  db: D1Database,
+  id: string,
+  data: { label?: string; r2_key?: string; content_kind?: 'image' | 'pdf' },
+): Promise<LibraryAssetRecord | null> {
+  const existing = await getLibraryAsset(db, id)
+  if (!existing) return null
+
+  const label = data.label?.trim() || existing.label
+  const r2_key = data.r2_key ?? existing.r2_key
+  const content_kind = data.content_kind ?? existing.content_kind
+
+  await db
+    .prepare(
+      `UPDATE library_assets
+       SET label = ?, r2_key = ?, content_kind = ?
+       WHERE id = ?`,
+    )
+    .bind(label, r2_key, content_kind, id)
+    .run()
+
+  return { ...existing, label, r2_key, content_kind }
+}
+
 export async function deleteLibraryAsset(db: D1Database, id: string): Promise<string | null> {
   const existing = await getLibraryAsset(db, id)
   if (!existing) return null
