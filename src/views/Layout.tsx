@@ -138,7 +138,7 @@ export function Layout({
             </p>
           </div>
         </footer>
-        <script src="/site.js?v=16" defer></script>
+        <script src="/site.js?v=17" defer></script>
         <script src="/admin-nav.js?v=3" defer></script>
       </body>
     </html>

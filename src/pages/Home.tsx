@@ -9,6 +9,7 @@ import { homeBlocksFromPage, homePageIncludesEventsFeed } from '../lib/home-page
 import { renderPageContent, type PageBlock } from '../lib/page-blocks'
 import type { PageRecord } from '../lib/pages-db'
 import type { PostRecord } from '../lib/posts-db'
+import { getAssetUrl } from '../lib/r2-assets'
 import type { PageProps } from '../types/page'
 
 const HOME_DESCRIPTION =
@@ -94,6 +95,8 @@ function HomeDirtFeedBlock({
                     date={post.published_at ?? ''}
                     title={post.title}
                     summary={post.excerpt}
+                    imageUrl={post.cover_r2_key ? getAssetUrl(post.cover_r2_key) : null}
+                    imageAlt={post.cover_alt}
                   />
                 </li>
               )

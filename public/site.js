@@ -1094,6 +1094,49 @@
     window.wireAssetPickers = wireAssetPickers
     wireAssetPickers()
 
+    /**
+     * Promise-based asset library pick for non-form editors (e.g. TipTap).
+     * Resolves with `{ key, url, label }` or `null` if cancelled / cleared.
+     * @param {'image' | 'pdf'} [kind]
+     */
+    window.pickLibraryAsset = function pickLibraryAsset(kind = 'image') {
+      return new Promise((resolve) => {
+        const field = document.createElement('div')
+        field.className = 'admin-asset-picker-field'
+        field.hidden = true
+        field.dataset.assetPicker = ''
+        field.dataset.assetKind = kind
+        field.innerHTML = '<input type="hidden" value="" data-asset-picker-value />'
+        document.body.appendChild(field)
+
+        const dialog = assetLibraryDialog
+        let settled = false
+        function finish() {
+          if (settled) return
+          settled = true
+          dialog.removeEventListener('close', onClose)
+          const input = field.querySelector('[data-asset-picker-value]')
+          const key = input instanceof HTMLInputElement ? input.value.trim() : ''
+          field.remove()
+          if (!key) {
+            resolve(null)
+            return
+          }
+          const known = libraryAssets.find((asset) => asset.key === key)
+          resolve({
+            key,
+            url: known?.url || `/assets/${key}`,
+            label: known?.label || key,
+          })
+        }
+        function onClose() {
+          finish()
+        }
+        dialog.addEventListener('close', onClose)
+        openAssetLibrary(field)
+      })
+    }
+
     searchInput?.addEventListener('input', () => {
       libraryCurrentPage = 0
       renderAssetGrid()

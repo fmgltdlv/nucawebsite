@@ -9,6 +9,7 @@
     "migrate:local": "wrangler d1 migrations apply nuca-lv --local",
     "types": "wrangler types",
     "check": "wrangler check",
+    "build:admin-editor": "esbuild scripts/admin-post-editor/main.ts --bundle --outfile=public/admin-post-editor.js --format=iife --target=es2020 --minify",
     "import-members": "node scripts/import-wp-members.mjs",
     "import-leadership": "node scripts/import-wp-leadership.mjs"
   },
@@ -17,6 +18,18 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260722.1",
+    "@tiptap/core": "^3.29.2",
+    "@tiptap/extension-color": "^3.29.2",
+    "@tiptap/extension-highlight": "^3.29.2",
+    "@tiptap/extension-image": "^3.29.2",
+    "@tiptap/extension-link": "^3.29.2",
+    "@tiptap/extension-placeholder": "^3.29.2",
+    "@tiptap/extension-text-align": "^3.29.2",
+    "@tiptap/extension-text-style": "^3.29.2",
+    "@tiptap/extension-underline": "^3.29.2",
+    "@tiptap/pm": "^3.29.2",
+    "@tiptap/starter-kit": "^3.29.2",
+    "esbuild": "^0.28.1",
     "typescript": "^5.8.3",
     "wrangler": "^4.24.0"
   }

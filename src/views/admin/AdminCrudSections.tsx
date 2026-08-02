@@ -30,6 +30,8 @@ type AdminCrudSectionsProps = {
   memberLogoForm?: boolean
   /** Optional second create action (e.g. PDF + post on one page). */
   secondaryAdd?: AdminCrudAddAction
+  /** Optional second create as a link (dedicated edit page). */
+  secondaryAddLink?: { buttonLabel: string; href: string }
   listTitle: string
   listCount: number
   emptyMessage: string
@@ -78,6 +80,7 @@ export function AdminCrudSections({
   addSubmitLabel,
   memberLogoForm,
   secondaryAdd,
+  secondaryAddLink,
   listTitle,
   listCount,
   emptyMessage,
@@ -124,6 +127,11 @@ export function AdminCrudSections({
                 modalId={secondaryAdd.modalId}
                 secondary={secondaryAdd.secondaryButton !== false}
               />
+            ) : null}
+            {secondaryAddLink ? (
+              <a class="btn btn-secondary" href={secondaryAddLink.href}>
+                {secondaryAddLink.buttonLabel}
+              </a>
             ) : null}
           </AdminListToolbar>
         }

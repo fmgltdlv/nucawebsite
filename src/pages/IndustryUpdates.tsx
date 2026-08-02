@@ -1,8 +1,11 @@
 import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import { markdownToSafeHtml } from '../lib/markdown'
+import { sanitizePostHtml } from '../lib/sanitize-html'
 import { formatArchiveDate } from '../lib/format'
+import { getAssetUrl } from '../lib/r2-assets'
 import type { PostRecord } from '../lib/posts-db'
 import type { PageProps } from '../types/page'
+import { raw } from 'hono/html'
 
 export function IndustryUpdateDetailPage({
   theme,
@@ -14,6 +17,10 @@ export function IndustryUpdateDetailPage({
   staffInboxCount,
   post,
 }: PageProps & { post: PostRecord }) {
+  const sanitized = sanitizePostHtml(post.body_html ?? '')
+  const body = sanitized ? raw(sanitized) : markdownToSafeHtml(post.body_md)
+  const coverUrl = post.cover_r2_key ? getAssetUrl(post.cover_r2_key) : null
+
   return (
     <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })} title={post.title}>
       <PageHeader
@@ -25,9 +32,20 @@ export function IndustryUpdateDetailPage({
           <p>
             <a class="btn btn-secondary btn-sm" href="/the-dirt">← THE DIRT</a>
           </p>
-          <div class="prose">{markdownToSafeHtml(post.body_md)}</div>
+          {coverUrl && (
+            <figure class="dirt-post-cover">
+              <img
+                src={coverUrl}
+                alt={post.cover_alt || ''}
+                loading="eager"
+                decoding="async"
+              />
+            </figure>
+          )}
+          <div class="prose dirt-post-body">{body}</div>
         </div>
       </section>
+      <script src="/dirt-post-carousel.js" defer></script>
     </Layout>
   )
 }

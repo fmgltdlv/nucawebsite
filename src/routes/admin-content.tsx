@@ -20,7 +20,7 @@ import {
   listLeadership,
   updateLeadership,
 } from '../lib/leadership-db'
-import { createPost, deletePost, getPostById, listAllPosts, updatePost } from '../lib/posts-db'
+import { createPost, deletePost, getPostById, listAllPosts, postCoverKey, updatePost } from '../lib/posts-db'
 import { buildPageLabels, createCustomPage, deleteCustomPage, getPageBySlug, listCustomPages, listPages, upsertPage } from '../lib/pages-db'
 import { listSiteInternalLinks } from '../lib/site-internal-links'
 import { blocksToMarkdown, parsePageBlocks } from '../lib/page-blocks'
@@ -86,11 +86,13 @@ import { seedContentIfEmpty } from '../lib/seed'
 import { listNewsletterSubscribers, updateNewsletterSubscriberStatus, deleteNewsletterSubscriber, acknowledgeAllNewsletterSubscribers, listAllNewsletterSubscribers, buildNewsletterSubscribersCsv, newsletterSubscribersExportFilename } from '../lib/newsletter-db'
 import { listContactSubmissions, updateContactSubmissionStatus, deleteContactSubmission, acknowledgeAllContactSubmissions } from '../lib/contact-db'
 import { parseDatetimeLocal } from '../lib/datetime'
+import { sanitizePostHtml } from '../lib/sanitize-html'
 import { AdminApplicationsPage } from '../pages/admin/AdminApplications'
 import { AdminContactMessagesPage } from '../pages/admin/AdminContactMessages'
 import { AdminNewsletterSubscribersPage } from '../pages/admin/AdminNewsletterSubscribers'
 import { AdminContentPage } from '../pages/admin/AdminContent'
 import { AdminContentDirtPage } from '../pages/admin/content/AdminContentDirt'
+import { AdminContentPostEditPage } from '../pages/admin/content/AdminContentPostEdit'
 import { AdminContentLeadershipPage } from '../pages/admin/content/AdminContentLeadership'
 import { AdminContentPageEditPage } from '../pages/admin/content/AdminContentPageEdit'
 import { AdminContentPagesPage } from '../pages/admin/content/AdminContentPages'
@@ -480,6 +482,158 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     )
   })
 
+  async function resolvePostCover(
+    r2: R2Bucket,
+    body: Record<string, unknown>,
+    postId: string,
+    existingKey: string | null,
+  ): Promise<{ key: string | null; error?: string }> {
+    if (body.remove_cover === '1') return { key: null }
+    const cover = body.cover instanceof File && body.cover.size > 0 ? body.cover : null
+    if (cover) {
+      const key = postCoverKey(postId, cover.name)
+      const upload = await uploadImage(r2, cover, key)
+      if (!upload.ok) return { key: existingKey, error: upload.error }
+      return { key }
+    }
+    const libraryKey = await resolveExistingImageKey(
+      r2,
+      body as Record<string, File | string>,
+      'existing_cover_key',
+    )
+    if (libraryKey && typeof libraryKey === 'object' && 'error' in libraryKey) {
+      return { key: existingKey, error: libraryKey.error }
+    }
+    if (typeof libraryKey === 'string') return { key: libraryKey }
+    return { key: existingKey }
+  }
+
+  app.get('/admin/content/the-dirt/posts/new', (c) => {
+    const ctx = getAdminCtx(c)
+    return c.html(
+      <AdminContentPostEditPage
+        {...c.get('adminSite')}
+        ctx={ctx}
+        post={null}
+        error={c.req.query('error')}
+      />,
+    )
+  })
+
+  app.post('/admin/content/the-dirt/posts/new', async (c) => {
+    const ctx = getAdminCtx(c)
+    const body = await c.req.parseBody()
+    const title = typeof body.title === 'string' ? body.title.trim() : ''
+    const body_html_raw = typeof body.body_html === 'string' ? body.body_html : ''
+    const body_html = sanitizePostHtml(body_html_raw)
+    if (!title || !body_html) {
+      return c.redirect(
+        '/admin/content/the-dirt/posts/new?error=Title%20and%20body%20are%20required',
+        303,
+      )
+    }
+    const publishedAtRaw = typeof body.published_at === 'string' ? body.published_at : ''
+    const id = await createPost(c.env.DB, {
+      title,
+      slug: typeof body.slug === 'string' ? body.slug.trim() : undefined,
+      excerpt: typeof body.excerpt === 'string' ? body.excerpt.trim() : undefined,
+      body_html,
+      published_at: publishedAtRaw ? parseDatetimeLocal(publishedAtRaw) ?? undefined : undefined,
+      published: body.published === '1',
+      cover_alt: typeof body.cover_alt === 'string' ? body.cover_alt.trim() : null,
+    })
+    const cover = await resolvePostCover(c.env.R2, body as Record<string, unknown>, id, null)
+    if (cover.error) {
+      return c.redirect(
+        `/admin/content/the-dirt/posts/${id}?error=${encodeURIComponent(cover.error)}`,
+        303,
+      )
+    }
+    if (cover.key) {
+      await updatePost(c.env.DB, id, {
+        title,
+        slug: typeof body.slug === 'string' && body.slug.trim() ? body.slug.trim() : (await getPostById(c.env.DB, id))!.slug,
+        excerpt: typeof body.excerpt === 'string' ? body.excerpt.trim() : null,
+        body_html,
+        cover_r2_key: cover.key,
+        cover_alt: typeof body.cover_alt === 'string' ? body.cover_alt.trim() : null,
+        published_at: publishedAtRaw ? parseDatetimeLocal(publishedAtRaw) : null,
+        published: body.published === '1',
+      })
+    }
+    return c.redirect(`/admin/content/the-dirt/posts/${id}?ok=1`, 303)
+  })
+
+  app.get('/admin/content/the-dirt/posts/:id', async (c) => {
+    const ctx = getAdminCtx(c)
+    const post = await getPostById(c.env.DB, c.req.param('id'))
+    if (!post) return c.redirect('/admin/content/the-dirt', 303)
+    return c.html(
+      <AdminContentPostEditPage
+        {...c.get('adminSite')}
+        ctx={ctx}
+        post={post}
+        flash={flashMessage(c, '1')}
+        error={c.req.query('error')}
+      />,
+    )
+  })
+
+  app.post('/admin/content/the-dirt/posts/:id', async (c) => {
+    const ctx = getAdminCtx(c)
+    const id = c.req.param('id')
+    const existing = await getPostById(c.env.DB, id)
+    if (!existing) return c.redirect('/admin/content/the-dirt', 303)
+    const body = await c.req.parseBody()
+    const title = typeof body.title === 'string' ? body.title.trim() : existing.title
+    const slug = typeof body.slug === 'string' ? body.slug.trim() : existing.slug
+    const body_html = sanitizePostHtml(typeof body.body_html === 'string' ? body.body_html : '')
+    if (!title || !slug || !body_html) {
+      return c.redirect(
+        `/admin/content/the-dirt/posts/${id}?error=Title%2C%20slug%2C%20and%20body%20are%20required`,
+        303,
+      )
+    }
+    const cover = await resolvePostCover(
+      c.env.R2,
+      body as Record<string, unknown>,
+      id,
+      existing.cover_r2_key,
+    )
+    if (cover.error) {
+      return c.redirect(
+        `/admin/content/the-dirt/posts/${id}?error=${encodeURIComponent(cover.error)}`,
+        303,
+      )
+    }
+    if (existing.cover_r2_key && existing.cover_r2_key !== cover.key) {
+      await deleteAssetIfUnreferenced(c.env.R2, c.env.DB, existing.cover_r2_key)
+    }
+    const publishedAtRaw = typeof body.published_at === 'string' ? body.published_at : ''
+    await updatePost(c.env.DB, id, {
+      title,
+      slug,
+      excerpt: typeof body.excerpt === 'string' ? body.excerpt.trim() : null,
+      body_html,
+      cover_r2_key: cover.key,
+      cover_alt: typeof body.cover_alt === 'string' ? body.cover_alt.trim() : null,
+      published_at: publishedAtRaw ? parseDatetimeLocal(publishedAtRaw) : existing.published_at,
+      published: body.published === '1',
+    })
+    return c.redirect(`/admin/content/the-dirt/posts/${id}?ok=1`, 303)
+  })
+
+  app.post('/admin/content/the-dirt/posts/:id/delete', async (c) => {
+    const ctx = getAdminCtx(c)
+    const id = c.req.param('id')
+    const existing = await getPostById(c.env.DB, id)
+    if (existing?.cover_r2_key) {
+      await deleteAssetIfUnreferenced(c.env.R2, c.env.DB, existing.cover_r2_key)
+    }
+    await deletePost(c.env.DB, id)
+    return c.redirect('/admin/content/the-dirt?ok=1', 303)
+  })
+
   app.post('/admin/content/the-dirt', async (c) => {
     const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
@@ -535,47 +689,6 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.get('/admin/content/posts', (c) => c.redirect('/admin/content/the-dirt', 302))
-
-  app.post('/admin/content/posts', async (c) => {
-    const ctx = getAdminCtx(c)
-    const body = await c.req.parseBody()
-    const title = typeof body.title === 'string' ? body.title.trim() : ''
-    const body_md = typeof body.body_md === 'string' ? body.body_md.trim() : ''
-    if (title && body_md) {
-      await createPost(c.env.DB, {
-        title,
-        slug: typeof body.slug === 'string' ? body.slug.trim() : undefined,
-        excerpt: typeof body.excerpt === 'string' ? body.excerpt.trim() : undefined,
-        body_md,
-        published: body.published === '1',
-      })
-    }
-    return c.redirect('/admin/content/the-dirt?ok=1', 303)
-  })
-
-  app.post('/admin/content/posts/:id', async (c) => {
-    const ctx = getAdminCtx(c)
-    const id = c.req.param('id')
-    const existing = await getPostById(c.env.DB, id)
-    if (!existing) return c.redirect('/admin/content/the-dirt', 303)
-    const body = await c.req.parseBody()
-    const publishedAtRaw = typeof body.published_at === 'string' ? body.published_at : ''
-    await updatePost(c.env.DB, id, {
-      title: typeof body.title === 'string' ? body.title.trim() : existing.title,
-      slug: typeof body.slug === 'string' ? body.slug.trim() : existing.slug,
-      excerpt: typeof body.excerpt === 'string' ? body.excerpt.trim() : null,
-      body_md: typeof body.body_md === 'string' ? body.body_md.trim() : existing.body_md,
-      published_at: publishedAtRaw ? parseDatetimeLocal(publishedAtRaw) : existing.published_at,
-      published: body.published === '1',
-    })
-    return c.redirect('/admin/content/the-dirt?ok=1', 303)
-  })
-
-  app.post('/admin/content/posts/:id/delete', async (c) => {
-    const ctx = getAdminCtx(c)
-    await deletePost(c.env.DB, c.req.param('id'))
-    return c.redirect('/admin/content/the-dirt?ok=1', 303)
-  })
 
   app.get('/admin/content/pages', async (c) => {
     const ctx = getAdminCtx(c)

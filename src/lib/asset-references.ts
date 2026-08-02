@@ -31,6 +31,36 @@ async function countPageBodyAssetKeyReferences(db: D1Database, key: string): Pro
   return count
 }
 
+function countKeyInHtml(html: string, key: string): number {
+  if (!html || !key) return 0
+  const needle = `/assets/${key}`
+  let count = 0
+  let idx = 0
+  while ((idx = html.indexOf(needle, idx)) !== -1) {
+    count++
+    idx += needle.length
+  }
+  return count
+}
+
+async function countPostAssetKeyReferences(db: D1Database, key: string): Promise<number> {
+  const coverRow = await db
+    .prepare('SELECT COUNT(*) AS total FROM posts WHERE cover_r2_key = ?')
+    .bind(key)
+    .first<{ total: number }>()
+
+  const { results } = await db
+    .prepare('SELECT body_html FROM posts WHERE body_html IS NOT NULL')
+    .all<{ body_html: string }>()
+
+  let bodyCount = 0
+  for (const row of results ?? []) {
+    bodyCount += countKeyInHtml(row.body_html, key)
+  }
+
+  return (coverRow?.total ?? 0) + bodyCount
+}
+
 /** Count how many site records reference the same R2 object key. */
 export async function countAssetKeyReferences(db: D1Database, key: string): Promise<number> {
   const row = await db
@@ -51,7 +81,8 @@ export async function countAssetKeyReferences(db: D1Database, key: string): Prom
 
   const tableRefs = row?.total ?? 0
   const pageRefs = await countPageBodyAssetKeyReferences(db, key)
-  return tableRefs + pageRefs
+  const postRefs = await countPostAssetKeyReferences(db, key)
+  return tableRefs + pageRefs + postRefs
 }
 
 /**

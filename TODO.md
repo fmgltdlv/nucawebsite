@@ -29,7 +29,7 @@ Track remaining work for the Cloudflare (Hono + D1) site. Admin/CMS capabilities
 | Committees | `/admin/content/committees` |
 | Resource links | `/admin/content/resources` |
 | Membership types | `/admin/content/member-types` |
-| THE DIRT (PDFs + web posts) | `/admin/content/the-dirt` |
+| THE DIRT (PDFs + rich-text web posts) | `/admin/content/the-dirt` |
 | Events, members | `/admin/events`, `/admin/members` |
 | Asset library uploads | `/admin/assets` |
 | Profile password change | `/admin/profile` |
@@ -60,13 +60,13 @@ CMS shells and lists are live; remaining work is **content accuracy**, not wirin
 | Resources | `/resources` | Blocks + links admin | |
 | Committees | `/about/committees` | Blocks + committees admin | |
 | Scholarships | `/scholarships` | Blocks | |
-| THE DIRT | `/the-dirt` | Shell + PDF/posts admin | |
+| THE DIRT | `/the-dirt` | Shell + PDF/posts admin (posts: rich-text editor) | |
 | Join | `/join` | Blocks + membership types | Application form structure still code |
 | Contact | `/contact` | Blocks + site settings | |
 
 ## Out of scope / future
 
 - [ ] Page revision history / server autosave
-- [ ] Rich-text WYSIWYG (markdown + blocks today)
+- [x] Rich-text editor for THE DIRT web posts (TipTap; cover, image layouts, carousels). CMS pages remain markdown + blocks.
 - [ ] Editable join application field schema (`membership-application.ts`)
 - [ ] Alternate nav layouts / per-page templates

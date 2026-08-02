@@ -62,6 +62,8 @@ export function TheDirtArchivePage({
                         date={post.published_at ?? ''}
                         title={post.title}
                         summary={post.excerpt}
+                        imageUrl={post.cover_r2_key ? getAssetUrl(post.cover_r2_key) : null}
+                        imageAlt={post.cover_alt}
                       />
                     </li>
                   )

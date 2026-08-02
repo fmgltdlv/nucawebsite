@@ -1,6 +1,5 @@
 import type { DirtReleaseRecord } from '../../../lib/dirt-db'
 import { mergeDirtFeed, type DirtFeedItem } from '../../../lib/dirt-feed'
-import { toDatetimeLocalValue } from '../../../lib/datetime'
 import { formatArchiveDate } from '../../../lib/format'
 import type { PostRecord } from '../../../lib/posts-db'
 import { getAssetUrl } from '../../../lib/r2-assets'
@@ -8,7 +7,6 @@ import { AdminShell } from '../../../views/AdminShell'
 import { AdminAssetPickerField } from '../../../views/admin/AdminAssetPickerField'
 import { AdminCrudSections } from '../../../views/admin/AdminCrudSections'
 import { AdminEditModalFooter } from '../../../views/admin/AdminEditActions'
-import { AdminEditButton } from '../../../views/admin/AdminListSection'
 import { AdminModal } from '../../../views/admin/AdminModal'
 import type { AdminContext } from '../../../lib/admin-context'
 import type { PageProps } from '../../../types/page'
@@ -60,15 +58,15 @@ function DirtReleaseListRow({ release }: { release: DirtReleaseRecord }) {
         )}
       </td>
       <td class="admin-list-actions">
-        <AdminEditButton modalId={editModalId} />
+        <button type="button" class="btn btn-secondary btn-sm" data-admin-modal-open={editModalId}>
+          Edit
+        </button>
       </td>
     </tr>
   )
 }
 
 function DirtPostListRow({ post }: { post: PostRecord }) {
-  const editModalId = `edit-post-${post.id}`
-
   return (
     <tr data-admin-list-row data-search={dirtItemSearchText({ kind: 'post', post })}>
       <td>
@@ -85,7 +83,9 @@ function DirtPostListRow({ post }: { post: PostRecord }) {
         )}
       </td>
       <td class="admin-list-actions">
-        <AdminEditButton modalId={editModalId} />
+        <a class="btn btn-secondary btn-sm" href={`/admin/content/the-dirt/posts/${post.id}`}>
+          Edit
+        </a>
       </td>
     </tr>
   )
@@ -143,60 +143,6 @@ function DirtReleaseEditModal({ release }: { release: DirtReleaseRecord }) {
       <label class="admin-check">
         <input type="checkbox" name="published" value="1" checked={release.published === 1} />
         Published in THE DIRT
-      </label>
-    </AdminModal>
-  )
-}
-
-function DirtPostEditModal({ post }: { post: PostRecord }) {
-  const formId = `form-post-${post.id}`
-
-  return (
-    <AdminModal
-      id={`edit-post-${post.id}`}
-      title={`Edit ${post.title}`}
-      formAction={`/admin/content/posts/${post.id}`}
-      formId={formId}
-      footer={
-        <AdminEditModalFooter
-          formId={formId}
-          saveAction={`/admin/content/posts/${post.id}`}
-          deleteAction={`/admin/content/posts/${post.id}/delete`}
-        />
-      }
-    >
-      <div class="form-field">
-        <label for={`${formId}-title`}>Title</label>
-        <input type="text" name="title" id={`${formId}-title`} value={post.title} required />
-      </div>
-      <div class="form-field">
-        <label for={`${formId}-slug`}>Slug</label>
-        <input type="text" name="slug" id={`${formId}-slug`} value={post.slug} required />
-      </div>
-      <div class="form-field">
-        <label for={`${formId}-date`}>Published date</label>
-        <input
-          type="datetime-local"
-          name="published_at"
-          id={`${formId}-date`}
-          value={post.published_at ? toDatetimeLocalValue(post.published_at) : ''}
-        />
-      </div>
-      <div class="form-field">
-        <label for={`${formId}-excerpt`}>Excerpt</label>
-        <textarea name="excerpt" id={`${formId}-excerpt`} rows={3}>
-          {post.excerpt ?? ''}
-        </textarea>
-      </div>
-      <div class="form-field">
-        <label for={`${formId}-body`}>Body (markdown)</label>
-        <textarea name="body_md" id={`${formId}-body`} rows={10} required>
-          {post.body_md}
-        </textarea>
-      </div>
-      <label class="admin-check">
-        <input type="checkbox" name="published" value="1" checked={post.published === 1} />
-        Published on THE DIRT
       </label>
     </AdminModal>
   )
@@ -270,36 +216,9 @@ export function AdminContentDirtPage({
             />
           </>
         }
-        secondaryAdd={{
+        secondaryAddLink={{
           buttonLabel: 'New post',
-          modalId: 'add-post-dialog',
-          modalTitle: 'New web post',
-          formAction: '/admin/content/posts',
-          submitLabel: 'Create post',
-          formBody: (
-            <>
-              <div class="form-field">
-                <label for="post-title">Title</label>
-                <input type="text" name="title" id="post-title" required />
-              </div>
-              <div class="form-field">
-                <label for="post-slug">Slug (optional)</label>
-                <input type="text" name="slug" id="post-slug" placeholder="auto-generated from title" />
-              </div>
-              <div class="form-field">
-                <label for="post-excerpt">Excerpt</label>
-                <textarea name="excerpt" id="post-excerpt" rows={2}></textarea>
-              </div>
-              <div class="form-field">
-                <label for="post-body_md">Body (markdown)</label>
-                <textarea name="body_md" id="post-body_md" rows={8} required></textarea>
-              </div>
-              <label class="admin-check">
-                <input type="checkbox" name="published" value="1" />
-                Publish immediately
-              </label>
-            </>
-          ),
+          href: '/admin/content/the-dirt/posts/new',
         }}
         listTitle="Feed"
         listCount={items.length}
@@ -325,9 +244,6 @@ export function AdminContentDirtPage({
           <>
             {releases.map((release) => (
               <DirtReleaseEditModal release={release} key={release.id} />
-            ))}
-            {posts.map((post) => (
-              <DirtPostEditModal post={post} key={post.id} />
             ))}
           </>
         }
