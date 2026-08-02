@@ -195,12 +195,21 @@ app.get('/about/committees/:key', async (c) => {
 
 app.get('/the-dirt', async (c) => {
   const site = await siteProps(c)
+  const listPage = Math.max(1, Number.parseInt(c.req.query('page') ?? '1', 10) || 1)
   const [page, posts, releases] = await Promise.all([
     getPageBySlug(c.env.DB, 'the-dirt', true),
     listPublishedPosts(c.env.DB),
     listDirtReleases(c.env.DB, true),
   ])
-  return c.html(<TheDirtArchivePage {...site} page={page} posts={posts} releases={releases} />)
+  return c.html(
+    <TheDirtArchivePage
+      {...site}
+      page={page}
+      posts={posts}
+      releases={releases}
+      listPage={listPage}
+    />,
+  )
 })
 
 app.get('/about/the-dirt', (c) => c.redirect('/the-dirt', 301))
