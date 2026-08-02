@@ -68,9 +68,21 @@ export function AdminListSearch() {
   )
 }
 
-export function AdminAddButton({ label, modalId }: { label: string; modalId: string }) {
+export function AdminAddButton({
+  label,
+  modalId,
+  secondary = false,
+}: {
+  label: string
+  modalId: string
+  secondary?: boolean
+}) {
   return (
-    <button type="button" class="btn btn-primary" data-admin-modal-open={modalId}>
+    <button
+      type="button"
+      class={secondary ? 'btn btn-secondary' : 'btn btn-primary'}
+      data-admin-modal-open={modalId}
+    >
       {label}
     </button>
   )

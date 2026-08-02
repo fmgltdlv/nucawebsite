@@ -29,7 +29,7 @@ Track remaining work for the Cloudflare (Hono + D1) site. Admin/CMS capabilities
 | Committees | `/admin/content/committees` |
 | Resource links | `/admin/content/resources` |
 | Membership types | `/admin/content/member-types` |
-| THE DIRT PDFs + web posts | `/admin/content/the-dirt`, `/admin/content/posts` |
+| THE DIRT (PDFs + web posts) | `/admin/content/the-dirt` |
 | Events, members | `/admin/events`, `/admin/members` |
 | Asset library uploads | `/admin/assets` |
 | Profile password change | `/admin/profile` |

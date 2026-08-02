@@ -27,7 +27,7 @@ export function AdminHomePage({ ctx, ...site }: PageProps & { ctx: AdminContext 
         </a>
         <a class="admin-card" href="/admin/content">
           <h2>Content</h2>
-          <p>FAQ, THE DIRT PDFs, editable pages, and site settings.</p>
+          <p>FAQ, THE DIRT, editable pages, and site settings.</p>
         </a>
         <a class="admin-card" href="/admin/assets">
           <h2>Assets</h2>

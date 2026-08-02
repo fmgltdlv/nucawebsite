@@ -1,6 +1,9 @@
 import type { DirtReleaseRecord } from '../../../lib/dirt-db'
-import { getAssetUrl } from '../../../lib/r2-assets'
+import { mergeDirtFeed, type DirtFeedItem } from '../../../lib/dirt-feed'
+import { toDatetimeLocalValue } from '../../../lib/datetime'
 import { formatArchiveDate } from '../../../lib/format'
+import type { PostRecord } from '../../../lib/posts-db'
+import { getAssetUrl } from '../../../lib/r2-assets'
 import { AdminShell } from '../../../views/AdminShell'
 import { AdminAssetPickerField } from '../../../views/admin/AdminAssetPickerField'
 import { AdminCrudSections } from '../../../views/admin/AdminCrudSections'
@@ -10,10 +13,29 @@ import { AdminModal } from '../../../views/admin/AdminModal'
 import type { AdminContext } from '../../../lib/admin-context'
 import type { PageProps } from '../../../types/page'
 
-function dirtSearchText(release: DirtReleaseRecord): string {
+function dirtItemSearchText(item: DirtFeedItem): string {
+  if (item.kind === 'post') {
+    const post = item.post
+    return [
+      post.title,
+      post.slug,
+      post.excerpt,
+      'post',
+      'web post',
+      post.published ? 'published' : 'draft',
+      post.published_at ? formatArchiveDate(post.published_at) : '',
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+  }
+
+  const release = item.release
   return [
     release.title,
     release.summary,
+    'pdf',
+    'release',
     release.published ? 'published' : 'draft',
     formatArchiveDate(release.published_at),
   ]
@@ -22,12 +44,13 @@ function dirtSearchText(release: DirtReleaseRecord): string {
     .toLowerCase()
 }
 
-function DirtListRow({ release }: { release: DirtReleaseRecord }) {
+function DirtReleaseListRow({ release }: { release: DirtReleaseRecord }) {
   const editModalId = `edit-dirt-${release.id}`
 
   return (
-    <tr data-admin-list-row data-search={dirtSearchText(release)}>
+    <tr data-admin-list-row data-search={dirtItemSearchText({ kind: 'release', release })}>
       <td><strong>{release.title}</strong></td>
+      <td><span class="admin-asset-type-badge">PDF</span></td>
       <td>{formatArchiveDate(release.published_at)}</td>
       <td>
         {release.published === 1 ? (
@@ -43,7 +66,32 @@ function DirtListRow({ release }: { release: DirtReleaseRecord }) {
   )
 }
 
-function DirtEditModal({ release }: { release: DirtReleaseRecord }) {
+function DirtPostListRow({ post }: { post: PostRecord }) {
+  const editModalId = `edit-post-${post.id}`
+
+  return (
+    <tr data-admin-list-row data-search={dirtItemSearchText({ kind: 'post', post })}>
+      <td>
+        <strong>{post.title}</strong>
+        <div class="muted"><code class="admin-id">{post.slug}</code></div>
+      </td>
+      <td><span class="admin-asset-type-badge">Post</span></td>
+      <td>{post.published_at ? formatArchiveDate(post.published_at) : '—'}</td>
+      <td>
+        {post.published === 1 ? (
+          <span class="admin-status-badge admin-status-listed">Published</span>
+        ) : (
+          <span class="admin-status-badge admin-status-hidden">Draft</span>
+        )}
+      </td>
+      <td class="admin-list-actions">
+        <AdminEditButton modalId={editModalId} />
+      </td>
+    </tr>
+  )
+}
+
+function DirtReleaseEditModal({ release }: { release: DirtReleaseRecord }) {
   const formId = `form-dirt-${release.id}`
 
   return (
@@ -100,18 +148,76 @@ function DirtEditModal({ release }: { release: DirtReleaseRecord }) {
   )
 }
 
+function DirtPostEditModal({ post }: { post: PostRecord }) {
+  const formId = `form-post-${post.id}`
+
+  return (
+    <AdminModal
+      id={`edit-post-${post.id}`}
+      title={`Edit ${post.title}`}
+      formAction={`/admin/content/posts/${post.id}`}
+      formId={formId}
+      footer={
+        <AdminEditModalFooter
+          formId={formId}
+          saveAction={`/admin/content/posts/${post.id}`}
+          deleteAction={`/admin/content/posts/${post.id}/delete`}
+        />
+      }
+    >
+      <div class="form-field">
+        <label for={`${formId}-title`}>Title</label>
+        <input type="text" name="title" id={`${formId}-title`} value={post.title} required />
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-slug`}>Slug</label>
+        <input type="text" name="slug" id={`${formId}-slug`} value={post.slug} required />
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-date`}>Published date</label>
+        <input
+          type="datetime-local"
+          name="published_at"
+          id={`${formId}-date`}
+          value={post.published_at ? toDatetimeLocalValue(post.published_at) : ''}
+        />
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-excerpt`}>Excerpt</label>
+        <textarea name="excerpt" id={`${formId}-excerpt`} rows={3}>
+          {post.excerpt ?? ''}
+        </textarea>
+      </div>
+      <div class="form-field">
+        <label for={`${formId}-body`}>Body (markdown)</label>
+        <textarea name="body_md" id={`${formId}-body`} rows={10} required>
+          {post.body_md}
+        </textarea>
+      </div>
+      <label class="admin-check">
+        <input type="checkbox" name="published" value="1" checked={post.published === 1} />
+        Published on THE DIRT
+      </label>
+    </AdminModal>
+  )
+}
+
 export function AdminContentDirtPage({
   ctx,
   releases,
+  posts,
   flash,
   error,
   ...site
 }: PageProps & {
   ctx: AdminContext
   releases: DirtReleaseRecord[]
+  posts: PostRecord[]
   flash?: string
   error?: string
 }) {
+  const items = mergeDirtFeed(posts, releases)
+
   return (
     <AdminShell
       {...site}
@@ -127,55 +233,104 @@ export function AdminContentDirtPage({
             <a href="/admin/content">← Content</a> · <a href="/the-dirt">View public listing</a>
             {' · '}
             <a href="/admin/content/pages/the-dirt">Edit page shell</a>
+            {' · '}
+            <a href="/admin/newsletter">Newsletter subscribers</a>
           </p>
         }
         flash={flash}
         error={error}
-        addButtonLabel="Upload release"
+        addButtonLabel="Upload PDF"
         addModalId="add-dirt-dialog"
-        addModalTitle="Upload release"
+        addModalTitle="Upload PDF release"
         addFormAction="/admin/content/the-dirt"
         addFormEncType="multipart/form-data"
         addSubmitLabel="Upload & publish"
         addFormBody={
           <>
             <div class="form-field">
-              <label for="title">Title</label>
-              <input type="text" name="title" id="title" required />
+              <label for="dirt-title">Title</label>
+              <input type="text" name="title" id="dirt-title" required />
             </div>
             <div class="form-field">
-              <label for="published_at">Published date</label>
-              <input type="date" name="published_at" id="published_at" required />
+              <label for="dirt-published_at">Published date</label>
+              <input type="date" name="published_at" id="dirt-published_at" required />
             </div>
             <div class="form-field">
-              <label for="summary">Summary (optional)</label>
-              <input type="text" name="summary" id="summary" />
+              <label for="dirt-summary">Summary (optional)</label>
+              <input type="text" name="summary" id="dirt-summary" />
             </div>
             <AdminAssetPickerField
               label="PDF file"
               kind="pdf"
               hiddenInputName="existing_pdf_key"
               fileInputName="pdf"
-              fileInputId="pdf"
+              fileInputId="dirt-pdf"
               fileAccept="application/pdf"
               hint="Upload a new PDF or choose an existing PDF from the library."
             />
           </>
         }
-        listTitle="Releases"
-        listCount={releases.length}
-        emptyMessage="No releases yet."
-        hasItems={releases.length > 0}
+        secondaryAdd={{
+          buttonLabel: 'New post',
+          modalId: 'add-post-dialog',
+          modalTitle: 'New web post',
+          formAction: '/admin/content/posts',
+          submitLabel: 'Create post',
+          formBody: (
+            <>
+              <div class="form-field">
+                <label for="post-title">Title</label>
+                <input type="text" name="title" id="post-title" required />
+              </div>
+              <div class="form-field">
+                <label for="post-slug">Slug (optional)</label>
+                <input type="text" name="slug" id="post-slug" placeholder="auto-generated from title" />
+              </div>
+              <div class="form-field">
+                <label for="post-excerpt">Excerpt</label>
+                <textarea name="excerpt" id="post-excerpt" rows={2}></textarea>
+              </div>
+              <div class="form-field">
+                <label for="post-body_md">Body (markdown)</label>
+                <textarea name="body_md" id="post-body_md" rows={8} required></textarea>
+              </div>
+              <label class="admin-check">
+                <input type="checkbox" name="published" value="1" />
+                Publish immediately
+              </label>
+            </>
+          ),
+        }}
+        listTitle="Feed"
+        listCount={items.length}
+        emptyMessage="No PDF releases or posts yet."
+        hasItems={items.length > 0}
         tableHead={
           <tr>
             <th>Title</th>
+            <th>Type</th>
             <th>Date</th>
             <th>Status</th>
             <th></th>
           </tr>
         }
-        tableBody={releases.map((release) => <DirtListRow release={release} key={release.id} />)}
-        afterTable={releases.map((release) => <DirtEditModal release={release} key={release.id} />)}
+        tableBody={items.map((item) =>
+          item.kind === 'post' ? (
+            <DirtPostListRow post={item.post} key={`post-${item.post.id}`} />
+          ) : (
+            <DirtReleaseListRow release={item.release} key={`release-${item.release.id}`} />
+          ),
+        )}
+        afterTable={
+          <>
+            {releases.map((release) => (
+              <DirtReleaseEditModal release={release} key={release.id} />
+            ))}
+            {posts.map((post) => (
+              <DirtPostEditModal post={post} key={post.id} />
+            ))}
+          </>
+        }
       />
     </AdminShell>
   )

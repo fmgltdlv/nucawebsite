@@ -94,7 +94,6 @@ import { AdminContentDirtPage } from '../pages/admin/content/AdminContentDirt'
 import { AdminContentLeadershipPage } from '../pages/admin/content/AdminContentLeadership'
 import { AdminContentPageEditPage } from '../pages/admin/content/AdminContentPageEdit'
 import { AdminContentPagesPage } from '../pages/admin/content/AdminContentPages'
-import { AdminContentPostsPage } from '../pages/admin/content/AdminContentPosts'
 import { AdminContentCommitteesPage } from '../pages/admin/content/AdminContentCommittees'
 import { AdminContentQaPage } from '../pages/admin/content/AdminContentQa'
 import { AdminContentResourcesPage } from '../pages/admin/content/AdminContentResources'
@@ -468,12 +467,13 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
 
   app.get('/admin/content/the-dirt', async (c) => {
     const ctx = getAdminCtx(c)
-    const releases = await listDirtReleases(c.env.DB)
+    const [releases, posts] = await Promise.all([listDirtReleases(c.env.DB), listAllPosts(c.env.DB)])
     return c.html(
       <AdminContentDirtPage
         {...c.get('adminSite')}
         ctx={ctx}
         releases={releases}
+        posts={posts}
         flash={flashMessage(c, '1')}
         error={c.req.query('error')}
       />,
@@ -534,13 +534,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     return c.redirect('/admin/content/the-dirt?ok=1', 303)
   })
 
-  app.get('/admin/content/posts', async (c) => {
-    const ctx = getAdminCtx(c)
-    const posts = await listAllPosts(c.env.DB)
-    return c.html(
-      <AdminContentPostsPage {...c.get('adminSite')} ctx={ctx} posts={posts} flash={flashMessage(c, '1')} />,
-    )
-  })
+  app.get('/admin/content/posts', (c) => c.redirect('/admin/content/the-dirt', 302))
 
   app.post('/admin/content/posts', async (c) => {
     const ctx = getAdminCtx(c)
@@ -556,14 +550,14 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
         published: body.published === '1',
       })
     }
-    return c.redirect('/admin/content/posts?ok=1', 303)
+    return c.redirect('/admin/content/the-dirt?ok=1', 303)
   })
 
   app.post('/admin/content/posts/:id', async (c) => {
     const ctx = getAdminCtx(c)
     const id = c.req.param('id')
     const existing = await getPostById(c.env.DB, id)
-    if (!existing) return c.redirect('/admin/content/posts', 303)
+    if (!existing) return c.redirect('/admin/content/the-dirt', 303)
     const body = await c.req.parseBody()
     const publishedAtRaw = typeof body.published_at === 'string' ? body.published_at : ''
     await updatePost(c.env.DB, id, {
@@ -574,13 +568,13 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
       published_at: publishedAtRaw ? parseDatetimeLocal(publishedAtRaw) : existing.published_at,
       published: body.published === '1',
     })
-    return c.redirect('/admin/content/posts?ok=1', 303)
+    return c.redirect('/admin/content/the-dirt?ok=1', 303)
   })
 
   app.post('/admin/content/posts/:id/delete', async (c) => {
     const ctx = getAdminCtx(c)
     await deletePost(c.env.DB, c.req.param('id'))
-    return c.redirect('/admin/content/posts?ok=1', 303)
+    return c.redirect('/admin/content/the-dirt?ok=1', 303)
   })
 
   app.get('/admin/content/pages', async (c) => {

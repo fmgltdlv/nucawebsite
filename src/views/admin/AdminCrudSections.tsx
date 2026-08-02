@@ -1,6 +1,20 @@
 import { AdminAddButton, AdminListSearch, AdminListSection, AdminListToolbar } from './AdminListSection'
 import { AdminModal, AdminModalCancelButton } from './AdminModal'
 
+type AdminCrudAddAction = {
+  buttonLabel: string
+  modalId: string
+  modalTitle: string
+  formAction: string
+  formEncType?: string
+  formId?: string
+  formBody: unknown
+  submitLabel: string
+  memberLogoForm?: boolean
+  /** Use secondary button style (e.g. second add action on a shared list). */
+  secondaryButton?: boolean
+}
+
 type AdminCrudSectionsProps = {
   breadcrumb?: unknown
   flash?: string
@@ -14,6 +28,8 @@ type AdminCrudSectionsProps = {
   addFormBody: unknown
   addSubmitLabel: string
   memberLogoForm?: boolean
+  /** Optional second create action (e.g. PDF + post on one page). */
+  secondaryAdd?: AdminCrudAddAction
   listTitle: string
   listCount: number
   emptyMessage: string
@@ -22,6 +38,30 @@ type AdminCrudSectionsProps = {
   tableHead: unknown
   tableBody: unknown
   afterTable?: unknown
+}
+
+function AddActionModal({ action }: { action: AdminCrudAddAction }) {
+  const formId = action.formId ?? `${action.modalId}-form`
+  return (
+    <AdminModal
+      id={action.modalId}
+      title={action.modalTitle}
+      formAction={action.formAction}
+      formEncType={action.formEncType}
+      formId={action.formId}
+      memberLogoForm={action.memberLogoForm}
+      footer={
+        <>
+          <AdminModalCancelButton />
+          <button type="submit" class="btn btn-primary" form={formId}>
+            {action.submitLabel}
+          </button>
+        </>
+      }
+    >
+      {action.formBody}
+    </AdminModal>
+  )
 }
 
 export function AdminCrudSections({
@@ -37,6 +77,7 @@ export function AdminCrudSections({
   addFormBody,
   addSubmitLabel,
   memberLogoForm,
+  secondaryAdd,
   listTitle,
   listCount,
   emptyMessage,
@@ -46,30 +87,26 @@ export function AdminCrudSections({
   tableBody,
   afterTable,
 }: AdminCrudSectionsProps) {
+  const primaryAdd: AdminCrudAddAction = {
+    buttonLabel: addButtonLabel,
+    modalId: addModalId,
+    modalTitle: addModalTitle,
+    formAction: addFormAction,
+    formEncType: addFormEncType,
+    formId: addFormId,
+    formBody: addFormBody,
+    submitLabel: addSubmitLabel,
+    memberLogoForm,
+  }
+
   return (
     <>
       {breadcrumb}
       {flash && <p class="admin-flash">{flash}</p>}
       {error && <p class="admin-flash admin-flash-error">{error}</p>}
 
-      <AdminModal
-        id={addModalId}
-        title={addModalTitle}
-        formAction={addFormAction}
-        formEncType={addFormEncType}
-        formId={addFormId}
-        memberLogoForm={memberLogoForm}
-        footer={
-          <>
-            <AdminModalCancelButton />
-            <button type="submit" class="btn btn-primary" form={addFormId ?? `${addModalId}-form`}>
-              {addSubmitLabel}
-            </button>
-          </>
-        }
-      >
-        {addFormBody}
-      </AdminModal>
+      <AddActionModal action={primaryAdd} />
+      {secondaryAdd ? <AddActionModal action={secondaryAdd} /> : null}
 
       <AdminListSection
         title={listTitle}
@@ -81,6 +118,13 @@ export function AdminCrudSections({
           <AdminListToolbar>
             <AdminListSearch />
             <AdminAddButton label={addButtonLabel} modalId={addModalId} />
+            {secondaryAdd ? (
+              <AdminAddButton
+                label={secondaryAdd.buttonLabel}
+                modalId={secondaryAdd.modalId}
+                secondary={secondaryAdd.secondaryButton !== false}
+              />
+            ) : null}
           </AdminListToolbar>
         }
         tableHead={tableHead}
