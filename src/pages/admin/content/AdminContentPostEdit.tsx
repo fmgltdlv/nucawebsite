@@ -1,7 +1,7 @@
 import { toDatetimeLocalValue } from '../../../lib/datetime'
 import { renderMarkdown } from '../../../lib/markdown'
+import { clampCoverWidthPct, type PostRecord } from '../../../lib/posts-db'
 import { getAssetUrl } from '../../../lib/r2-assets'
-import type { PostRecord } from '../../../lib/posts-db'
 import { AdminShell } from '../../../views/AdminShell'
 import { AdminAssetPickerField } from '../../../views/admin/AdminAssetPickerField'
 import type { AdminContext } from '../../../lib/admin-context'
@@ -31,6 +31,8 @@ export function AdminContentPostEditPage({
     : `/admin/content/the-dirt/posts/${post.id}`
   const title = isNew ? 'New DIRT post' : `Edit: ${post.title}`
   const bodyHtml = initialBodyHtml(post)
+  const coverWidth = clampCoverWidthPct(post?.cover_width_pct, 100)
+  const coverUrl = post?.cover_r2_key ? getAssetUrl(post.cover_r2_key) : null
 
   return (
     <AdminShell
@@ -87,15 +89,48 @@ export function AdminContentPostEditPage({
           </textarea>
         </div>
 
-        <AdminAssetPickerField
-          label="Cover photo"
-          kind="image"
-          hiddenInputName="existing_cover_key"
-          currentKey={post?.cover_r2_key}
-          currentUrl={post?.cover_r2_key ? getAssetUrl(post.cover_r2_key) : null}
-          removeCheckboxName="remove_cover"
-          hint="Optional. Choose from the library (upload there if needed). Shown on THE DIRT archive and at the top of the post."
-        />
+        <div class="dirt-cover-editor" data-cover-editor>
+          <AdminAssetPickerField
+            label="Cover photo"
+            kind="image"
+            hiddenInputName="existing_cover_key"
+            currentKey={post?.cover_r2_key}
+            currentUrl={coverUrl}
+            removeCheckboxName="remove_cover"
+            hint="Optional. Choose from the library (upload there if needed). Shown on THE DIRT archive and at the top of the post."
+          />
+          <div class="dirt-cover-size" data-cover-size hidden={!coverUrl}>
+            <div
+              class="dirt-cover-size-preview"
+              data-cover-size-preview
+              style={{ width: `${coverWidth}%` }}
+            >
+              {coverUrl ? (
+                <img src={coverUrl} alt="" data-cover-size-image loading="lazy" decoding="async" />
+              ) : (
+                <img src="" alt="" data-cover-size-image hidden loading="lazy" decoding="async" />
+              )}
+              <span class="dirt-cover-size-badge" data-cover-size-badge>
+                {coverWidth}%
+              </span>
+            </div>
+            <label class="dirt-cover-size-control">
+              <span>Cover width</span>
+              <input
+                type="range"
+                name="cover_width_pct"
+                min="20"
+                max="100"
+                step="1"
+                value={String(coverWidth)}
+                data-cover-width-input
+              />
+              <span data-cover-width-label>{coverWidth}%</span>
+            </label>
+            <p class="muted form-hint">Drag the slider to set how wide the cover appears on the post.</p>
+          </div>
+        </div>
+
         <div class="form-field">
           <label for="post-cover-alt">Cover alt text</label>
           <input type="text" name="cover_alt" id="post-cover-alt" value={post?.cover_alt ?? ''} />
@@ -145,8 +180,8 @@ export function AdminContentPostEditPage({
         </form>
       )}
 
-      <link rel="stylesheet" href="/admin-post-editor.css?v=5" />
-      <script src="/admin-post-editor.js?v=5" defer></script>
+      <link rel="stylesheet" href="/admin-post-editor.css?v=6" />
+      <script src="/admin-post-editor.js?v=6" defer></script>
     </AdminShell>
   )
 }

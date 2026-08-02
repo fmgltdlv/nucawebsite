@@ -20,7 +20,7 @@ import {
   listLeadership,
   updateLeadership,
 } from '../lib/leadership-db'
-import { createPost, deletePost, getPostById, listAllPosts, postCoverKey, updatePost } from '../lib/posts-db'
+import { createPost, deletePost, getPostById, listAllPosts, clampCoverWidthPct, updatePost } from '../lib/posts-db'
 import { buildPageLabels, createCustomPage, deleteCustomPage, getPageBySlug, listCustomPages, listPages, upsertPage } from '../lib/pages-db'
 import { listSiteInternalLinks } from '../lib/site-internal-links'
 import { blocksToMarkdown, parsePageBlocks } from '../lib/page-blocks'
@@ -485,17 +485,9 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   async function resolvePostCover(
     r2: R2Bucket,
     body: Record<string, unknown>,
-    postId: string,
     existingKey: string | null,
   ): Promise<{ key: string | null; error?: string }> {
     if (body.remove_cover === '1') return { key: null }
-    const cover = body.cover instanceof File && body.cover.size > 0 ? body.cover : null
-    if (cover) {
-      const key = postCoverKey(postId, cover.name)
-      const upload = await uploadImage(r2, cover, key)
-      if (!upload.ok) return { key: existingKey, error: upload.error }
-      return { key }
-    }
     const libraryKey = await resolveExistingImageKey(
       r2,
       body as Record<string, File | string>,
@@ -506,6 +498,15 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     }
     if (typeof libraryKey === 'string') return { key: libraryKey }
     return { key: existingKey }
+  }
+
+  function readCoverWidthPct(body: Record<string, unknown>, fallback = 100): number {
+    return clampCoverWidthPct(
+      typeof body.cover_width_pct === 'string' || typeof body.cover_width_pct === 'number'
+        ? body.cover_width_pct
+        : fallback,
+      fallback,
+    )
   }
 
   app.get('/admin/content/the-dirt/posts/new', (c) => {
@@ -533,6 +534,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
       )
     }
     const publishedAtRaw = typeof body.published_at === 'string' ? body.published_at : ''
+    const coverWidth = readCoverWidthPct(body as Record<string, unknown>, 100)
     const id = await createPost(c.env.DB, {
       title,
       slug: typeof body.slug === 'string' ? body.slug.trim() : undefined,
@@ -541,8 +543,9 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
       published_at: publishedAtRaw ? parseDatetimeLocal(publishedAtRaw) ?? undefined : undefined,
       published: body.published === '1',
       cover_alt: typeof body.cover_alt === 'string' ? body.cover_alt.trim() : null,
+      cover_width_pct: coverWidth,
     })
-    const cover = await resolvePostCover(c.env.R2, body as Record<string, unknown>, id, null)
+    const cover = await resolvePostCover(c.env.R2, body as Record<string, unknown>, null)
     if (cover.error) {
       return c.redirect(
         `/admin/content/the-dirt/posts/${id}?error=${encodeURIComponent(cover.error)}`,
@@ -557,6 +560,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
         body_html,
         cover_r2_key: cover.key,
         cover_alt: typeof body.cover_alt === 'string' ? body.cover_alt.trim() : null,
+        cover_width_pct: coverWidth,
         published_at: publishedAtRaw ? parseDatetimeLocal(publishedAtRaw) : null,
         published: body.published === '1',
       })
@@ -597,7 +601,6 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const cover = await resolvePostCover(
       c.env.R2,
       body as Record<string, unknown>,
-      id,
       existing.cover_r2_key,
     )
     if (cover.error) {
@@ -617,6 +620,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
       body_html,
       cover_r2_key: cover.key,
       cover_alt: typeof body.cover_alt === 'string' ? body.cover_alt.trim() : null,
+      cover_width_pct: readCoverWidthPct(body as Record<string, unknown>, existing.cover_width_pct),
       published_at: publishedAtRaw ? parseDatetimeLocal(publishedAtRaw) : existing.published_at,
       published: body.published === '1',
     })

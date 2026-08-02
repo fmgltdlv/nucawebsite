@@ -274,6 +274,88 @@ function bootDirtPostEditors() {
   })
 }
 
+function initCoverEditors() {
+  document.querySelectorAll<HTMLElement>('[data-cover-editor]').forEach((root) => {
+    if (root.dataset.coverEditorReady === '1') return
+    root.dataset.coverEditorReady = '1'
+
+    const picker = root.querySelector('[data-asset-picker]')
+    const size = root.querySelector('[data-cover-size]')
+    const preview = root.querySelector('[data-cover-size-preview]')
+    const img = root.querySelector('[data-cover-size-image]')
+    const input = root.querySelector('[data-cover-width-input]')
+    const label = root.querySelector('[data-cover-width-label]')
+    const badge = root.querySelector('[data-cover-size-badge]')
+    const pickerValue = root.querySelector('[data-asset-picker-value]')
+    const removeCheckbox = root.querySelector('[data-asset-picker-remove]')
+
+    if (
+      !(size instanceof HTMLElement) ||
+      !(preview instanceof HTMLElement) ||
+      !(img instanceof HTMLImageElement) ||
+      !(input instanceof HTMLInputElement)
+    ) {
+      return
+    }
+
+    const applyWidth = () => {
+      const pct = Math.max(20, Math.min(100, Number.parseInt(input.value, 10) || 100))
+      input.value = String(pct)
+      preview.style.width = `${pct}%`
+      if (label) label.textContent = `${pct}%`
+      if (badge) badge.textContent = `${pct}%`
+    }
+
+    const syncVisibility = () => {
+      if (removeCheckbox instanceof HTMLInputElement && removeCheckbox.checked) {
+        size.hidden = true
+        return
+      }
+      const key = pickerValue instanceof HTMLInputElement ? pickerValue.value.trim() : ''
+      const pickerImg = picker?.querySelector('[data-asset-picker-preview-image]')
+      const url =
+        pickerImg instanceof HTMLImageElement && pickerImg.src
+          ? pickerImg.src
+          : key
+            ? `/assets/${key}`
+            : ''
+      if (!key || !url) {
+        size.hidden = true
+        return
+      }
+      size.hidden = false
+      img.hidden = false
+      if (img.src !== url) img.src = url
+    }
+
+    input.addEventListener('input', applyWidth)
+    removeCheckbox?.addEventListener('change', syncVisibility)
+    picker?.querySelector('[data-asset-picker-clear]')?.addEventListener('click', () => {
+      queueMicrotask(syncVisibility)
+    })
+
+    const dialog = document.getElementById('asset-library-dialog')
+    dialog?.addEventListener('close', () => queueMicrotask(syncVisibility))
+
+    const pickerPreview = picker?.querySelector('[data-asset-picker-preview]')
+    if (pickerPreview) {
+      new MutationObserver(syncVisibility).observe(pickerPreview, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+      })
+    }
+
+    applyWidth()
+    syncVisibility()
+  })
+}
+
+function bootAdminPostPage() {
+  bootDirtPostEditors()
+  initCoverEditors()
+}
+
 declare global {
   interface Window {
     initDirtPostEditor?: typeof initDirtPostEditor
@@ -288,7 +370,7 @@ declare global {
 window.initDirtPostEditor = initDirtPostEditor
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', bootDirtPostEditors)
+  document.addEventListener('DOMContentLoaded', bootAdminPostPage)
 } else {
-  bootDirtPostEditors()
+  bootAdminPostPage()
 }

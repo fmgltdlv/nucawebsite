@@ -130,6 +130,62 @@
   margin-top: 0.5rem;
 }
 
+.dirt-cover-editor {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.dirt-cover-size {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #f8f9fb;
+}
+
+.dirt-cover-size-preview {
+  position: relative;
+  max-width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #e8ebf0;
+  line-height: 0;
+}
+
+.dirt-cover-size-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 16rem;
+  object-fit: contain;
+}
+
+.dirt-cover-size-badge {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(15, 61, 104, 0.9);
+  color: #fff;
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
+.dirt-cover-size-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.dirt-cover-size-control input[type='range'] {
+  flex: 1;
+  min-width: 10rem;
+}
+
 /* Image node: drag resize + context menu */
 .dirt-post-image.is-editor {
   position: relative;
