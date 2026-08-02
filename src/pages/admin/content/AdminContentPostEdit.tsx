@@ -91,13 +91,10 @@ export function AdminContentPostEditPage({
           label="Cover photo"
           kind="image"
           hiddenInputName="existing_cover_key"
-          fileInputName="cover"
-          fileInputId="post-cover"
-          fileAccept="image/jpeg,image/png,image/webp,image/gif"
           currentKey={post?.cover_r2_key}
           currentUrl={post?.cover_r2_key ? getAssetUrl(post.cover_r2_key) : null}
           removeCheckboxName="remove_cover"
-          hint="Optional. Shown on THE DIRT archive and at the top of the post."
+          hint="Optional. Choose from the library (upload there if needed). Shown on THE DIRT archive and at the top of the post."
         />
         <div class="form-field">
           <label for="post-cover-alt">Cover alt text</label>
