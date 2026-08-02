@@ -49,6 +49,20 @@ export function AdminAssetLibraryDialog() {
             No matching assets in the library.
           </p>
           <div class="admin-asset-library-grid" data-asset-library-grid hidden></div>
+          <nav
+            class="admin-list-pagination admin-asset-library-pagination"
+            data-asset-library-pagination
+            hidden
+            aria-label="Asset library pagination"
+          >
+            <button type="button" class="btn btn-secondary btn-sm" data-asset-library-page-prev disabled>
+              Previous
+            </button>
+            <span class="admin-list-page-info" data-asset-library-page-info></span>
+            <button type="button" class="btn btn-secondary btn-sm" data-asset-library-page-next disabled>
+              Next
+            </button>
+          </nav>
         </div>
         <footer class="admin-modal-footer">
           <AdminModalCancelButton />

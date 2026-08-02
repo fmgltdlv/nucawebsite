@@ -762,6 +762,11 @@
     const uploadFileInput = assetLibraryDialog.querySelector('[data-asset-library-upload-file]')
     const uploadBtn = assetLibraryDialog.querySelector('[data-asset-library-upload-btn]')
     const uploadStatus = assetLibraryDialog.querySelector('[data-asset-library-upload-status]')
+    const pagination = assetLibraryDialog.querySelector('[data-asset-library-pagination]')
+    const prevBtn = assetLibraryDialog.querySelector('[data-asset-library-page-prev]')
+    const nextBtn = assetLibraryDialog.querySelector('[data-asset-library-page-next]')
+    const pageInfo = assetLibraryDialog.querySelector('[data-asset-library-page-info]')
+    const ASSET_LIBRARY_PAGE_SIZE = 24
     /** @type {HTMLElement | null} */
     let activePickerField = null
     /** @type {Record<string, Array<{ key: string, label: string, type: string, url: string }> | null>} */
@@ -771,6 +776,7 @@
     /** @type {Array<{ key: string, label: string, type: string, url: string }>} */
     let libraryAssets = []
     let activeKind = 'image'
+    let libraryCurrentPage = 0
     let uploadInFlight = false
     let openSeq = 0
 
@@ -861,6 +867,7 @@
         invalidateAssetsCache(activeKind)
         libraryAssets = [data.asset, ...libraryAssets.filter((asset) => asset.key !== data.asset.key)]
         if (searchInput instanceof HTMLInputElement) searchInput.value = ''
+        libraryCurrentPage = 0
         renderAssetGrid()
         setUploadStatus('Uploaded.')
 
@@ -960,17 +967,38 @@
           })
         : libraryAssets
 
+      const totalPages = Math.max(1, Math.ceil(filteredAssets.length / ASSET_LIBRARY_PAGE_SIZE))
+      if (libraryCurrentPage >= totalPages) libraryCurrentPage = totalPages - 1
+      if (libraryCurrentPage < 0) libraryCurrentPage = 0
+
+      const start = libraryCurrentPage * ASSET_LIBRARY_PAGE_SIZE
+      const pageAssets = filteredAssets.slice(start, start + ASSET_LIBRARY_PAGE_SIZE)
+
       grid.innerHTML = ''
       if (filteredAssets.length === 0) {
         grid.hidden = true
         if (emptyEl instanceof HTMLElement) emptyEl.hidden = false
+        if (pagination instanceof HTMLElement) pagination.hidden = true
         return
       }
 
       grid.hidden = false
       if (emptyEl instanceof HTMLElement) emptyEl.hidden = true
 
-      filteredAssets.forEach((asset) => {
+      if (pagination instanceof HTMLElement) {
+        pagination.hidden = filteredAssets.length <= ASSET_LIBRARY_PAGE_SIZE
+      }
+      if (pageInfo instanceof HTMLElement) {
+        pageInfo.textContent = `Page ${libraryCurrentPage + 1} of ${totalPages} (${filteredAssets.length} items)`
+      }
+      if (prevBtn instanceof HTMLButtonElement) {
+        prevBtn.disabled = libraryCurrentPage <= 0
+      }
+      if (nextBtn instanceof HTMLButtonElement) {
+        nextBtn.disabled = libraryCurrentPage >= totalPages - 1
+      }
+
+      pageAssets.forEach((asset) => {
         const button = document.createElement('button')
         button.type = 'button'
         button.className = 'admin-asset-library-item'
@@ -1003,11 +1031,13 @@
 
       if (loadingEl instanceof HTMLElement) loadingEl.hidden = false
       if (emptyEl instanceof HTMLElement) emptyEl.hidden = true
+      if (pagination instanceof HTMLElement) pagination.hidden = true
       if (grid instanceof HTMLElement) {
         grid.hidden = true
         grid.innerHTML = ''
       }
       if (searchInput instanceof HTMLInputElement) searchInput.value = ''
+      libraryCurrentPage = 0
 
       assetLibraryDialog.showModal()
 
@@ -1020,6 +1050,7 @@
       } catch (error) {
         if (seq !== openSeq || !assetLibraryDialog.open) return
         if (loadingEl instanceof HTMLElement) loadingEl.hidden = true
+        if (pagination instanceof HTMLElement) pagination.hidden = true
         if (emptyEl instanceof HTMLElement) {
           emptyEl.hidden = false
           emptyEl.textContent =
@@ -1064,6 +1095,19 @@
     wireAssetPickers()
 
     searchInput?.addEventListener('input', () => {
+      libraryCurrentPage = 0
+      renderAssetGrid()
+    })
+
+    prevBtn?.addEventListener('click', () => {
+      if (libraryCurrentPage > 0) {
+        libraryCurrentPage -= 1
+        renderAssetGrid()
+      }
+    })
+
+    nextBtn?.addEventListener('click', () => {
+      libraryCurrentPage += 1
       renderAssetGrid()
     })
 

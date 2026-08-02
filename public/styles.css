@@ -4154,6 +4154,11 @@ button.pill {
   padding: 0.25rem;
 }
 
+.admin-asset-library-pagination {
+  flex-shrink: 0;
+  margin-top: 0.75rem;
+}
+
 .admin-asset-library-item {
   display: flex;
   flex-direction: column;
