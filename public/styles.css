@@ -2043,6 +2043,23 @@ button.pill {
   display: inline-flex;
 }
 
+.event-rsvp-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.event-rsvp-form .btn {
+  justify-self: start;
+}
+
+.event-rsvp-spots {
+  margin-bottom: 0.25rem !important;
+}
+
+.event-rsvp-alt {
+  margin-top: 0.85rem !important;
+}
+
 .admin-event-image-preview {
   display: block;
   width: 100%;
@@ -2175,7 +2192,8 @@ button.pill {
   }
 }
 
-.form-field label {
+.form-field label,
+.form-field-label {
   display: block;
   font-size: 0.85rem;
   font-weight: 600;

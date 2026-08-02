@@ -4,9 +4,10 @@ type AdminAssetPickerFieldProps = {
   label: string
   kind: AssetContentKind
   hiddenInputName: string
-  fileInputName: string
-  fileInputId: string
-  fileAccept: string
+  /** When omitted, only the asset library picker is shown (no separate file input). */
+  fileInputName?: string
+  fileInputId?: string
+  fileAccept?: string
   currentKey?: string | null
   currentUrl?: string | null
   removeCheckboxName?: string
@@ -25,9 +26,11 @@ export function AdminAssetPickerField({
   removeCheckboxName,
   hint,
 }: AdminAssetPickerFieldProps) {
+  const showFileInput = Boolean(fileInputName && fileInputId)
+
   return (
     <div class="form-field admin-asset-picker-field" data-asset-picker data-asset-kind={kind}>
-      <label for={fileInputId}>{label}</label>
+      {showFileInput ? <label for={fileInputId}>{label}</label> : <span class="form-field-label">{label}</span>}
 
       <div class="admin-asset-picker-preview" data-asset-picker-preview hidden={!currentUrl}>
         {currentUrl && kind === 'image' && (
@@ -60,7 +63,15 @@ export function AdminAssetPickerField({
       />
 
       <div class="admin-asset-picker-actions">
-        <input type="file" name={fileInputName} id={fileInputId} accept={fileAccept} data-asset-picker-file />
+        {showFileInput && (
+          <input
+            type="file"
+            name={fileInputName}
+            id={fileInputId}
+            accept={fileAccept}
+            data-asset-picker-file
+          />
+        )}
         <button type="button" class="btn btn-secondary btn-sm" data-asset-picker-open>
           Choose from library
         </button>

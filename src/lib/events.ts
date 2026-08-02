@@ -10,6 +10,7 @@ import {
   getAssetUrl,
   uploadImage,
 } from './r2-assets'
+import { deleteEventRsvpsForEvent } from './event-rsvps'
 
 export type EventRecord = {
   id: string
@@ -19,6 +20,8 @@ export type EventRecord = {
   location: string | null
   description: string | null
   registration_url: string | null
+  rsvp_enabled: number
+  registration_limit: number | null
   published: number
   repeat_rule: string | null
   repeat_until: string | null
@@ -37,7 +40,7 @@ export type EventOccurrenceView = {
 
 export const EVENTS_LIST_PAGE_SIZE = 5
 
-const EVENT_COLUMNS = `id, title, starts_at, ends_at, location, description, registration_url, published, repeat_rule, repeat_until, thumbnail_r2_key, flyer_r2_key, latitude, longitude, committee_key`
+const EVENT_COLUMNS = `id, title, starts_at, ends_at, location, description, registration_url, rsvp_enabled, registration_limit, published, repeat_rule, repeat_until, thumbnail_r2_key, flyer_r2_key, latitude, longitude, committee_key`
 
 export async function resolveEventCommitteeKey(
   db: D1Database,
@@ -225,8 +228,24 @@ export async function resolveEventFormCoordinates(
     skipMap?: boolean
   },
 ): Promise<{ latitude: number | null; longitude: number | null }> {
-  if (options?.manual) return options.manual
   if (options?.skipMap) return { latitude: null, longitude: null }
+
+  const trimmed = location?.trim() ?? ''
+  const existingLocation = options?.existing?.location?.trim() ?? ''
+  const locationChanged = !!options?.existing && trimmed !== existingLocation
+
+  if (options?.manual) {
+    const sameAsExisting =
+      options.existing != null &&
+      options.existing.latitude === options.manual.latitude &&
+      options.existing.longitude === options.manual.longitude
+
+    // Address changed but submitted coords still match the old pin — regeocode.
+    if (!(locationChanged && sameAsExisting)) {
+      return options.manual
+    }
+  }
+
   return resolveEventCoordinates(location, options?.existing)
 }
 
@@ -317,6 +336,8 @@ export async function createEvent(
     location?: string
     description?: string
     registration_url?: string
+    rsvp_enabled?: boolean
+    registration_limit?: number | null
     repeat_rule?: string | null
     repeat_until?: string | null
     thumbnail_r2_key?: string | null
@@ -329,8 +350,8 @@ export async function createEvent(
   const id = crypto.randomUUID()
   await db
     .prepare(
-      `INSERT INTO events (id, title, starts_at, ends_at, location, description, registration_url, published, repeat_rule, repeat_until, thumbnail_r2_key, flyer_r2_key, latitude, longitude, committee_key)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO events (id, title, starts_at, ends_at, location, description, registration_url, rsvp_enabled, registration_limit, published, repeat_rule, repeat_until, thumbnail_r2_key, flyer_r2_key, latitude, longitude, committee_key)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       id,
@@ -340,6 +361,8 @@ export async function createEvent(
       data.location ?? null,
       data.description ?? null,
       data.registration_url ?? null,
+      data.rsvp_enabled ? 1 : 0,
+      data.registration_limit ?? null,
       data.repeat_rule ?? null,
       data.repeat_until ?? null,
       data.thumbnail_r2_key ?? null,
@@ -362,6 +385,8 @@ export async function updateEvent(
     location?: string | null
     description?: string | null
     registration_url?: string | null
+    rsvp_enabled?: boolean
+    registration_limit?: number | null
     published: boolean
     repeat_rule?: string | null
     repeat_until?: string | null
@@ -375,7 +400,7 @@ export async function updateEvent(
   await db
     .prepare(
       `UPDATE events SET title = ?, starts_at = ?, ends_at = ?, location = ?, description = ?,
-       registration_url = ?, published = ?, repeat_rule = ?, repeat_until = ?,
+       registration_url = ?, rsvp_enabled = ?, registration_limit = ?, published = ?, repeat_rule = ?, repeat_until = ?,
        thumbnail_r2_key = ?, flyer_r2_key = ?, latitude = ?, longitude = ?, committee_key = ?,
        updated_at = datetime('now') WHERE id = ?`,
     )
@@ -386,6 +411,8 @@ export async function updateEvent(
       data.location ?? null,
       data.description ?? null,
       data.registration_url ?? null,
+      data.rsvp_enabled ? 1 : 0,
+      data.registration_limit ?? null,
       data.published ? 1 : 0,
       data.repeat_rule ?? null,
       data.repeat_until ?? null,
@@ -400,6 +427,7 @@ export async function updateEvent(
 }
 
 export async function deleteEvent(db: D1Database, id: string): Promise<void> {
+  await deleteEventRsvpsForEvent(db, id)
   await db.prepare('DELETE FROM events WHERE id = ?').bind(id).run()
 }
 

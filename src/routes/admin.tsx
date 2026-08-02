@@ -23,6 +23,13 @@ import {
   updateEvent,
   resolveEventCommitteeKey,
 } from '../lib/events'
+import {
+  buildEventRsvpsCsv,
+  deleteEventRsvp,
+  eventRsvpsExportFilename,
+  listEventRsvps,
+  parseRegistrationLimit,
+} from '../lib/event-rsvps'
 import { listCommittees } from '../lib/committees-db'
 import { listMembershipTypes } from '../lib/membership-types-db'
 import { geocodeClarkCountyAddress } from '../lib/geocode'
@@ -49,6 +56,7 @@ import {
 import { AdminLoginPage } from '../pages/AdminAuth'
 import { AdminAssetsPage } from '../pages/admin/AdminAssets'
 import { AdminEventsPage } from '../pages/admin/AdminEvents'
+import { AdminEventRsvpsPage } from '../pages/admin/AdminEventRsvps'
 import { AdminHomePage } from '../pages/admin/AdminHome'
 import { AdminMembersPage } from '../pages/admin/AdminMembers'
 import { AdminProfilePage } from '../pages/admin/AdminProfile'
@@ -619,6 +627,8 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const description = typeof body.description === 'string' ? body.description.trim() : ''
     const registration_url =
       typeof body.registration_url === 'string' ? body.registration_url.trim() : ''
+    const rsvp_enabled = body.rsvp_enabled === '1'
+    const registration_limit = parseRegistrationLimit(body.registration_limit)
     const repeat_rule = parseRepeatRule(typeof body.repeat_rule === 'string' ? body.repeat_rule : '')
     const repeat_until = parseRepeatUntil(typeof body.repeat_until === 'string' ? body.repeat_until : '')
     const committee_key = await resolveEventCommitteeKey(c.env.DB, body.committee_key)
@@ -634,6 +644,8 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       location: location || undefined,
       description: description || undefined,
       registration_url: registration_url || undefined,
+      rsvp_enabled,
+      registration_limit,
       repeat_rule,
       repeat_until,
       committee_key,
@@ -653,6 +665,8 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
         location: location || null,
         description: description || null,
         registration_url: registration_url || null,
+        rsvp_enabled,
+        registration_limit,
         published: true,
         repeat_rule,
         repeat_until,
@@ -686,6 +700,8 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const description = typeof body.description === 'string' ? body.description.trim() : ''
     const registration_url =
       typeof body.registration_url === 'string' ? body.registration_url.trim() : ''
+    const rsvp_enabled = body.rsvp_enabled === '1'
+    const registration_limit = parseRegistrationLimit(body.registration_limit)
     const repeat_rule = parseRepeatRule(typeof body.repeat_rule === 'string' ? body.repeat_rule : '')
     const repeat_until = parseRepeatUntil(typeof body.repeat_until === 'string' ? body.repeat_until : '')
     const committee_key = await resolveEventCommitteeKey(c.env.DB, body.committee_key)
@@ -706,6 +722,8 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
       location: location || null,
       description: description || null,
       registration_url: registration_url || null,
+      rsvp_enabled,
+      registration_limit,
       published: body.published === '1',
       repeat_rule,
       repeat_until,
@@ -717,6 +735,49 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     })
 
     return c.redirect('/admin/events?ok=1', 303)
+  })
+
+  app.get('/admin/events/:id/rsvps', async (c) => {
+    const ctx = getAdminCtx(c)
+    const event = await getEventById(c.env.DB, c.req.param('id'))
+    if (!event) return c.redirect('/admin/events', 303)
+    const rsvps = await listEventRsvps(c.env.DB, event.id)
+    const flash = c.req.query('ok') === '1' ? 'RSVP list updated.' : undefined
+    return c.html(
+      <AdminEventRsvpsPage {...c.get('adminSite')} ctx={ctx} event={event} rsvps={rsvps} flash={flash} />,
+    )
+  })
+
+  app.get('/admin/events/:id/rsvps/export', async (c) => {
+    const ctx = getAdminCtx(c)
+    const event = await getEventById(c.env.DB, c.req.param('id'))
+    if (!event) return c.redirect('/admin/events', 303)
+    const rsvps = await listEventRsvps(c.env.DB, event.id)
+    await writeAuditLog(c.env.DB, {
+      action: 'event_rsvps.export',
+      resource: 'event_rsvps',
+      resourceId: event.id,
+      userId: ctx.user.id,
+      details: `${rsvps.length} rsvps`,
+      ip: clientIp(c.req.raw.headers),
+    })
+    const filename = eventRsvpsExportFilename(event.title)
+    const csv = buildEventRsvpsCsv(rsvps)
+    return new Response(csv, {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+      },
+    })
+  })
+
+  app.post('/admin/events/:id/rsvps/:rsvpId/delete', async (c) => {
+    getAdminCtx(c)
+    const eventId = c.req.param('id')
+    const event = await getEventById(c.env.DB, eventId)
+    if (!event) return c.redirect('/admin/events', 303)
+    await deleteEventRsvp(c.env.DB, c.req.param('rsvpId'))
+    return c.redirect(`/admin/events/${eventId}/rsvps?ok=1`, 303)
   })
 
   app.post('/admin/events/:id/delete', async (c) => {

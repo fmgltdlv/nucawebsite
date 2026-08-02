@@ -22,6 +22,52 @@ function mapExternalUrl(lat: number, lng: number): string {
   return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`
 }
 
+const RSVP_ERROR_MESSAGES: Record<string, string> = {
+  full: 'This event is full. No more RSVPs can be accepted.',
+  duplicate: 'That email is already registered for this event.',
+  invalid: 'Please enter a valid name and email address.',
+  disabled: 'RSVPs are not open for this event.',
+}
+
+function EventRsvpForm({
+  eventId,
+  startsAt,
+  spotsLeft,
+  limit,
+  errorMessage,
+  idSuffix = '',
+}: {
+  eventId: string
+  startsAt: string
+  spotsLeft: number | null
+  limit: number | null
+  errorMessage: string | null
+  idSuffix?: string
+}) {
+  return (
+    <form class="form event-rsvp-form" method="post" action={`/events/${eventId}/rsvp`}>
+      <input type="hidden" name="occurrence_starts_at" value={startsAt} />
+      {errorMessage && <p class="form-hint-warn" role="alert">{errorMessage}</p>}
+      {spotsLeft != null && limit != null && (
+        <p class="event-detail-card-muted event-rsvp-spots">
+          {spotsLeft} of {limit} spot{limit === 1 ? '' : 's'} remaining
+        </p>
+      )}
+      <div class="form-field">
+        <label for={`rsvp_name${idSuffix}`}>Name</label>
+        <input type="text" name="name" id={`rsvp_name${idSuffix}`} required autocomplete="name" />
+      </div>
+      <div class="form-field">
+        <label for={`rsvp_email${idSuffix}`}>Email</label>
+        <input type="email" name="email" id={`rsvp_email${idSuffix}`} required autocomplete="email" />
+      </div>
+      <button type="submit" class="btn btn-primary">
+        RSVP
+      </button>
+    </form>
+  )
+}
+
 export function EventDetailPage({
   theme,
   contact,
@@ -31,10 +77,21 @@ export function EventDetailPage({
   navigation,
   staffInboxCount,
   occurrence,
-}: PageProps & { occurrence: EventOccurrenceView }) {
+  rsvpCount = 0,
+  rsvpError,
+}: PageProps & {
+  occurrence: EventOccurrenceView
+  rsvpCount?: number
+  rsvpError?: string
+}) {
   const { master, starts_at, ends_at } = occurrence
   const flyerUrl = eventFlyerUrl(master)
   const hasMap = master.latitude != null && master.longitude != null
+  const rsvpEnabled = master.rsvp_enabled === 1
+  const limit = master.registration_limit
+  const spotsLeft = limit != null ? Math.max(0, limit - rsvpCount) : null
+  const isFull = spotsLeft === 0
+  const errorMessage = rsvpError ? RSVP_ERROR_MESSAGES[rsvpError] ?? RSVP_ERROR_MESSAGES.invalid : null
 
   return (
     <Layout
@@ -75,12 +132,34 @@ export function EventDetailPage({
 
               <div class="event-detail-card event-detail-registration">
                 <h2 class="event-detail-card-title">Registration</h2>
-                {master.registration_url ? (
+                {rsvpEnabled ? (
+                  isFull ? (
+                    <p class="event-detail-card-muted">This event is full. Registration is closed.</p>
+                  ) : (
+                    <EventRsvpForm
+                      eventId={master.id}
+                      startsAt={starts_at}
+                      spotsLeft={spotsLeft}
+                      limit={limit}
+                      errorMessage={errorMessage}
+                    />
+                  )
+                ) : master.registration_url ? (
                   <a class="btn btn-primary event-detail-register" href={master.registration_url}>
                     Register
                   </a>
                 ) : (
-                  <p class="event-detail-card-muted">Registration is not required for this event. Attendance is free and open!</p>
+                  <p class="event-detail-card-muted">
+                    Registration is not required for this event. Attendance is free and open!
+                  </p>
+                )}
+                {rsvpEnabled && master.registration_url && (
+                  <p class="event-detail-card-muted event-rsvp-alt">
+                    Prefer an external form?{' '}
+                    <a href={master.registration_url} target="_blank" rel="noopener noreferrer">
+                      Register elsewhere ↗
+                    </a>
+                  </p>
                 )}
               </div>
 
@@ -121,6 +200,21 @@ export function EventDetailPage({
         </div>
       </article>
     </Layout>
+  )
+}
+
+export function EventRsvpThanksPage(
+  props: PageProps & { eventTitle: string; eventHref: string },
+) {
+  return (
+    <StatusPage
+      {...props}
+      title="RSVP confirmed"
+      heading="You're on the list"
+      lead={`Thanks for registering for ${props.eventTitle}. We look forward to seeing you.`}
+      ctaHref={props.eventHref}
+      ctaLabel="Back to event"
+    />
   )
 }
 

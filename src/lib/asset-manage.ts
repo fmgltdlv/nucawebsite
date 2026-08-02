@@ -324,6 +324,8 @@ async function manageEventImage(
     location: existing.location,
     description: existing.description,
     registration_url: existing.registration_url,
+    rsvp_enabled: existing.rsvp_enabled === 1,
+    registration_limit: existing.registration_limit,
     published: existing.published === 1,
     repeat_rule: existing.repeat_rule,
     repeat_until: existing.repeat_until,

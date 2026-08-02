@@ -13,7 +13,9 @@ import {
   listUpcomingEventsPage,
   getPublishedEventById,
   resolveEventOccurrence,
+  eventPublicHref,
 } from './lib/events'
+import { countEventRsvps, createEventRsvp } from './lib/event-rsvps'
 import { listLeadership } from './lib/leadership-db'
 import {
   getActiveMemberPublicProfile,
@@ -41,7 +43,7 @@ import { CommitteesPage } from './pages/Committees'
 import { CommitteeDetailPage } from './pages/CommitteeDetail'
 import { ContentPage } from './pages/ContentPage'
 import { ContactPage, ContactErrorPage, ContactThanksPage } from './pages/Contact'
-import { EventDetailPage, EventNotFoundPage } from './pages/EventDetail'
+import { EventDetailPage, EventNotFoundPage, EventRsvpThanksPage } from './pages/EventDetail'
 import { EventsPage, type EventsView } from './pages/Events'
 import { HomePage } from './pages/Home'
 import { IndustryUpdateDetailPage } from './pages/IndustryUpdates'
@@ -338,7 +340,49 @@ app.get('/events/:id', async (c) => {
   const occurrence = resolveEventOccurrence(master, at)
   if (!occurrence) return c.html(<EventNotFoundPage {...site} />, 404)
 
-  return c.html(<EventDetailPage {...site} occurrence={occurrence} />)
+  const rsvpCount =
+    master.rsvp_enabled === 1
+      ? await countEventRsvps(c.env.DB, master.id, occurrence.starts_at)
+      : 0
+  const rsvpError = c.req.query('rsvp_error') || undefined
+
+  return c.html(
+    <EventDetailPage {...site} occurrence={occurrence} rsvpCount={rsvpCount} rsvpError={rsvpError} />,
+  )
+})
+
+app.post('/events/:id/rsvp', async (c) => {
+  const site = await siteProps(c)
+  const master = await getPublishedEventById(c.env.DB, c.req.param('id'))
+  if (!master) return c.html(<EventNotFoundPage {...site} />, 404)
+
+  const body = await c.req.parseBody()
+  const occurrenceRaw =
+    typeof body.occurrence_starts_at === 'string' ? body.occurrence_starts_at : ''
+  const occurrence = resolveEventOccurrence(master, occurrenceRaw || null)
+  if (!occurrence) return c.html(<EventNotFoundPage {...site} />, 404)
+
+  const eventHref = eventPublicHref({ series_id: master.id, starts_at: occurrence.starts_at })
+  const name = typeof body.name === 'string' ? body.name : ''
+  const email = typeof body.email === 'string' ? body.email : ''
+
+  const result = await createEventRsvp(c.env.DB, {
+    eventId: master.id,
+    occurrenceStartsAt: occurrence.starts_at,
+    name,
+    email,
+    rsvpEnabled: master.rsvp_enabled === 1,
+    registrationLimit: master.registration_limit,
+  })
+
+  if (!result.ok) {
+    const sep = eventHref.includes('?') ? '&' : '?'
+    return c.redirect(`${eventHref}${sep}rsvp_error=${encodeURIComponent(result.error)}`, 303)
+  }
+
+  return c.html(
+    <EventRsvpThanksPage {...site} eventTitle={master.title} eventHref={eventHref} />,
+  )
 })
 
 app.get('/advocacy', (c) => c.redirect('/about/committees', 301))

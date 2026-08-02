@@ -65,13 +65,11 @@ function EventCommitteeField({
 }
 
 function EventImageFields({
-  formId,
   event,
 }: {
   formId?: string
   event?: EventRecord
 }) {
-  const idPrefix = formId ? `${formId}-` : ''
   const thumbnailUrl = event ? eventThumbnailUrl(event) : undefined
   const flyerUrl = event ? eventFlyerUrl(event) : undefined
 
@@ -82,26 +80,71 @@ function EventImageFields({
           label="Thumbnail (list view)"
           kind="image"
           hiddenInputName="existing_thumbnail_key"
-          fileInputName="thumbnail"
-          fileInputId={`${idPrefix}thumbnail`}
-          fileAccept="image/*"
           currentKey={event?.thumbnail_r2_key}
           currentUrl={thumbnailUrl}
           removeCheckboxName="remove_thumbnail"
-          hint="Shown on the events list and home page. Square images (~400×400 px) work best."
+          hint="Shown on the events list and home page. Choose an existing asset or upload a new one from the library popup. Square images (~400×400 px) work best."
         />
         <AdminAssetPickerField
           label="Flyer (event page)"
           kind="image"
           hiddenInputName="existing_flyer_key"
-          fileInputName="flyer"
-          fileInputId={`${idPrefix}flyer`}
-          fileAccept="image/*"
           currentKey={event?.flyer_r2_key}
           currentUrl={flyerUrl}
           removeCheckboxName="remove_flyer"
-          hint="Hero image on the public event page."
+          hint="Hero image on the public event page. Choose an existing asset or upload a new one from the library popup."
         />
+      </div>
+    </>
+  )
+}
+
+function EventRegistrationFields({
+  formId,
+  event,
+}: {
+  formId?: string
+  event?: EventRecord
+}) {
+  const idPrefix = formId ? `${formId}-` : ''
+
+  return (
+    <>
+      <div class="form-field">
+        <label for={`${idPrefix}registration_url`}>External registration URL (optional)</label>
+        <input
+          type="url"
+          name="registration_url"
+          id={`${idPrefix}registration_url`}
+          value={event?.registration_url ?? ''}
+        />
+        <p class="form-hint">
+          Links out to an external registration page. Leave blank to use the on-site RSVP form instead.
+        </p>
+      </div>
+      <label class="admin-check">
+        <input
+          type="checkbox"
+          name="rsvp_enabled"
+          value="1"
+          checked={event ? event.rsvp_enabled === 1 : false}
+        />
+        Enable on-site RSVP form
+      </label>
+      <div class="form-field">
+        <label for={`${idPrefix}registration_limit`}>Registration limit (optional)</label>
+        <input
+          type="number"
+          name="registration_limit"
+          id={`${idPrefix}registration_limit`}
+          min="1"
+          step="1"
+          value={event?.registration_limit != null ? String(event.registration_limit) : ''}
+          placeholder="Unlimited"
+        />
+        <p class="form-hint">
+          Maximum RSVPs for each occurrence when the on-site form is enabled. Leave blank for no limit.
+        </p>
       </div>
     </>
   )
@@ -171,6 +214,15 @@ function EventListRow({
       <td>{repeatRuleLabel(event.repeat_rule)}</td>
       <td>{committeeLabel(event.committee_key, committees)}</td>
       <td>{event.location ?? '—'}</td>
+      <td>
+        {event.rsvp_enabled === 1 ? (
+          <a href={`/admin/events/${event.id}/rsvps`}>RSVPs</a>
+        ) : event.registration_url ? (
+          'External'
+        ) : (
+          '—'
+        )}
+      </td>
       <td>
         {event.published === 1 ? (
           <span class="admin-status-badge admin-status-listed">Published</span>
@@ -254,15 +306,7 @@ function EventEditModal({
           {event.description ?? ''}
         </textarea>
       </div>
-      <div class="form-field">
-        <label for={`${formId}-registration`}>Registration URL</label>
-        <input
-          type="url"
-          name="registration_url"
-          id={`${formId}-registration`}
-          value={event.registration_url ?? ''}
-        />
-      </div>
+      <EventRegistrationFields formId={formId} event={event} />
       <label class="admin-check">
         <input type="checkbox" name="published" value="1" checked={event.published === 1} />
         Published on public events page
@@ -320,10 +364,7 @@ export function AdminEventsPage({
               <label for="description">Description</label>
               <textarea name="description" id="description" rows={3}></textarea>
             </div>
-            <div class="form-field">
-              <label for="registration_url">Registration URL</label>
-              <input type="url" name="registration_url" id="registration_url" />
-            </div>
+            <EventRegistrationFields />
           </>
         }
         listTitle="Events"
@@ -337,6 +378,7 @@ export function AdminEventsPage({
             <th>Repeats</th>
             <th>Committee</th>
             <th>Location</th>
+            <th>Registration</th>
             <th>Status</th>
             <th></th>
           </tr>
