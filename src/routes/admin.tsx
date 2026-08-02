@@ -32,7 +32,10 @@ import {
 } from '../lib/event-rsvps'
 import { listCommittees } from '../lib/committees-db'
 import { listMembershipTypes } from '../lib/membership-types-db'
-import { geocodeClarkCountyAddress } from '../lib/geocode'
+import {
+  geocodeClarkCountyAddress,
+  geocodeClarkCountyAddressCandidates,
+} from '../lib/geocode'
 import { parseDatetimeLocal } from '../lib/datetime'
 import { registerAdminContentRoutes } from './admin-content'
 import {
@@ -311,16 +314,38 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const ctx = getAdminCtx(c)
 
     const address = c.req.query('address')?.trim() ?? ''
-    if (!address) return c.json({ ok: false })
+    if (!address) return c.json({ ok: false, candidates: [] })
+
+    const suggest = c.req.query('suggest') === '1'
+    if (suggest) {
+      const candidates = await geocodeClarkCountyAddressCandidates(address).catch(() => [])
+      return c.json({
+        ok: candidates.length > 0,
+        candidates: candidates.map((candidate) => ({
+          latitude: candidate.lat,
+          longitude: candidate.lng,
+          formatted: candidate.formatted,
+          score: candidate.score,
+        })),
+      })
+    }
 
     const result = await geocodeClarkCountyAddress(address).catch(() => null)
-    if (!result) return c.json({ ok: false })
+    if (!result) return c.json({ ok: false, candidates: [] })
 
     return c.json({
       ok: true,
       latitude: result.lat,
       longitude: result.lng,
       formatted: result.formatted,
+      candidates: [
+        {
+          latitude: result.lat,
+          longitude: result.lng,
+          formatted: result.formatted,
+          score: result.score,
+        },
+      ],
     })
   })
 

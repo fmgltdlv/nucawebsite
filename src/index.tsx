@@ -15,7 +15,7 @@ import {
   resolveEventOccurrence,
   eventPublicHref,
 } from './lib/events'
-import { countEventRsvps, createEventRsvp } from './lib/event-rsvps'
+import { countEventRsvps, createEventRsvp, parseRsvpQuantity } from './lib/event-rsvps'
 import { listLeadership } from './lib/leadership-db'
 import {
   getActiveMemberPublicProfile,
@@ -365,12 +365,26 @@ app.post('/events/:id/rsvp', async (c) => {
   const eventHref = eventPublicHref({ series_id: master.id, starts_at: occurrence.starts_at })
   const name = typeof body.name === 'string' ? body.name : ''
   const email = typeof body.email === 'string' ? body.email : ''
+  const spotsUsed =
+    master.rsvp_enabled === 1 && master.registration_limit != null
+      ? await countEventRsvps(c.env.DB, master.id, occurrence.starts_at)
+      : 0
+  const spotsLeft =
+    master.registration_limit != null
+      ? Math.max(0, master.registration_limit - spotsUsed)
+      : null
+  const quantity = parseRsvpQuantity(body.quantity, spotsLeft)
+  if (quantity == null) {
+    const sep = eventHref.includes('?') ? '&' : '?'
+    return c.redirect(`${eventHref}${sep}rsvp_error=invalid`, 303)
+  }
 
   const result = await createEventRsvp(c.env.DB, {
     eventId: master.id,
     occurrenceStartsAt: occurrence.starts_at,
     name,
     email,
+    quantity,
     rsvpEnabled: master.rsvp_enabled === 1,
     registrationLimit: master.registration_limit,
   })

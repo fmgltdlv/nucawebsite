@@ -7,7 +7,7 @@ import type { AdminContext } from '../../lib/admin-context'
 import type { PageProps } from '../../types/page'
 
 function rsvpSearchText(rsvp: EventRsvpRecord): string {
-  return [rsvp.name, rsvp.email, rsvp.occurrence_starts_at, rsvp.created_at]
+  return [rsvp.name, rsvp.email, String(rsvp.quantity ?? 1), rsvp.occurrence_starts_at, rsvp.created_at]
     .filter(Boolean)
     .join(' ')
     .toLowerCase()
@@ -29,6 +29,7 @@ function RsvpListRow({
       <td>
         <a href={`mailto:${rsvp.email}`}>{rsvp.email}</a>
       </td>
+      <td>{rsvp.quantity ?? 1}</td>
       <td>
         <time dateTime={rsvp.occurrence_starts_at}>{formatEventDateShort(rsvp.occurrence_starts_at)}</time>
       </td>
@@ -55,6 +56,7 @@ export function AdminEventRsvpsPage({
 }) {
   const limitLabel =
     event.registration_limit != null ? `Limit ${event.registration_limit} per occurrence` : 'No limit'
+  const spotsReserved = rsvps.reduce((sum, rsvp) => sum + (rsvp.quantity ?? 1), 0)
 
   return (
     <AdminShell
@@ -71,7 +73,8 @@ export function AdminEventRsvpsPage({
       {flash && <p class="admin-flash">{flash}</p>}
 
       <p class="section-lead">
-        {rsvps.length} RSVP{rsvps.length === 1 ? '' : 's'} total · {limitLabel}
+        {rsvps.length} RSVP{rsvps.length === 1 ? '' : 's'} · {spotsReserved} spot
+        {spotsReserved === 1 ? '' : 's'} reserved · {limitLabel}
         {event.rsvp_enabled !== 1 && ' · On-site RSVP is currently disabled'}
       </p>
 
@@ -95,6 +98,7 @@ export function AdminEventRsvpsPage({
             <th>Submitted</th>
             <th>Name</th>
             <th>Email</th>
+            <th>Spots</th>
             <th>Occurrence</th>
             <th></th>
           </tr>

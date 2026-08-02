@@ -24,18 +24,31 @@ export function EventLocationFields({
       data-initial-longitude={hasCoords ? String(longitude) : ''}
     >
       <label for={`${idPrefix}location`}>Location</label>
-      <input
-        type="text"
-        name="location"
-        id={`${idPrefix}location`}
-        value={location ?? ''}
-        data-event-location-input
-      />
+      <div class="event-location-suggest-wrap">
+        <input
+          type="text"
+          name="location"
+          id={`${idPrefix}location`}
+          value={location ?? ''}
+          data-event-location-input
+          autocomplete="off"
+          aria-autocomplete="list"
+          aria-controls={`${idPrefix}location-suggestions`}
+        />
+        <ul
+          id={`${idPrefix}location-suggestions`}
+          class="event-location-suggestions"
+          data-event-location-suggestions
+          hidden
+          role="listbox"
+          aria-label="Address suggestions"
+        />
+      </div>
       <input type="hidden" name="latitude" value={hasCoords ? String(latitude) : ''} data-event-latitude />
       <input type="hidden" name="longitude" value={hasCoords ? String(longitude) : ''} data-event-longitude />
       <input type="hidden" name="map_skip" value="0" data-event-map-skip />
       <p class="form-hint">
-        Full street address when possible. We geocode Clark County addresses for the map on the event page.
+        Full street address when possible. Press Enter to search Clark County addresses for the map.
       </p>
       {hasCoords && (
         <p class="form-hint" data-event-coords-hint>

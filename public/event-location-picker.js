@@ -54,6 +54,10 @@
     return form.querySelector('[data-event-coords-hint]')
   }
 
+  function getSuggestionsList(form) {
+    return form.querySelector('[data-event-location-suggestions]')
+  }
+
   function readLocation(form) {
     const input = getLocationField(form)
     return input instanceof HTMLInputElement ? input.value.trim() : ''
@@ -99,6 +103,94 @@
     clearManualCoords(form)
     const skipInput = getMapSkipInput(form)
     if (skipInput instanceof HTMLInputElement) skipInput.value = '1'
+  }
+
+  function clearSuggestions(form) {
+    const list = getSuggestionsList(form)
+    if (!(list instanceof HTMLElement)) return
+    list.replaceChildren()
+    list.hidden = true
+  }
+
+  function applySuggestion(form, candidate) {
+    const input = getLocationField(form)
+    if (input instanceof HTMLInputElement) input.value = candidate.formatted
+    setManualCoords(form, candidate.lat, candidate.lng)
+    clearSuggestions(form)
+    form.dataset.locationProcessed = '1'
+  }
+
+  function renderSuggestions(form, candidates) {
+    const list = getSuggestionsList(form)
+    if (!(list instanceof HTMLElement)) return
+
+    list.replaceChildren()
+    if (!candidates.length) {
+      const empty = document.createElement('li')
+      empty.className = 'event-location-suggestion event-location-suggestion-empty'
+      empty.setAttribute('role', 'option')
+      empty.textContent = 'No matching Clark County addresses found.'
+      list.appendChild(empty)
+      list.hidden = false
+      return
+    }
+
+    candidates.forEach((candidate) => {
+      const item = document.createElement('li')
+      item.className = 'event-location-suggestion'
+      item.setAttribute('role', 'option')
+      item.tabIndex = 0
+      item.textContent = candidate.formatted
+      item.addEventListener('click', () => applySuggestion(form, candidate))
+      item.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          applySuggestion(form, candidate)
+        }
+      })
+      list.appendChild(item)
+    })
+    list.hidden = false
+  }
+
+  async function suggestAddresses(form) {
+    const location = readLocation(form)
+    if (!location) {
+      clearSuggestions(form)
+      return
+    }
+
+    const list = getSuggestionsList(form)
+    if (list instanceof HTMLElement) {
+      list.replaceChildren()
+      const loading = document.createElement('li')
+      loading.className = 'event-location-suggestion event-location-suggestion-empty'
+      loading.setAttribute('role', 'option')
+      loading.textContent = 'Searching addresses…'
+      list.appendChild(loading)
+      list.hidden = false
+    }
+
+    try {
+      const response = await fetch(
+        `/admin/api/geocode?suggest=1&address=${encodeURIComponent(location)}`,
+      )
+      if (!response.ok) {
+        renderSuggestions(form, [])
+        return
+      }
+      const data = await response.json()
+      const candidates = Array.isArray(data?.candidates)
+        ? data.candidates.map((candidate) => ({
+            formatted: String(candidate.formatted || ''),
+            lat: Number(candidate.latitude),
+            lng: Number(candidate.longitude),
+          })).filter((candidate) => candidate.formatted && Number.isFinite(candidate.lat) && Number.isFinite(candidate.lng))
+        : []
+      renderSuggestions(form, candidates)
+    } catch {
+      renderSuggestions(form, [])
+    }
   }
 
   function resetPickerState() {
@@ -249,10 +341,27 @@
     locationInput?.addEventListener('input', () => {
       delete form.dataset.locationProcessed
       clearManualCoords(form)
+      clearSuggestions(form)
+    })
+
+    locationInput?.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return
+      event.preventDefault()
+      void suggestAddresses(form)
+    })
+
+    locationInput?.addEventListener('blur', () => {
+      window.setTimeout(() => {
+        const list = getSuggestionsList(form)
+        if (!(list instanceof HTMLElement)) return
+        if (list.contains(document.activeElement)) return
+        clearSuggestions(form)
+      }, 150)
     })
 
     form.addEventListener('submit', async (event) => {
       if (event.defaultPrevented) return
+      clearSuggestions(form)
       if (shouldSkipGeocodeCheck(form)) return
 
       event.preventDefault()

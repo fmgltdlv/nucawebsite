@@ -1765,12 +1765,6 @@
     title.textContent = event.title
     body.appendChild(title)
 
-    if (event.description) {
-      const desc = document.createElement('p')
-      desc.textContent = event.description
-      body.appendChild(desc)
-    }
-
     link.appendChild(body)
     article.appendChild(link)
     return article
@@ -2158,12 +2152,6 @@
     const title = document.createElement('h2')
     title.textContent = event.title
     body.appendChild(title)
-
-    if (event.description) {
-      const desc = document.createElement('p')
-      desc.textContent = event.description
-      body.appendChild(desc)
-    }
 
     link.appendChild(body)
     article.appendChild(link)

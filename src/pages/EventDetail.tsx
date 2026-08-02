@@ -25,7 +25,7 @@ function mapExternalUrl(lat: number, lng: number): string {
 const RSVP_ERROR_MESSAGES: Record<string, string> = {
   full: 'This event is full. No more RSVPs can be accepted.',
   duplicate: 'That email is already registered for this event.',
-  invalid: 'Please enter a valid name and email address.',
+  invalid: 'Please enter a valid name, email, and number of spots.',
   disabled: 'RSVPs are not open for this event.',
 }
 
@@ -44,6 +44,8 @@ function EventRsvpForm({
   errorMessage: string | null
   idSuffix?: string
 }) {
+  const maxSpots = spotsLeft != null ? Math.max(1, spotsLeft) : 50
+
   return (
     <form class="form event-rsvp-form" method="post" action={`/events/${eventId}/rsvp`}>
       <input type="hidden" name="occurrence_starts_at" value={startsAt} />
@@ -60,6 +62,23 @@ function EventRsvpForm({
       <div class="form-field">
         <label for={`rsvp_email${idSuffix}`}>Email</label>
         <input type="email" name="email" id={`rsvp_email${idSuffix}`} required autocomplete="email" />
+      </div>
+      <div class="form-field">
+        <label for={`rsvp_quantity${idSuffix}`}>Number of spots</label>
+        <input
+          type="number"
+          name="quantity"
+          id={`rsvp_quantity${idSuffix}`}
+          required
+          min={1}
+          max={maxSpots}
+          value="1"
+          inputmode="numeric"
+        />
+        <p class="form-hint">
+          Register yourself and additional guests in one RSVP
+          {spotsLeft != null ? ` (up to ${maxSpots}).` : '.'}
+        </p>
       </div>
       <button type="submit" class="btn btn-primary">
         RSVP

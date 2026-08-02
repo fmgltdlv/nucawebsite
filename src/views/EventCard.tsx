@@ -58,7 +58,6 @@ export function EventCard({ event }: { event: ExpandedEventRecord }) {
             {event.location && <span>{event.location}</span>}
           </div>
           <h2>{event.title}</h2>
-          {event.description && <p>{event.description}</p>}
         </div>
       </a>
     </article>
