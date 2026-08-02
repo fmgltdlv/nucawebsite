@@ -114,8 +114,8 @@ export function AdminContentPostEditPage({
             </textarea>
           </div>
           <p class="muted admin-help">
-            Use the toolbar for formatting, images (presets or custom %), image+text layouts, and carousels.
-            Images come from the asset library.
+            Insert an image, then drag the blue corner handle to resize. Right-click a photo for
+            inline / float left / float right. Use Image+Text for side-by-side layouts.
           </p>
         </div>
 
@@ -148,8 +148,8 @@ export function AdminContentPostEditPage({
         </form>
       )}
 
-      <link rel="stylesheet" href="/admin-post-editor.css?v=2" />
-      <script src="/admin-post-editor.js?v=2" defer></script>
+      <link rel="stylesheet" href="/admin-post-editor.css?v=3" />
+      <script src="/admin-post-editor.js?v=3" defer></script>
     </AdminShell>
   )
 }

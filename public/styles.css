@@ -5188,7 +5188,6 @@ button.pill {
 }
 
 /* DIRT post admin editor (also in admin-post-editor.css) */
-
 .dirt-post-editor {
   border: 1px solid var(--border, #d0d5dd);
   border-radius: 8px;
@@ -5315,4 +5314,99 @@ button.pill {
   flex-wrap: wrap;
   gap: 0.75rem;
   margin-top: 0.5rem;
+}
+
+/* Image node: drag resize + context menu */
+.dirt-post-image.is-editor {
+  position: relative;
+  display: block;
+  max-width: 100%;
+  margin: 0.75rem 0;
+}
+
+.dirt-post-image.is-editor .dirt-post-image-frame {
+  position: relative;
+  display: block;
+  line-height: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+}
+
+.dirt-post-image.is-editor.is-selected .dirt-post-image-frame,
+.dirt-post-image.is-editor.is-resizing .dirt-post-image-frame {
+  border-color: #0f3d68;
+}
+
+.dirt-post-image.is-editor img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  user-select: none;
+  -webkit-user-drag: none;
+  cursor: ew-resize;
+}
+
+.dirt-post-image-resize-handle {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: #0f3d68;
+  box-shadow: 0 0 0 2px #fff;
+  cursor: nwse-resize;
+  touch-action: none;
+  z-index: 2;
+}
+
+.dirt-post-image-size-badge {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(15, 61, 104, 0.9);
+  color: #fff;
+  font-size: 0.7rem;
+  line-height: 1.2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.dirt-post-image.is-editor.is-selected .dirt-post-image-size-badge,
+.dirt-post-image.is-editor.is-resizing .dirt-post-image-size-badge,
+.dirt-post-image.is-editor:hover .dirt-post-image-size-badge {
+  opacity: 1;
+}
+
+.dirt-image-context-menu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 11rem;
+  padding: 0.25rem;
+  border: 1px solid #c9ced6;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.dirt-image-context-menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.dirt-image-context-menu-item:hover,
+.dirt-image-context-menu-item.is-active {
+  background: #e8eef5;
 }

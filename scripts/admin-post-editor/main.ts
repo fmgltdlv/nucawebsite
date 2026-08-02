@@ -26,13 +26,6 @@ const HIGHLIGHTS = [
   { label: 'Mint', value: '#bbf7d0' },
 ]
 
-const WIDTH_PRESETS = [
-  { label: 'Small', pct: 25 },
-  { label: 'Medium', pct: 40 },
-  { label: 'Large', pct: 60 },
-  { label: 'Full', pct: 100 },
-]
-
 function btn(label: string, title: string, onClick: () => void, isActive?: () => boolean) {
   const el = document.createElement('button')
   el.type = 'button'
@@ -86,25 +79,14 @@ function toggleUnderline(editor: Editor) {
 async function insertImage(editor: Editor) {
   const asset = await window.pickLibraryAsset?.('image')
   if (!asset) return
-  const placement = window.prompt('Placement: inline, float-left, or float-right', 'inline') || 'inline'
-  const widthRaw = window.prompt('Width % (or small/medium/large/full)', '100') || '100'
-  let widthPct = 100
-  const preset = WIDTH_PRESETS.find((p) => p.label.toLowerCase() === widthRaw.trim().toLowerCase())
-  if (preset) widthPct = preset.pct
-  else {
-    const n = Number.parseInt(widthRaw, 10)
-    if (!Number.isNaN(n)) widthPct = Math.max(10, Math.min(100, n))
-  }
   editor
     .chain()
     .focus()
     .setDirtImage({
       src: asset.url,
       alt: asset.label || '',
-      placement: (['inline', 'float-left', 'float-right'].includes(placement)
-        ? placement
-        : 'inline') as 'inline' | 'float-left' | 'float-right',
-      widthPct,
+      placement: 'inline',
+      widthPct: 60,
     })
     .run()
 }
@@ -125,38 +107,17 @@ async function insertMediaText(editor: Editor) {
     .run()
 }
 
-async function insertCarousel(editor: Editor) {
-  const slides: Array<{ src: string; alt?: string }> = []
-  for (let i = 0; i < 8; i++) {
-    const asset = await window.pickLibraryAsset?.('image')
-    if (!asset) break
-    slides.push({ src: asset.url, alt: asset.label || '' })
-    if (slides.length >= 2) {
-      const more = window.confirm('Add another slide?')
-      if (!more) break
-    }
-  }
-  if (slides.length < 2) {
-    window.alert('A carousel needs at least 2 images.')
-    return
-  }
-  editor.chain().focus().setCarousel({ slides }).run()
-}
-
 function buildToolbar(editor: Editor, toolbar: HTMLElement) {
   toolbar.innerHTML = ''
-  const groups: HTMLElement[] = []
 
   const makeGroup = () => {
     const g = document.createElement('div')
     g.className = 'dirt-editor-toolbar-group'
-    groups.push(g)
     toolbar.append(g)
     return g
   }
 
-  const g1 = makeGroup()
-  g1.append(
+  makeGroup().append(
     btn('B', 'Bold', () => editor.chain().focus().toggleBold().run(), () => editor.isActive('bold')),
     btn('I', 'Italic', () => editor.chain().focus().toggleItalic().run(), () => editor.isActive('italic')),
     btn('U', 'Underline', () => toggleUnderline(editor), () => editor.isActive('underline')),
@@ -165,8 +126,7 @@ function buildToolbar(editor: Editor, toolbar: HTMLElement) {
     ),
   )
 
-  const g2 = makeGroup()
-  g2.append(
+  makeGroup().append(
     btn('H2', 'Heading 2', () => editor.chain().focus().toggleHeading({ level: 2 }).run(), () =>
       editor.isActive('heading', { level: 2 }),
     ),
@@ -185,8 +145,7 @@ function buildToolbar(editor: Editor, toolbar: HTMLElement) {
     btn('—', 'Horizontal rule', () => editor.chain().focus().setHorizontalRule().run()),
   )
 
-  const g3 = makeGroup()
-  g3.append(
+  makeGroup().append(
     btn('Link', 'Add/edit link', () => promptLink(editor), () => editor.isActive('link')),
     btn('Left', 'Align left', () => editor.chain().focus().setTextAlign('left').run(), () =>
       editor.isActive({ textAlign: 'left' }),
@@ -200,70 +159,31 @@ function buildToolbar(editor: Editor, toolbar: HTMLElement) {
   )
 
   const g4 = makeGroup()
-  const colorSelect = selectControl(
-    COLORS.map((c) => ({ label: c.label, value: c.value })),
-    (value) => {
-      if (!value) editor.chain().focus().unsetColor().run()
-      else editor.chain().focus().setColor(value).run()
-    },
-    'Text color',
+  g4.append(
+    selectControl(
+      COLORS.map((c) => ({ label: c.label, value: c.value })),
+      (value) => {
+        if (!value) editor.chain().focus().unsetColor().run()
+        else editor.chain().focus().setColor(value).run()
+      },
+      'Text color',
+    ),
+    selectControl(
+      HIGHLIGHTS.map((c) => ({ label: c.label, value: c.value })),
+      (value) => {
+        if (!value) editor.chain().focus().unsetHighlight().run()
+        else editor.chain().focus().toggleHighlight({ color: value }).run()
+      },
+      'Highlight',
+    ),
   )
-  const highlightSelect = selectControl(
-    HIGHLIGHTS.map((c) => ({ label: c.label, value: c.value })),
-    (value) => {
-      if (!value) editor.chain().focus().unsetHighlight().run()
-      else editor.chain().focus().toggleHighlight({ color: value }).run()
-    },
-    'Highlight',
-  )
-  g4.append(colorSelect, highlightSelect)
 
-  const g5 = makeGroup()
-  g5.append(
-    btn('Image', 'Insert image', () => void insertImage(editor)),
+  makeGroup().append(
+    btn('Image', 'Insert image — drag corner to resize, right-click for float/inline', () =>
+      void insertImage(editor),
+    ),
     btn('Image+Text', 'Insert image beside text', () => void insertMediaText(editor)),
-    btn('Carousel', 'Insert image carousel', () => void insertCarousel(editor)),
   )
-
-  const imageControls = document.createElement('div')
-  imageControls.className = 'dirt-editor-toolbar-group dirt-editor-image-controls'
-  imageControls.hidden = true
-  const widthPreset = selectControl(
-    [
-      { label: 'Width…', value: '' },
-      ...WIDTH_PRESETS.map((p) => ({ label: p.label, value: String(p.pct) })),
-      { label: 'Custom %', value: 'custom' },
-    ],
-    (value) => {
-      if (!editor.isActive('dirtImage')) return
-      if (value === 'custom') {
-        const raw = window.prompt('Custom width %', '50')
-        const n = Number.parseInt(raw || '', 10)
-        if (!Number.isNaN(n)) editor.chain().focus().updateDirtImage({ widthPct: n }).run()
-        return
-      }
-      if (value) editor.chain().focus().updateDirtImage({ widthPct: Number(value) }).run()
-    },
-    'Image width',
-  )
-  const placement = selectControl(
-    [
-      { label: 'Inline', value: 'inline' },
-      { label: 'Float left', value: 'float-left' },
-      { label: 'Float right', value: 'float-right' },
-    ],
-    (value) => {
-      if (!editor.isActive('dirtImage')) return
-      editor
-        .chain()
-        .focus()
-        .updateDirtImage({ placement: value as 'inline' | 'float-left' | 'float-right' })
-        .run()
-    },
-    'Image placement',
-  )
-  imageControls.append(widthPreset, placement)
-  toolbar.append(imageControls)
 
   const refresh = () => {
     toolbar.querySelectorAll<HTMLButtonElement>('.dirt-editor-btn').forEach((button) => {
@@ -271,8 +191,6 @@ function buildToolbar(editor: Editor, toolbar: HTMLElement) {
       if (!activeFn) return
       button.classList.toggle('is-active', !!activeFn())
     })
-    const onImage = editor.isActive('dirtImage')
-    imageControls.hidden = !onImage
   }
 
   editor.on('selectionUpdate', refresh)
@@ -285,7 +203,11 @@ export function initDirtPostEditor(root: HTMLElement) {
   const toolbar = root.querySelector('[data-dirt-editor-toolbar]')
   const mount = root.querySelector('[data-dirt-editor-mount]')
   const hidden = root.querySelector('[data-dirt-editor-input]')
-  if (!(toolbar instanceof HTMLElement) || !(mount instanceof HTMLElement) || !(hidden instanceof HTMLInputElement || hidden instanceof HTMLTextAreaElement)) {
+  if (
+    !(toolbar instanceof HTMLElement) ||
+    !(mount instanceof HTMLElement) ||
+    !(hidden instanceof HTMLInputElement || hidden instanceof HTMLTextAreaElement)
+  ) {
     return null
   }
 
@@ -307,6 +229,7 @@ export function initDirtPostEditor(root: HTMLElement) {
         Placeholder.configure({ placeholder: 'Write your DIRT post…' }),
         DirtImage,
         MediaText,
+        // Keep Carousel for reading older posts; insert UI removed.
         Carousel,
       ],
       content: initial,
