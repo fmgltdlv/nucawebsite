@@ -7,7 +7,6 @@ import { FontFamily } from '@tiptap/extension-font-family'
 import Highlight from '@tiptap/extension-highlight'
 import Placeholder from '@tiptap/extension-placeholder'
 import { DirtImage } from './dirt-image'
-import { MediaText } from './media-text'
 import { Carousel } from './carousel'
 
 const COLORS = [
@@ -113,22 +112,6 @@ async function insertImage(editor: Editor) {
     .run()
 }
 
-async function insertMediaText(editor: Editor) {
-  const asset = await window.pickLibraryAsset?.('image')
-  if (!asset) return
-  editor
-    .chain()
-    .focus()
-    .setMediaText({
-      src: asset.url,
-      alt: asset.label || '',
-      body: '',
-      position: 'left',
-      imageWidthPct: 40,
-    })
-    .run()
-}
-
 function buildToolbar(editor: Editor, toolbar: HTMLElement) {
   toolbar.innerHTML = ''
 
@@ -209,10 +192,9 @@ function buildToolbar(editor: Editor, toolbar: HTMLElement) {
   )
 
   makeGroup().append(
-    btn('Image', 'Insert image — drag corner to resize, right-click for float/inline', () =>
+    btn('Image', 'Insert image — drag to resize, right-click for float/inline', () =>
       void insertImage(editor),
     ),
-    btn('Image+Text', 'Insert image beside text', () => void insertMediaText(editor)),
   )
 
   const refresh = () => {
@@ -259,7 +241,6 @@ export function initDirtPostEditor(root: HTMLElement) {
         TextAlign.configure({ types: ['heading', 'paragraph'] }),
         Placeholder.configure({ placeholder: 'Write your DIRT post…' }),
         DirtImage,
-        MediaText,
         // Keep Carousel for reading older posts; insert UI removed.
         Carousel,
       ],

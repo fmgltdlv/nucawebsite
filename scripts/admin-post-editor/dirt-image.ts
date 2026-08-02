@@ -1,5 +1,4 @@
 import { Node, mergeAttributes } from '@tiptap/core'
-import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { Editor } from '@tiptap/core'
 
 export type ImagePlacement = 'inline' | 'float-left' | 'float-right'
@@ -62,7 +61,7 @@ function showPlacementMenu(
     item.setAttribute('role', 'menuitem')
     if (opt.value === current) item.classList.add('is-active')
     item.textContent = opt.label
-    item.addEventListener('click', (event) => {
+    item.addEventListener('pointerdown', (event) => {
       event.preventDefault()
       event.stopPropagation()
       onPick(opt.value)
@@ -86,35 +85,37 @@ function showPlacementMenu(
   const onDoc = (event: Event) => {
     if (event.target instanceof Node && menu.contains(event.target)) return
     closePlacementMenu()
-    document.removeEventListener('mousedown', onDoc, true)
+    document.removeEventListener('pointerdown', onDoc, true)
     document.removeEventListener('keydown', onKey, true)
   }
   const onKey = (event: KeyboardEvent) => {
     if (event.key === 'Escape') {
       closePlacementMenu()
-      document.removeEventListener('mousedown', onDoc, true)
+      document.removeEventListener('pointerdown', onDoc, true)
       document.removeEventListener('keydown', onKey, true)
     }
   }
-  // Defer so the opening contextmenu event doesn't immediately close it.
   requestAnimationFrame(() => {
-    document.addEventListener('mousedown', onDoc, true)
+    document.addEventListener('pointerdown', onDoc, true)
     document.addEventListener('keydown', onKey, true)
   })
 }
 
-function applyNodeAttrs(
+function setImageAttrs(
   editor: Editor,
   getPos: () => number | undefined,
-  node: ProseMirrorNode,
   next: Record<string, unknown>,
 ) {
   const pos = getPos()
-  if (typeof pos !== 'number') return
-  editor
+  if (typeof pos !== 'number') return false
+  return editor
     .chain()
-    .command(({ tr }) => {
-      tr.setNodeMarkup(pos, undefined, { ...node.attrs, ...next })
+    .command(({ tr, dispatch }) => {
+      const existing = tr.doc.nodeAt(pos)
+      if (!existing || existing.type.name !== 'dirtImage') return false
+      if (dispatch) {
+        tr.setNodeMarkup(pos, undefined, { ...existing.attrs, ...next })
+      }
       return true
     })
     .run()
@@ -124,15 +125,32 @@ export const DirtImage = Node.create({
   name: 'dirtImage',
   group: 'block',
   atom: true,
-  draggable: true,
+  draggable: false,
 
   addAttributes() {
     return {
       src: { default: null },
       alt: { default: '' },
       caption: { default: '' },
-      placement: { default: 'inline' },
-      widthPct: { default: 100 },
+      placement: {
+        default: 'inline' as ImagePlacement,
+        parseHTML: (el) =>
+          (el.getAttribute('data-placement') as ImagePlacement) || 'inline',
+        renderHTML: (attrs) => ({ 'data-placement': attrs.placement || 'inline' }),
+      },
+      widthPct: {
+        default: 100,
+        parseHTML: (el) => {
+          if (!(el instanceof HTMLElement)) return 100
+          const widthStyle = el.style.width
+          if (widthStyle?.endsWith('%')) return clampWidth(Number.parseInt(widthStyle, 10))
+          return clampWidth(Number(el.getAttribute('data-width-pct') || 100))
+        },
+        renderHTML: (attrs) => ({
+          'data-width-pct': String(clampWidth(Number(attrs.widthPct))),
+          style: `width: ${clampWidth(Number(attrs.widthPct))}%`,
+        }),
+      },
     }
   },
 
@@ -148,11 +166,12 @@ export const DirtImage = Node.create({
           const widthPct = widthStyle?.endsWith('%')
             ? Number.parseInt(widthStyle, 10)
             : Number(el.dataset.widthPct || 100)
+          const placement = (el.dataset.placement as ImagePlacement) || 'inline'
           return {
             src: img.getAttribute('src'),
             alt: img.getAttribute('alt') || '',
             caption: el.querySelector('figcaption')?.textContent || '',
-            placement: (el.dataset.placement as ImagePlacement) || 'inline',
+            placement,
             widthPct: clampWidth(widthPct),
           }
         },
@@ -160,22 +179,22 @@ export const DirtImage = Node.create({
     ]
   },
 
-  renderHTML({ node }) {
+  renderHTML({ node, HTMLAttributes }) {
     const placement = (node.attrs.placement as ImagePlacement) || 'inline'
     const widthPct = clampWidth(Number(node.attrs.widthPct))
     const caption = node.attrs.caption || ''
-    const figureAttrs = mergeAttributes({
+    const figureAttrs = mergeAttributes(HTMLAttributes, {
       class: `dirt-post-image dirt-post-image--${placement}`,
       'data-placement': placement,
       'data-width-pct': String(widthPct),
       style: `width: ${widthPct}%`,
     })
-    const imgAttrs = mergeAttributes({
+    const imgAttrs = {
       src: node.attrs.src,
       alt: node.attrs.alt || '',
       loading: 'lazy',
       decoding: 'async',
-    })
+    }
     if (caption) {
       return ['figure', figureAttrs, ['img', imgAttrs], ['figcaption', {}, String(caption)]]
     }
@@ -187,19 +206,12 @@ export const DirtImage = Node.create({
       let current = node
 
       const root = document.createElement('figure')
-      root.className = `dirt-post-image dirt-post-image--${current.attrs.placement} is-editor`
-      root.dataset.placement = current.attrs.placement
-      root.dataset.widthPct = String(current.attrs.widthPct)
-      root.style.width = `${current.attrs.widthPct}%`
       root.contentEditable = 'false'
-      root.classList.toggle('is-selected', selected)
 
       const frame = document.createElement('div')
       frame.className = 'dirt-post-image-frame'
 
       const img = document.createElement('img')
-      img.src = current.attrs.src || ''
-      img.alt = current.attrs.alt || ''
       img.draggable = false
 
       const handle = document.createElement('span')
@@ -209,27 +221,29 @@ export const DirtImage = Node.create({
 
       const badge = document.createElement('span')
       badge.className = 'dirt-post-image-size-badge'
-      badge.textContent = `${current.attrs.widthPct}%`
 
       const captionEl = document.createElement('figcaption')
-      captionEl.hidden = !current.attrs.caption
-      captionEl.textContent = current.attrs.caption || ''
 
       frame.append(img, handle, badge)
       root.append(frame, captionEl)
 
       const syncDom = () => {
-        root.className = `dirt-post-image dirt-post-image--${current.attrs.placement} is-editor`
-        root.classList.toggle('is-selected', selected)
-        root.dataset.placement = current.attrs.placement
-        root.dataset.widthPct = String(current.attrs.widthPct)
-        root.style.width = `${current.attrs.widthPct}%`
+        const placement = (current.attrs.placement as ImagePlacement) || 'inline'
+        const widthPct = clampWidth(Number(current.attrs.widthPct))
+        root.className = `dirt-post-image dirt-post-image--${placement} is-editor`
+        root.classList.toggle('is-selected', !!selected)
+        root.dataset.placement = placement
+        root.dataset.widthPct = String(widthPct)
+        root.style.width = `${widthPct}%`
+        root.style.cssFloat = placement === 'float-left' ? 'left' : placement === 'float-right' ? 'right' : ''
+        root.style.float = root.style.cssFloat
         img.src = current.attrs.src || ''
         img.alt = current.attrs.alt || ''
-        badge.textContent = `${current.attrs.widthPct}%`
+        badge.textContent = `${widthPct}%`
         captionEl.hidden = !current.attrs.caption
         captionEl.textContent = current.attrs.caption || ''
       }
+      syncDom()
 
       root.addEventListener('contextmenu', (event) => {
         event.preventDefault()
@@ -239,7 +253,12 @@ export const DirtImage = Node.create({
           editor.chain().setNodeSelection(pos).run()
         }
         showPlacementMenu(event.clientX, event.clientY, current.attrs.placement, (placement) => {
-          applyNodeAttrs(editor, getPos, current, { placement })
+          const patch: Record<string, unknown> = { placement }
+          // Full-width floats look identical to inline — shrink so the effect is visible.
+          if (placement !== 'inline' && clampWidth(Number(current.attrs.widthPct)) >= 90) {
+            patch.widthPct = 45
+          }
+          setImageAttrs(editor, getPos, patch)
         })
       })
 
@@ -252,7 +271,6 @@ export const DirtImage = Node.create({
         if (!resizing) return
         const delta = event.clientX - startX
         const deltaPct = (delta / containerWidth) * 100
-        // Float-right: drag left (negative delta) should grow the image.
         const signed = current.attrs.placement === 'float-right' ? -deltaPct : deltaPct
         const next = clampWidth(startWidthPct + signed)
         root.style.width = `${next}%`
@@ -272,7 +290,7 @@ export const DirtImage = Node.create({
         document.removeEventListener('pointerup', onPointerUp)
         root.classList.remove('is-resizing')
         const next = clampWidth(Number.parseInt(root.dataset.widthPct || '', 10))
-        applyNodeAttrs(editor, getPos, current, { widthPct: next })
+        setImageAttrs(editor, getPos, { widthPct: next })
       }
 
       const beginResize = (event: PointerEvent) => {
@@ -283,8 +301,8 @@ export const DirtImage = Node.create({
         if (typeof pos === 'number') {
           editor.chain().setNodeSelection(pos).run()
         }
-        const parent = root.parentElement
-        containerWidth = parent?.clientWidth || root.clientWidth || 1
+        const parent = root.closest('.ProseMirror') || root.parentElement
+        containerWidth = parent instanceof HTMLElement ? parent.clientWidth : root.clientWidth || 1
         startX = event.clientX
         startWidthPct = clampWidth(Number(current.attrs.widthPct))
         resizing = true
@@ -295,7 +313,6 @@ export const DirtImage = Node.create({
       }
 
       handle.addEventListener('pointerdown', beginResize)
-      // Click-drag on the photo itself also resizes.
       img.addEventListener('pointerdown', beginResize)
 
       return {

@@ -114,8 +114,8 @@ export function AdminContentPostEditPage({
             </textarea>
           </div>
           <p class="muted admin-help">
-            Insert an image, then drag the blue corner handle to resize. Right-click a photo for
-            inline / float left / float right. Use Image+Text for side-by-side layouts.
+            Insert an image, then drag it to resize. Right-click for inline / float left / float right
+            (float options shrink full-width images so the wrap is visible).
           </p>
         </div>
 
@@ -148,8 +148,8 @@ export function AdminContentPostEditPage({
         </form>
       )}
 
-      <link rel="stylesheet" href="/admin-post-editor.css?v=4" />
-      <script src="/admin-post-editor.js?v=4" defer></script>
+      <link rel="stylesheet" href="/admin-post-editor.css?v=5" />
+      <script src="/admin-post-editor.js?v=5" defer></script>
     </AdminShell>
   )
 }
