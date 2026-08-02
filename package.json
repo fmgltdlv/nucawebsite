@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "migrate": "wrangler d1 migrations apply nuca-lv --remote",
+    "migrate:local": "wrangler d1 migrations apply nuca-lv --local",
     "types": "wrangler types",
     "check": "wrangler check",
     "import-members": "node scripts/import-wp-members.mjs",
