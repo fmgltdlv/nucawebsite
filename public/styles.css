@@ -5186,3 +5186,133 @@ button.pill {
   border-radius: var(--radius-md, 8px);
   background: var(--color-surface, #fff);
 }
+
+/* DIRT post admin editor (also in admin-post-editor.css) */
+
+.dirt-post-editor {
+  border: 1px solid var(--border, #d0d5dd);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.dirt-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border, #d0d5dd);
+  background: #f8f9fb;
+}
+
+.dirt-editor-toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.dirt-editor-btn {
+  min-width: 2rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #c9ced6;
+  border-radius: 4px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.dirt-editor-btn.is-active,
+.dirt-editor-btn:hover {
+  border-color: #0f3d68;
+  background: #e8eef5;
+}
+
+.dirt-editor-select {
+  max-width: 8rem;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.dirt-editor-mount {
+  min-height: 18rem;
+  padding: 1rem 1.1rem;
+}
+
+.dirt-editor-mount .ProseMirror {
+  outline: none;
+  min-height: 16rem;
+}
+
+.dirt-editor-mount .ProseMirror p.is-editor-empty:first-child::before {
+  color: #98a2b3;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.dirt-editor-node-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  background: #f4f6f8;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.dirt-editor-node-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.dirt-post-media-text.is-editor,
+.dirt-post-carousel.is-editor {
+  border: 1px dashed #98a2b3;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin: 0.75rem 0;
+}
+
+.dirt-post-media-text-editor {
+  width: 100%;
+  margin-top: 0.5rem;
+  font: inherit;
+}
+
+.dirt-post-carousel-editor-slides {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.dirt-post-carousel-editor-row {
+  display: grid;
+  grid-template-columns: 4rem 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.dirt-post-carousel-editor-row img {
+  width: 4rem;
+  height: 3rem;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.admin-post-edit-form {
+  max-width: 52rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-post-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}

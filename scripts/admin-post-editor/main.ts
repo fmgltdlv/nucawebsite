@@ -1,8 +1,6 @@
 import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
-import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
-import Link from '@tiptap/extension-link'
 import { TextStyle } from '@tiptap/extension-text-style'
 import { Color } from '@tiptap/extension-color'
 import Highlight from '@tiptap/extension-highlight'
@@ -81,6 +79,10 @@ function promptLink(editor: Editor) {
   editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run()
 }
 
+function toggleUnderline(editor: Editor) {
+  editor.chain().focus().toggleUnderline().run()
+}
+
 async function insertImage(editor: Editor) {
   const asset = await window.pickLibraryAsset?.('image')
   if (!asset) return
@@ -157,9 +159,7 @@ function buildToolbar(editor: Editor, toolbar: HTMLElement) {
   g1.append(
     btn('B', 'Bold', () => editor.chain().focus().toggleBold().run(), () => editor.isActive('bold')),
     btn('I', 'Italic', () => editor.chain().focus().toggleItalic().run(), () => editor.isActive('italic')),
-    btn('U', 'Underline', () => editor.chain().focus().toggleUnderline().run(), () =>
-      editor.isActive('underline'),
-    ),
+    btn('U', 'Underline', () => toggleUnderline(editor), () => editor.isActive('underline')),
     btn('S', 'Strikethrough', () => editor.chain().focus().toggleStrike().run(), () =>
       editor.isActive('strike'),
     ),
@@ -281,6 +281,7 @@ function buildToolbar(editor: Editor, toolbar: HTMLElement) {
 }
 
 export function initDirtPostEditor(root: HTMLElement) {
+  if (root.dataset.dirtEditorReady === '1') return null
   const toolbar = root.querySelector('[data-dirt-editor-toolbar]')
   const mount = root.querySelector('[data-dirt-editor-mount]')
   const hidden = root.querySelector('[data-dirt-editor-input]')
@@ -290,38 +291,52 @@ export function initDirtPostEditor(root: HTMLElement) {
 
   const initial = hidden.value || '<p></p>'
 
-  const editor = new Editor({
-    element: mount,
-    extensions: [
-      StarterKit.configure({
-        heading: { levels: [2, 3] },
-      }),
-      Underline,
-      TextStyle,
-      Color,
-      Highlight.configure({ multicolor: true }),
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Link.configure({ openOnClick: false, autolink: true }),
-      Placeholder.configure({ placeholder: 'Write your DIRT post…' }),
-      DirtImage,
-      MediaText,
-      Carousel,
-    ],
-    content: initial,
-    onUpdate: ({ editor: current }) => {
-      hidden.value = current.getHTML()
-    },
-  })
+  try {
+    const editor = new Editor({
+      element: mount,
+      extensions: [
+        // TipTap v3 StarterKit already includes underline + link — configure, don't duplicate.
+        StarterKit.configure({
+          heading: { levels: [2, 3] },
+          link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
+        }),
+        TextStyle,
+        Color,
+        Highlight.configure({ multicolor: true }),
+        TextAlign.configure({ types: ['heading', 'paragraph'] }),
+        Placeholder.configure({ placeholder: 'Write your DIRT post…' }),
+        DirtImage,
+        MediaText,
+        Carousel,
+      ],
+      content: initial,
+      onUpdate: ({ editor: current }) => {
+        hidden.value = current.getHTML()
+      },
+    })
 
-  hidden.value = editor.getHTML()
-  buildToolbar(editor, toolbar)
-
-  const form = root.closest('form')
-  form?.addEventListener('submit', () => {
+    root.dataset.dirtEditorReady = '1'
     hidden.value = editor.getHTML()
-  })
+    buildToolbar(editor, toolbar)
 
-  return editor
+    const form = root.closest('form')
+    form?.addEventListener('submit', () => {
+      hidden.value = editor.getHTML()
+    })
+
+    return editor
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Editor failed to load.'
+    toolbar.innerHTML = `<p class="admin-flash admin-flash-error">${message}</p>`
+    console.error('DIRT post editor failed to initialize', error)
+    return null
+  }
+}
+
+function bootDirtPostEditors() {
+  document.querySelectorAll<HTMLElement>('[data-dirt-post-editor]').forEach((root) => {
+    initDirtPostEditor(root)
+  })
 }
 
 declare global {
@@ -337,8 +352,8 @@ declare global {
 
 window.initDirtPostEditor = initDirtPostEditor
 
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll<HTMLElement>('[data-dirt-post-editor]').forEach((root) => {
-    initDirtPostEditor(root)
-  })
-})
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootDirtPostEditors)
+} else {
+  bootDirtPostEditors()
+}
