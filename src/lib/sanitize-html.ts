@@ -72,7 +72,42 @@ function isSafeSrc(src: string): boolean {
   }
 }
 
-/** Allow only color / background-color / width percentage styles. */
+/** Allow only color / background-color / width / text-align / font-family styles. */
+const ALLOWED_FONT_NAMES = new Set([
+  'var(--font-sans)',
+  'var(--font-display)',
+  'instrument serif',
+  'dm sans',
+  'source serif 4',
+  'source sans 3',
+  'inter',
+  'barlow',
+  'barlow condensed',
+  'bebas neue',
+  'fraunces',
+  'outfit',
+  'oswald',
+  'work sans',
+  'georgia',
+  'system-ui',
+  'sans-serif',
+  'serif',
+])
+
+function isAllowedFontFamily(value: string): boolean {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  if (!normalized) return false
+  // Reject URLs / expressions outside var(--font-*)
+  if (/url\s*\(|expression\s*\(|@import/i.test(normalized)) return false
+  const tokens = normalized.split(',').map((part) =>
+    part
+      .trim()
+      .replace(/^['"]|['"]$/g, '')
+      .toLowerCase(),
+  )
+  return tokens.length > 0 && tokens.every((token) => ALLOWED_FONT_NAMES.has(token))
+}
+
 function sanitizeStyle(style: string): string | null {
   const allowed: string[] = []
   for (const part of style.split(';')) {
@@ -92,6 +127,10 @@ function sanitizeStyle(style: string): string | null {
     } else if (prop === 'text-align') {
       if (/^(left|center|right|justify)$/i.test(value)) {
         allowed.push(`${prop}: ${value}`)
+      }
+    } else if (prop === 'font-family') {
+      if (isAllowedFontFamily(value)) {
+        allowed.push(`font-family: ${value.replace(/\s+/g, ' ').trim()}`)
       }
     }
   }

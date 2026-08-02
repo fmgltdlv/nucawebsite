@@ -148,8 +148,8 @@ export function AdminContentPostEditPage({
         </form>
       )}
 
-      <link rel="stylesheet" href="/admin-post-editor.css?v=3" />
-      <script src="/admin-post-editor.js?v=3" defer></script>
+      <link rel="stylesheet" href="/admin-post-editor.css?v=4" />
+      <script src="/admin-post-editor.js?v=4" defer></script>
     </AdminShell>
   )
 }

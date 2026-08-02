@@ -5234,6 +5234,10 @@ button.pill {
   font-size: 0.85rem;
 }
 
+.dirt-editor-select--font {
+  max-width: 11rem;
+}
+
 .dirt-editor-mount {
   min-height: 18rem;
   padding: 1rem 1.1rem;

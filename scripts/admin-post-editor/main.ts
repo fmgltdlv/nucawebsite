@@ -3,6 +3,7 @@ import StarterKit from '@tiptap/starter-kit'
 import TextAlign from '@tiptap/extension-text-align'
 import { TextStyle } from '@tiptap/extension-text-style'
 import { Color } from '@tiptap/extension-color'
+import { FontFamily } from '@tiptap/extension-font-family'
 import Highlight from '@tiptap/extension-highlight'
 import Placeholder from '@tiptap/extension-placeholder'
 import { DirtImage } from './dirt-image'
@@ -24,6 +25,25 @@ const HIGHLIGHTS = [
   { label: 'Amber', value: '#fde68a' },
   { label: 'Sky', value: '#bae6fd' },
   { label: 'Mint', value: '#bbf7d0' },
+]
+
+/** Font stacks must stay in sync with sanitize-html ALLOWED_FONT_FAMILIES. */
+const FONTS = [
+  { label: 'Default', value: '' },
+  { label: 'Body (theme)', value: 'var(--font-sans)' },
+  { label: 'Display (theme)', value: 'var(--font-display)' },
+  { label: 'Instrument Serif', value: "'Instrument Serif', Georgia, serif" },
+  { label: 'DM Sans', value: "'DM Sans', system-ui, sans-serif" },
+  { label: 'Source Serif', value: "'Source Serif 4', Georgia, serif" },
+  { label: 'Source Sans', value: "'Source Sans 3', system-ui, sans-serif" },
+  { label: 'Inter', value: "'Inter', system-ui, sans-serif" },
+  { label: 'Barlow', value: "'Barlow', system-ui, sans-serif" },
+  { label: 'Barlow Condensed', value: "'Barlow Condensed', 'Barlow', system-ui, sans-serif" },
+  { label: 'Bebas Neue', value: "'Bebas Neue', 'Barlow', system-ui, sans-serif" },
+  { label: 'Fraunces', value: "'Fraunces', Georgia, serif" },
+  { label: 'Outfit', value: "'Outfit', system-ui, sans-serif" },
+  { label: 'Oswald', value: "'Oswald', 'Work Sans', system-ui, sans-serif" },
+  { label: 'Work Sans', value: "'Work Sans', system-ui, sans-serif" },
 ]
 
 function btn(label: string, title: string, onClick: () => void, isActive?: () => boolean) {
@@ -50,11 +70,13 @@ function selectControl(
 ) {
   const el = document.createElement('select')
   el.className = 'dirt-editor-select'
+  if (title === 'Font') el.classList.add('dirt-editor-select--font')
   el.title = title
   options.forEach((opt) => {
     const o = document.createElement('option')
     o.value = opt.value
     o.textContent = opt.label
+    if (opt.value) o.style.fontFamily = opt.value
     el.append(o)
   })
   el.addEventListener('change', () => onChange(el.value))
@@ -161,6 +183,14 @@ function buildToolbar(editor: Editor, toolbar: HTMLElement) {
   const g4 = makeGroup()
   g4.append(
     selectControl(
+      FONTS.map((f) => ({ label: f.label, value: f.value })),
+      (value) => {
+        if (!value) editor.chain().focus().unsetFontFamily().run()
+        else editor.chain().focus().setFontFamily(value).run()
+      },
+      'Font',
+    ),
+    selectControl(
       COLORS.map((c) => ({ label: c.label, value: c.value })),
       (value) => {
         if (!value) editor.chain().focus().unsetColor().run()
@@ -224,6 +254,7 @@ export function initDirtPostEditor(root: HTMLElement) {
         }),
         TextStyle,
         Color,
+        FontFamily,
         Highlight.configure({ multicolor: true }),
         TextAlign.configure({ types: ['heading', 'paragraph'] }),
         Placeholder.configure({ placeholder: 'Write your DIRT post…' }),
