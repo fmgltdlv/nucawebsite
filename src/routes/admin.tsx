@@ -230,7 +230,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
 
   app.post('/admin/assets/upload', async (c) => {
     getAdminCtx(c)
-    const body = await c.req.parseBody()
+    const body = await c.req.parseBody({ all: true })
     const files = parseUploadFiles(body.file)
     const label = typeof body.label === 'string' ? body.label : undefined
 
