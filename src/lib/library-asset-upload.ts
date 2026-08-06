@@ -12,6 +12,16 @@ type UploadResult =
   | { ok: true; asset: LibraryAssetApiEntry }
   | { ok: false; error: string }
 
+export function parseUploadFiles(value: unknown): File[] {
+  if (value instanceof File) {
+    return value.size > 0 ? [value] : []
+  }
+  if (Array.isArray(value)) {
+    return value.filter((file): file is File => file instanceof File && file.size > 0)
+  }
+  return []
+}
+
 export async function uploadLibraryAsset(
   r2: R2Bucket,
   db: D1Database,

@@ -593,12 +593,12 @@
   function adminFormNeedsImageCompression(form) {
     const maxBytes = adminImageMaxBytes(form)
     return Array.from(form.querySelectorAll('input[type="file"]')).some((input) => {
-      if (!(input instanceof HTMLInputElement)) return false
-      const file = input.files?.[0]
-      if (!file) return false
-      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
-      if (isPdf) return false
-      return isRasterImageFile(file) && file.size > maxBytes
+      if (!(input instanceof HTMLInputElement) || !input.files?.length) return false
+      return Array.from(input.files).some((file) => {
+        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+        if (isPdf) return false
+        return isRasterImageFile(file) && file.size > maxBytes
+      })
     })
   }
 
@@ -607,28 +607,35 @@
     const isLogoForm = maxBytes === MEMBER_LOGO_MAX_BYTES
 
     for (const input of form.querySelectorAll('input[type="file"]')) {
-      if (!(input instanceof HTMLInputElement)) continue
-      const file = input.files?.[0]
-      if (!file) continue
+      if (!(input instanceof HTMLInputElement) || !input.files?.length) continue
 
-      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
-      if (isPdf) {
-        if (file.size > ADMIN_PDF_MAX_BYTES) {
-          throw new Error(`PDF too large (max ${Math.round(ADMIN_PDF_MAX_BYTES / 1024 / 1024)} MB).`)
+      const transfer = new DataTransfer()
+
+      for (const file of Array.from(input.files)) {
+        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+        if (isPdf) {
+          if (file.size > ADMIN_PDF_MAX_BYTES) {
+            throw new Error(`PDF too large (max ${Math.round(ADMIN_PDF_MAX_BYTES / 1024 / 1024)} MB).`)
+          }
+          transfer.items.add(file)
+          continue
         }
-        continue
+
+        if (isRasterImageFile(file) && file.size > maxBytes) {
+          const compressed = isLogoForm
+            ? await compressMemberLogo(file)
+            : await compressImageToMaxBytes(
+                file,
+                maxBytes,
+                file.name.replace(/\.[^.]+$/, '') || 'image',
+              )
+          transfer.items.add(compressed)
+        } else {
+          transfer.items.add(file)
+        }
       }
 
-      if (isRasterImageFile(file) && file.size > maxBytes) {
-        const compressed = isLogoForm
-          ? await compressMemberLogo(file)
-          : await compressImageToMaxBytes(
-              file,
-              maxBytes,
-              file.name.replace(/\.[^.]+$/, '') || 'image',
-            )
-        replaceFileInput(input, compressed)
-      }
+      input.files = transfer.files
     }
   }
 
@@ -703,6 +710,57 @@
       }
 
       setFormSavingState(form, event.submitter)
+    })
+  }
+
+  function wireAdminFileDropZones(scope = document) {
+    scope.querySelectorAll('[data-file-drop-zone]:not([data-admin-bound])').forEach((zone) => {
+      zone.setAttribute('data-admin-bound', '1')
+      const input = zone.querySelector('input[type="file"]')
+      const selectedEl = zone.querySelector('[data-file-drop-selected]')
+      if (!(input instanceof HTMLInputElement)) return
+
+      function updateSelectedSummary() {
+        if (!(selectedEl instanceof HTMLElement)) return
+        const files = input.files ? Array.from(input.files) : []
+        if (files.length === 0) {
+          selectedEl.hidden = true
+          selectedEl.textContent = ''
+          return
+        }
+
+        selectedEl.hidden = false
+        if (files.length === 1) {
+          selectedEl.textContent = files[0].name
+          return
+        }
+
+        selectedEl.textContent = `${files.length} files selected`
+      }
+
+      input.addEventListener('change', updateSelectedSummary)
+
+      zone.addEventListener('dragover', (event) => {
+        event.preventDefault()
+        zone.classList.add('is-drag-over')
+      })
+      zone.addEventListener('dragleave', (event) => {
+        if (event.relatedTarget instanceof Node && zone.contains(event.relatedTarget)) return
+        zone.classList.remove('is-drag-over')
+      })
+      zone.addEventListener('drop', (event) => {
+        event.preventDefault()
+        zone.classList.remove('is-drag-over')
+        const transfer = event.dataTransfer
+        if (!transfer?.files?.length) return
+
+        const next = new DataTransfer()
+        Array.from(transfer.files).forEach((file) => next.items.add(file))
+        input.files = next.files
+        input.dispatchEvent(new Event('change', { bubbles: true }))
+      })
+
+      updateSelectedSummary()
     })
   }
 
@@ -1247,6 +1305,7 @@
 
   window.initAdminPageContent = function initAdminPageContent(scope = document) {
     wireMemberLogoForms(scope)
+    wireAdminFileDropZones(scope)
     wireAdminModalOpenButtons(scope)
     wireAdminModals(scope)
     if (typeof window.wireAssetPickers === 'function') window.wireAssetPickers(scope)

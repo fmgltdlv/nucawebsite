@@ -65,7 +65,7 @@ import { AdminMembersPage } from '../pages/admin/AdminMembers'
 import { AdminProfilePage } from '../pages/admin/AdminProfile'
 import { AdminUsersPage } from '../pages/admin/AdminUsers'
 import { deleteLibraryAsset } from '../lib/library-assets-db'
-import { uploadLibraryAsset } from '../lib/library-asset-upload'
+import { uploadLibraryAsset, parseUploadFiles } from '../lib/library-asset-upload'
 import { applyAssetManage, parseAssetManageRequest } from '../lib/asset-manage'
 import { deleteAssetIfUnreferenced } from '../lib/asset-references'
 
@@ -206,8 +206,10 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const flash =
       c.req.query('ok') === '1'
         ? 'Asset updated.'
-        : c.req.query('uploaded') === '1'
-          ? 'Asset uploaded.'
+        : c.req.query('uploaded')
+          ? Number(c.req.query('uploaded')) === 1
+            ? 'Asset uploaded.'
+            : `${c.req.query('uploaded')} assets uploaded.`
         : c.req.query('deleted') === '1'
           ? 'Library asset deleted.'
           : undefined
@@ -229,19 +231,39 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
   app.post('/admin/assets/upload', async (c) => {
     getAdminCtx(c)
     const body = await c.req.parseBody()
-    const file = body.file
+    const files = parseUploadFiles(body.file)
     const label = typeof body.label === 'string' ? body.label : undefined
 
-    if (!(file instanceof File)) {
+    if (files.length === 0) {
       return c.redirect('/admin/assets?error=' + encodeURIComponent('Choose a file to upload.'), 303)
     }
 
-    const result = await uploadLibraryAsset(c.env.R2, c.env.DB, file, { label })
-    if (!result.ok) {
-      return c.redirect('/admin/assets?error=' + encodeURIComponent(result.error), 303)
+    let uploadedCount = 0
+    let firstError: string | undefined
+
+    for (const file of files) {
+      const result = await uploadLibraryAsset(c.env.R2, c.env.DB, file, {
+        label: files.length === 1 ? label : undefined,
+      })
+      if (result.ok) {
+        uploadedCount += 1
+      } else if (!firstError) {
+        firstError = result.error
+      }
     }
 
-    return c.redirect('/admin/assets?type=library&uploaded=1', 303)
+    if (uploadedCount === 0) {
+      return c.redirect(
+        '/admin/assets?error=' + encodeURIComponent(firstError ?? 'Upload failed.'),
+        303,
+      )
+    }
+
+    const query = new URLSearchParams({ type: 'library', uploaded: String(uploadedCount) })
+    if (firstError) {
+      query.set('error', `${uploadedCount} uploaded; some failed: ${firstError}`)
+    }
+    return c.redirect(`/admin/assets?${query.toString()}`, 303)
   })
 
   app.post('/admin/api/assets/upload', async (c) => {

@@ -4330,6 +4330,42 @@ button.pill {
   word-break: break-all;
 }
 
+.admin-file-drop-zone {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-sm, 4px);
+  background: #fafbfc;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.admin-file-drop-zone.is-drag-over {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 6%, #fff);
+}
+
+.admin-file-drop-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 7rem;
+  padding: 1.25rem 1rem;
+  text-align: center;
+  cursor: pointer;
+}
+
+.admin-file-drop-text {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.admin-file-drop-selected {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  max-width: 100%;
+  word-break: break-word;
+}
+
 .admin-asset-pdf-preview {
   display: inline-flex;
   align-items: center;

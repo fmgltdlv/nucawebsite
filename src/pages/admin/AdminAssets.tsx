@@ -9,6 +9,7 @@ import { getAssetUrl } from '../../lib/r2-assets'
 import { AdminShell } from '../../views/AdminShell'
 import { AdminListSearch, AdminListSection, AdminListToolbar, AdminEditButton } from '../../views/admin/AdminListSection'
 import { AdminAssetManageModal, assetManageModalId } from '../../views/admin/AdminAssetManageModal'
+import { AdminFileDropZone } from '../../views/admin/AdminFileDropZone'
 import type { AdminContext } from '../../lib/admin-context'
 import type { PageProps } from '../../types/page'
 
@@ -149,19 +150,16 @@ export function AdminAssetsPage({
             />
             <p class="form-hint">Optional. Shown in the library picker and asset list.</p>
           </div>
-          <div class="form-field">
-            <label for="file">File</label>
-            <input
-              type="file"
-              name="file"
-              id="file"
-              required
-              accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
-            />
-            <p class="form-hint">
-              Images over 5 MB are automatically resized before upload. PDFs max 25 MB.
-            </p>
-          </div>
+          <AdminFileDropZone
+            id="file"
+            name="file"
+            fieldLabel="Files"
+            multiple
+            required
+            accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+            dropText="click here or drag and drop images here."
+            hint="Select or drop multiple images at once. Images over 5 MB are automatically resized before upload. PDFs max 25 MB."
+          />
         </div>
         <button type="submit" class="btn btn-primary">
           Upload
