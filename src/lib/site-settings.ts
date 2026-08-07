@@ -1,6 +1,11 @@
 import { DEFAULT_THEME, parseThemeId, type ThemeId } from '../config/themes'
 import { site as defaultSite } from '../data/demo'
 import {
+  DEFAULT_MEMBER_GRID_LOGO_SIZE,
+  parseMemberGridLogoSize,
+  type MemberGridLogoSizeId,
+} from './member-directory-settings'
+import {
   DEFAULT_LOGO_SIZE_PERCENT,
   parseLogoSizePercent,
 } from './site-logo'
@@ -136,6 +141,23 @@ export async function setSiteLogoSizePercent(db: D1Database, percent: number): P
     return
   }
   await setSetting(db, 'logo_size_percent', value)
+}
+
+export async function getMemberGridLogoSize(db: D1Database): Promise<MemberGridLogoSizeId> {
+  const stored = await getSetting<string>(db, 'member_grid_logo_size')
+  return parseMemberGridLogoSize(stored ?? DEFAULT_MEMBER_GRID_LOGO_SIZE)
+}
+
+export async function setMemberGridLogoSize(
+  db: D1Database,
+  size: MemberGridLogoSizeId,
+): Promise<void> {
+  const value = parseMemberGridLogoSize(size)
+  if (value === DEFAULT_MEMBER_GRID_LOGO_SIZE) {
+    await db.prepare('DELETE FROM site_settings WHERE key = ?').bind('member_grid_logo_size').run()
+    return
+  }
+  await setSetting(db, 'member_grid_logo_size', value)
 }
 
 export function phoneTelHref(phone: string): string {

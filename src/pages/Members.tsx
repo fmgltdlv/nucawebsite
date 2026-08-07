@@ -5,6 +5,10 @@ import {
   type MemberType,
 } from '../data/demo'
 import type { MembershipTypeRecord } from '../lib/membership-types-db'
+import {
+  memberGridLogoStyle,
+  type MemberGridLogoSizeId,
+} from '../lib/member-directory-settings'
 import type { PageProps } from '../types/page'
 
 function MemberBubble({
@@ -85,10 +89,12 @@ export function MembersPage({
   filter,
   members,
   membershipTypes = [],
+  memberGridLogoSize = 'default',
 }: PageProps & {
   filter?: MemberType
   members: MemberSummary[]
   membershipTypes?: MembershipTypeRecord[]
+  memberGridLogoSize?: MemberGridLogoSizeId
 }) {
   const sorted = [...members].sort((a, b) =>
     a.company.localeCompare(b.company, undefined, { sensitivity: 'base' }),
@@ -111,7 +117,7 @@ export function MembersPage({
   return (
     <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })} title="Members">
       <PageHeader title="Members" />
-      <section class="section">
+      <section class="section" style={memberGridLogoStyle(memberGridLogoSize)}>
         <div class="container">
           <div class="members-toolbar">
             <label class="search-field">

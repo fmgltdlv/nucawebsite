@@ -1,6 +1,11 @@
 import { resolveMemberTypeLabel } from '../../data/demo'
 import type { MembershipTypeRecord } from '../../lib/membership-types-db'
 import type { AdminMember } from '../../lib/members-db'
+import {
+  MEMBER_GRID_LOGO_SIZE_OPTIONS,
+  memberGridLogoStyle,
+  type MemberGridLogoSizeId,
+} from '../../lib/member-directory-settings'
 import { AdminShell } from '../../views/AdminShell'
 import { AdminModal, AdminModalCancelButton } from '../../views/admin/AdminModal'
 import { AdminAssetPickerField } from '../../views/admin/AdminAssetPickerField'
@@ -171,10 +176,56 @@ function MemberEditModal({
   )
 }
 
+function MemberDirectorySettings({
+  memberGridLogoSize,
+}: {
+  memberGridLogoSize: MemberGridLogoSizeId
+}) {
+  return (
+    <form class="form admin-form-section" method="post" action="/admin/members/settings">
+      <h2>Directory display</h2>
+      <p class="admin-note">
+        Logo size on the public member grid at <a href="/members">/members</a>. Larger sizes work
+        best when most members have uploaded logos.
+      </p>
+      <fieldset class="admin-member-logo-size-fieldset">
+        <legend class="visually-hidden">Member grid logo size</legend>
+        <div class="admin-member-logo-size-options">
+          {MEMBER_GRID_LOGO_SIZE_OPTIONS.map((option) => (
+            <label
+              key={option.id}
+              class="admin-member-logo-size-option"
+              style={memberGridLogoStyle(option.id)}
+            >
+              <input
+                type="radio"
+                name="member_grid_logo_size"
+                value={option.id}
+                checked={memberGridLogoSize === option.id}
+              />
+              <span class="admin-member-logo-size-preview" aria-hidden="true">
+                <span class="member-bubble-avatar">NU</span>
+              </span>
+              <span class="admin-member-logo-size-copy">
+                <span class="admin-member-logo-size-label">
+                  {option.label} ({option.px}px)
+                </span>
+                <span class="admin-member-logo-size-desc">{option.description}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <button type="submit" class="btn btn-primary">Save display settings</button>
+    </form>
+  )
+}
+
 export function AdminMembersPage({
   ctx,
   members,
   membershipTypes,
+  memberGridLogoSize = 'default',
   flash,
   error,
   ...site
@@ -182,6 +233,7 @@ export function AdminMembersPage({
   ctx: AdminContext
   members: AdminMember[]
   membershipTypes: MembershipTypeRecord[]
+  memberGridLogoSize?: MemberGridLogoSizeId
   flash?: string
   error?: string
 }) {
@@ -201,6 +253,8 @@ export function AdminMembersPage({
         appear on the public site. Manage type labels in{' '}
         <a href="/admin/content/member-types">Membership types</a>.
       </p>
+
+      <MemberDirectorySettings memberGridLogoSize={memberGridLogoSize} />
 
       <AdminCrudSections
         flash={flash}

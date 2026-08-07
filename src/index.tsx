@@ -29,6 +29,7 @@ import { getPostBySlug, listPublishedPosts } from './lib/posts-db'
 import { listQaItems } from './lib/qa-db'
 import { listResourceItems } from './lib/resource-items-db'
 import { listMembershipTypes } from './lib/membership-types-db'
+import { getMemberGridLogoSize } from './lib/site-settings'
 import { getAssetObject } from './lib/r2-assets'
 import { subscribeNewsletter } from './lib/newsletter-db'
 import { loadAdminLayoutProps, loadPublicSiteContext, type AdminLayoutProps } from './lib/site-context'
@@ -271,9 +272,10 @@ app.get('/api/members/:id', async (c) => {
 app.get('/members', async (c) => {
   await seedDemoMembersIfEmpty(c.env)
   const site = await siteProps(c)
-  const [members, membershipTypes] = await Promise.all([
+  const [members, membershipTypes, memberGridLogoSize] = await Promise.all([
     listActiveMemberSummaries(c.env.DB),
     listMembershipTypes(c.env.DB, true),
+    getMemberGridLogoSize(c.env.DB),
   ])
   const type = c.req.query('type')
   const valid = new Set(membershipTypes.map((t) => t.key))
@@ -284,6 +286,7 @@ app.get('/members', async (c) => {
       members={members}
       filter={filter}
       membershipTypes={membershipTypes}
+      memberGridLogoSize={memberGridLogoSize}
     />,
   )
 })

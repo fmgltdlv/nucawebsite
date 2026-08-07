@@ -1381,9 +1381,9 @@ button.pill {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 3.5rem;
-  height: 3.5rem;
-  font-size: 1.25rem;
+  width: var(--member-logo-size, 3.5rem);
+  height: var(--member-logo-size, 3.5rem);
+  font-size: var(--member-logo-font-size, 1.25rem);
   font-weight: 700;
   color: var(--color-primary);
   background: #eef4ff;
@@ -4113,6 +4113,64 @@ button.pill {
   font-weight: 700;
   color: var(--color-primary);
   background: #eef4ff;
+}
+
+.admin-member-logo-size-fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.admin-member-logo-size-options {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.admin-member-logo-size-option {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.85rem;
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.admin-member-logo-size-option:has(input:checked) {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.admin-member-logo-size-option input {
+  margin: 0;
+}
+
+.admin-member-logo-size-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 6.5rem;
+  height: 6.5rem;
+}
+
+.admin-member-logo-size-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.admin-member-logo-size-label {
+  font-weight: 600;
+}
+
+.admin-member-logo-size-desc {
+  font-size: 0.9rem;
+  color: var(--color-muted);
+  line-height: 1.4;
 }
 
 .admin-table-file {

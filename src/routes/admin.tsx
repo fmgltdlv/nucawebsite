@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { ThemeId } from '../config/themes'
 import type { AdminLayoutProps } from '../lib/site-context'
+import { getMemberGridLogoSize, setMemberGridLogoSize } from '../lib/site-settings'
 import { MEMBER_TYPES, type MemberType } from '../data/demo'
 import type { Env } from '../env'
 import { createUser, changeUserPassword, deleteUser, getSessionVersion, listUsers, verifyUserLogin, verifyUserPassword } from '../lib/auth'
@@ -46,6 +47,7 @@ import {
   updateMemberLogoKey,
 } from '../lib/members-db'
 import { applyMemberLogoChange } from '../lib/member-logos'
+import { parseMemberGridLogoSize } from '../lib/member-directory-settings'
 import { parsePointsOfContactFromForm } from '../lib/member-contacts'
 import { countAssetsByType, dedupeAssetsByKey, filterAssetsByKind, listIndexedAssets, parseAssetType } from '../lib/assets-index'
 import { getAssetUrl } from '../lib/r2-assets'
@@ -526,25 +528,47 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
 
   app.get('/admin/members', async (c) => {
     const ctx = getAdminCtx(c)
-    const [members, membershipTypes] = await Promise.all([
+    const [members, membershipTypes, memberGridLogoSize] = await Promise.all([
       listMembersForAdmin(c.env.DB),
       listMembershipTypes(c.env.DB),
+      getMemberGridLogoSize(c.env.DB),
     ])
     const flash =
-      c.req.query('ok') === '1'
-        ? 'Member saved.'
-        : c.req.query('created') === '1'
-          ? 'Member added.'
-          : undefined
+      c.req.query('settings') === '1'
+        ? 'Directory display settings saved.'
+        : c.req.query('ok') === '1'
+          ? 'Member saved.'
+          : c.req.query('created') === '1'
+            ? 'Member added.'
+            : undefined
     return c.html(
       <AdminMembersPage
         {...c.get('adminSite')}
         ctx={ctx}
         members={members}
         membershipTypes={membershipTypes}
+        memberGridLogoSize={memberGridLogoSize}
         flash={flash}
       />,
     )
+  })
+
+  app.post('/admin/members/settings', async (c) => {
+    const ctx = getAdminCtx(c)
+    const body = await c.req.parseBody()
+    await setMemberGridLogoSize(
+      c.env.DB,
+      parseMemberGridLogoSize(
+        typeof body.member_grid_logo_size === 'string' ? body.member_grid_logo_size : undefined,
+      ),
+    )
+    await writeAuditLog(c.env.DB, {
+      userId: ctx.user.id,
+      action: 'members.settings.update',
+      resource: 'site_settings',
+      ip: clientIp(c.req.raw.headers),
+    })
+    return c.redirect('/admin/members?settings=1', 303)
   })
 
   app.post('/admin/members', async (c) => {
