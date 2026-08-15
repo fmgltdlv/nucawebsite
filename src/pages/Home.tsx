@@ -157,15 +157,20 @@ function renderHomeBlock(
       )
       break
     default:
-      content = (
-        <section class="section">
-          <div class="container prose">
-            {renderPageContent('', JSON.stringify([block]), {
-              calendarEvents: data.calendarEvents,
-            })}
-          </div>
-        </section>
-      )
+      content =
+        block.type === 'image' && block.layout === 'overlay' ? (
+          renderPageContent('', JSON.stringify([block]), {
+            calendarEvents: data.calendarEvents,
+          })
+        ) : (
+          <section class="section">
+            <div class="container prose">
+              {renderPageContent('', JSON.stringify([block]), {
+                calendarEvents: data.calendarEvents,
+              })}
+            </div>
+          </section>
+        )
       break
   }
 

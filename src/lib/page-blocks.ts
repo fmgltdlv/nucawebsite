@@ -20,7 +20,7 @@ export type BlockFont =
   | 'inter'
 export type CalendarView = 'list' | 'week' | 'month'
 export type ButtonStyle = 'primary' | 'secondary'
-export type ImageLayout = 'inline' | 'section' | 'background'
+export type ImageLayout = 'inline' | 'section' | 'background' | 'overlay'
 export type ImageWidth = 'auto' | 'small' | 'medium' | 'large' | 'full'
 export type ImageHeight = 'auto' | 'small' | 'medium' | 'large' | 'viewport'
 export type ImageScroll = 'normal' | 'fixed'
@@ -170,7 +170,7 @@ function isButtonStyle(value: unknown): value is ButtonStyle {
 }
 
 function isImageLayout(value: unknown): value is ImageLayout {
-  return value === 'inline' || value === 'section' || value === 'background'
+  return value === 'inline' || value === 'section' || value === 'background' || value === 'overlay'
 }
 
 function isImageWidth(value: unknown): value is ImageWidth {
@@ -643,6 +643,28 @@ function renderImageBlockHtml(block: PageBlock & { type: 'image' }): string {
   const url = escapeHtml(getAssetUrl(block.asset_key))
   const alt = escapeHtml(block.alt?.trim() || '')
   const caption = block.caption?.trim()
+
+  if (block.layout === 'overlay') {
+    const overlayKey = escapeHtml(block.asset_key.trim())
+    const overlayCaption = caption
+      ? `<p class="page-image-overlay-caption">${escapeHtml(caption)}</p>`
+      : ''
+    return `<dialog class="page-image-overlay" data-image-overlay data-overlay-key="${overlayKey}" aria-label="${alt || 'Announcement'}">
+  <article class="page-image-overlay-card">
+    <button type="button" class="page-image-overlay-close" aria-label="Close" data-image-overlay-dismiss>×</button>
+    <img src="${url}" alt="${alt}" decoding="async" />
+    ${overlayCaption}
+    <footer class="page-image-overlay-footer">
+      <button type="button" class="btn btn-secondary" data-image-overlay-dismiss>Dismiss</button>
+      <label class="page-image-overlay-persist">
+        <input type="checkbox" data-image-overlay-persist />
+        <span>Don’t show this again</span>
+      </label>
+    </footer>
+  </article>
+</dialog>`
+  }
+
   const captionHtml = caption
     ? `<figcaption class="page-block-image-caption">${escapeHtml(caption)}</figcaption>`
     : ''

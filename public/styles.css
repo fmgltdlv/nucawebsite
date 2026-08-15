@@ -3326,6 +3326,124 @@ button.pill {
   background: var(--color-surface-muted, #f4f6f8);
 }
 
+.page-image-overlay {
+  width: min(42rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  margin: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  overflow: visible;
+}
+
+.page-image-overlay::backdrop {
+  background: rgb(15 23 42 / 0.65);
+}
+
+.page-image-overlay-card {
+  position: relative;
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 1.25rem;
+  padding: 2.5rem 1.25rem 1.25rem;
+  box-shadow: 0 20px 50px rgb(15 23 42 / 0.25);
+  text-align: center;
+}
+
+.page-image-overlay-card img {
+  width: 100%;
+  max-height: min(78vh, 56rem);
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--radius-md, 8px);
+  display: block;
+  margin-inline: auto;
+}
+
+.page-image-overlay-close {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 999px;
+  background: rgb(15 23 42 / 0.06);
+  color: var(--color-text);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.page-image-overlay-close:hover {
+  background: rgb(15 23 42 / 0.1);
+}
+
+.page-image-overlay-caption {
+  margin: 0.85rem 0 0;
+  color: var(--color-muted, #5a6570);
+  line-height: 1.5;
+}
+
+.page-image-overlay-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1.15rem;
+}
+
+.page-image-overlay-persist {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--color-muted, #5a6570);
+  cursor: pointer;
+}
+
+body:has(.page-preview-banner) .page-image-overlay,
+.page-image-overlay.is-preview {
+  display: block;
+  position: relative;
+  width: min(28rem, 100%);
+  max-height: none;
+  margin: 1rem auto;
+}
+
+body:has(.page-preview-banner) .page-image-overlay::backdrop,
+.page-image-overlay.is-preview::backdrop {
+  display: none;
+}
+
+body:has(.page-preview-banner) .page-image-overlay-card,
+.page-image-overlay.is-preview .page-image-overlay-card {
+  max-height: none;
+  padding-top: 2.75rem;
+}
+
+body:has(.page-preview-banner) .page-image-overlay-card::before,
+.page-image-overlay.is-preview .page-image-overlay-card::before {
+  content: 'Opens as a full-page banner when visitors arrive';
+  position: absolute;
+  top: 0.65rem;
+  left: 0.85rem;
+  right: 2.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  text-align: left;
+}
+
 .committee-list a.leader-name {
   color: inherit;
   text-decoration: none;

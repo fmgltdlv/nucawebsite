@@ -2561,4 +2561,77 @@
   })
 
   dialog.showModal()
+})();
+
+(function () {
+  const dialogs = [...document.querySelectorAll('dialog[data-image-overlay]')].filter(
+    (el) => el instanceof HTMLDialogElement,
+  )
+  if (dialogs.length === 0) return
+
+  const isPreview =
+    window.self !== window.top || Boolean(document.querySelector('.page-preview-banner'))
+
+  function storageKeys(dialog) {
+    const id = dialog.getAttribute('data-overlay-key') || 'default'
+    return {
+      session: `nuca_image_overlay_session_${id}`,
+      persist: `nuca_image_overlay_${id}`,
+    }
+  }
+
+  function isDismissed(dialog) {
+    const keys = storageKeys(dialog)
+    try {
+      return sessionStorage.getItem(keys.session) === '1' || localStorage.getItem(keys.persist) === '1'
+    } catch {
+      return false
+    }
+  }
+
+  function dismiss(dialog) {
+    const keys = storageKeys(dialog)
+    const persist = dialog.querySelector('[data-image-overlay-persist]')
+    try {
+      if (persist instanceof HTMLInputElement && persist.checked) {
+        localStorage.setItem(keys.persist, '1')
+      } else {
+        sessionStorage.setItem(keys.session, '1')
+      }
+    } catch {
+      // ignore storage failures
+    }
+    if (dialog.open) dialog.close()
+  }
+
+  if (isPreview) {
+    dialogs.forEach((dialog) => {
+      dialog.classList.add('is-preview')
+    })
+    return
+  }
+
+  const dialog = dialogs.find((el) => !isDismissed(el))
+  if (!dialog) return
+
+  dialog.querySelectorAll('[data-image-overlay-dismiss]').forEach((button) => {
+    button.addEventListener('click', () => dismiss(dialog))
+  })
+
+  dialog.addEventListener('click', (event) => {
+    const rect = dialog.getBoundingClientRect()
+    const inDialog =
+      rect.top <= event.clientY &&
+      event.clientY <= rect.top + rect.height &&
+      rect.left <= event.clientX &&
+      event.clientX <= rect.left + rect.width
+    if (!inDialog) dismiss(dialog)
+  })
+
+  dialog.addEventListener('cancel', (event) => {
+    event.preventDefault()
+    dismiss(dialog)
+  })
+
+  dialog.showModal()
 })()

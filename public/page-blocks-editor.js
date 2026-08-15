@@ -74,7 +74,7 @@
   /** @typedef {{ type: 'events_feed', title: string, lead: string, limit: number }} EventsFeedBlock */
   /** @typedef {{ type: 'dirt_feed', title: string, lead: string, limit: number }} DirtFeedBlock */
   /** @typedef {{ type: 'button', label: string, href: string, style: 'primary' | 'secondary', align?: TextAlign, new_tab?: boolean }} ButtonBlock */
-  /** @typedef {{ type: 'image', asset_key: string, alt?: string, caption?: string, layout: 'inline' | 'section' | 'background', align?: TextAlign, width?: 'auto' | 'small' | 'medium' | 'large' | 'full', height?: 'auto' | 'small' | 'medium' | 'large' | 'viewport', scroll?: 'normal' | 'fixed', full_width?: boolean }} ImageBlock */
+  /** @typedef {{ type: 'image', asset_key: string, alt?: string, caption?: string, layout: 'inline' | 'section' | 'background' | 'overlay', align?: TextAlign, width?: 'auto' | 'small' | 'medium' | 'large' | 'full', height?: 'auto' | 'small' | 'medium' | 'large' | 'viewport', scroll?: 'normal' | 'fixed', full_width?: boolean }} ImageBlock */
   /** @typedef {{ type: 'benefits_grid', title?: string, items: { title: string, body: string }[] }} BenefitsGridBlock */
   /** @typedef {{ type: 'stats_panel', items: { value: string, label: string }[] }} StatsPanelBlock */
   /** @typedef {{ type: 'member_types', title?: string }} MemberTypesBlock */
@@ -151,8 +151,12 @@
         return truncate(block.title || 'THE DIRT feed')
       case 'button':
         return truncate(block.label || 'Button')
-      case 'image':
-        return block.asset_key ? truncate(block.alt || block.caption || block.asset_key) : 'No image selected'
+      case 'image': {
+        const label = block.asset_key
+          ? truncate(block.alt || block.caption || block.asset_key)
+          : 'No image selected'
+        return block.layout === 'overlay' ? `Page-open overlay · ${label}` : label
+      }
       case 'benefits_grid':
         return truncate(block.title || `Benefits · ${block.items.length} items`)
       case 'stats_panel':
@@ -1291,6 +1295,7 @@
               ['inline', 'Inline with content'],
               ['section', 'Full-width section (scrolls with page)'],
               ['background', 'Background section'],
+              ['overlay', 'Full-page overlay when page opens'],
             ],
             block.layout,
             (layout) => {
@@ -1305,6 +1310,11 @@
                   } else if (layout === 'section') {
                     next.width = undefined
                     next.height = b.height || 'auto'
+                    next.scroll = undefined
+                    next.full_width = undefined
+                  } else if (layout === 'overlay') {
+                    next.width = undefined
+                    next.height = undefined
                     next.scroll = undefined
                     next.full_width = undefined
                   } else {
@@ -1346,6 +1356,12 @@
           ),
         ),
       )
+    } else if (layout === 'overlay') {
+      const hint = document.createElement('p')
+      hint.className = 'form-hint'
+      hint.textContent =
+        'Shows as a full-page banner overlay the first time a visitor opens this page (like a social flyer). They can dismiss it and optionally hide it on later visits. Place this block near the top of the page.'
+      fields.push(hint)
     } else if (layout === 'section') {
       fields.push(
         field(
