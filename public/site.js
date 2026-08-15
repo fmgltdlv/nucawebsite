@@ -2652,15 +2652,15 @@
     banners.forEach((banner) => {
       if (!(banner instanceof HTMLElement)) return
       const fixed = banner.querySelector('.page-block-image-banner-fixed')
-      const fade = banner.querySelector('[data-image-banner-fade]')
-      if (!(fixed instanceof HTMLElement) || !(fade instanceof HTMLElement)) return
+      const media = banner.querySelector('.page-block-image-banner-media')
+      if (!(fixed instanceof HTMLElement) || !(media instanceof HTMLElement)) return
 
       banner.style.setProperty('--banner-top', `${top}px`)
       const rect = banner.getBoundingClientRect()
       const fadeEnd = Math.max(rect.height * 0.35, 1)
       const scrolled = top - rect.top
       const progress = Math.min(Math.max(scrolled / fadeEnd, 0), 1)
-      fade.style.opacity = String(progress)
+      media.style.opacity = String(1 - progress * 0.7)
       fixed.style.visibility = rect.bottom <= top ? 'hidden' : 'visible'
     })
   }
