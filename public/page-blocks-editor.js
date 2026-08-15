@@ -60,6 +60,7 @@
 
   /** @typedef {'left' | 'center' | 'right'} TextAlign */
   /** @typedef {'default' | 'muted' | 'accent' | 'primary'} BlockColor */
+  /** @typedef {'sm' | 'md' | 'lg' | 'xl'} BlockTextSize */
   /** @typedef {'body' | 'display' | 'serif' | 'fraunces' | 'condensed' | 'bebas' | 'oswald' | 'outfit' | 'inter'} BlockFont */
   /** @typedef {'none' | 'muted' | 'accent-soft' | 'accent' | 'primary' | 'surface'} SectionBackground */
 
@@ -69,7 +70,7 @@
   /** @typedef {{ type: 'callout', title?: string, body: string, style: 'default' | 'muted' | 'accent' }} CalloutBlock */
   /** @typedef {{ type: 'section', title?: string, muted?: boolean, background?: SectionBackground, blocks: PageBlock[] }} SectionBlock */
   /** @typedef {{ type: 'calendar', title?: string, view: 'list' | 'week' | 'month', committee_keys: string[] }} CalendarBlock */
-  /** @typedef {{ type: 'hero', eyebrow: string, title: string, lead: string, cta_primary_label: string, cta_primary_href: string, cta_secondary_label: string, cta_secondary_href: string }} HeroBlock */
+  /** @typedef {{ type: 'hero', eyebrow: string, title: string, lead: string, eyebrow_color?: BlockColor, eyebrow_size?: BlockTextSize, title_color?: BlockColor, title_size?: BlockTextSize, lead_color?: BlockColor, lead_size?: BlockTextSize, cta_primary_label: string, cta_primary_href: string, cta_secondary_label: string, cta_secondary_href: string }} HeroBlock */
   /** @typedef {{ type: 'events_feed', title: string, lead: string, limit: number }} EventsFeedBlock */
   /** @typedef {{ type: 'dirt_feed', title: string, lead: string, limit: number }} DirtFeedBlock */
   /** @typedef {{ type: 'button', label: string, href: string, style: 'primary' | 'secondary', align?: TextAlign, new_tab?: boolean }} ButtonBlock */
@@ -386,6 +387,13 @@
     ['muted', 'Muted'],
     ['accent', 'Accent'],
     ['primary', 'Primary'],
+  ]
+
+  const SIZE_OPTIONS = [
+    ['sm', 'Small'],
+    ['md', 'Default'],
+    ['lg', 'Large'],
+    ['xl', 'Extra large'],
   ]
 
   const FONT_OPTIONS = [
@@ -1077,6 +1085,22 @@
     return selectField(COLOR_OPTIONS, value || 'default', (color) =>
       onChange(color === 'default' ? undefined : color),
     )
+  }
+
+  function sizeSelect(value, onChange) {
+    return selectField(SIZE_OPTIONS, value || 'md', (size) =>
+      onChange(size === 'md' ? undefined : size),
+    )
+  }
+
+  function textSizeColorRow(sizeValue, colorValue, onSize, onColor) {
+    const row = document.createElement('div')
+    row.className = 'page-block-field-row'
+    row.append(
+      field('Size', sizeSelect(sizeValue, onSize)),
+      field('Color', colorSelect(colorValue, onColor)),
+    )
+    return row
   }
 
   function fontSelect(value, onChange) {
@@ -1897,6 +1921,12 @@
             return next
           })
         })),
+        textSizeColorRow(
+          block.eyebrow_size,
+          block.eyebrow_color,
+          (eyebrow_size) => updateBlock(index, (b) => ({ ...b, eyebrow_size })),
+          (eyebrow_color) => updateBlock(index, (b) => ({ ...b, eyebrow_color })),
+        ),
         field('Headline', textInput(block.title, (title) => {
           updateBlock(index, (b) => {
             const next = { ...b, title }
@@ -1904,6 +1934,12 @@
             return next
           })
         })),
+        textSizeColorRow(
+          block.title_size,
+          block.title_color,
+          (title_size) => updateBlock(index, (b) => ({ ...b, title_size })),
+          (title_color) => updateBlock(index, (b) => ({ ...b, title_color })),
+        ),
         field('Lead paragraph', textArea(block.lead, (lead) => {
           updateBlock(index, (b) => {
             const next = { ...b, lead }
@@ -1911,6 +1947,12 @@
             return next
           })
         }, 4)),
+        textSizeColorRow(
+          block.lead_size,
+          block.lead_color,
+          (lead_size) => updateBlock(index, (b) => ({ ...b, lead_size })),
+          (lead_color) => updateBlock(index, (b) => ({ ...b, lead_color })),
+        ),
         field(
           'Primary button label',
           textInput(block.cta_primary_label, (cta_primary_label) =>

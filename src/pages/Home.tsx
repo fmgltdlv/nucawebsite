@@ -6,7 +6,7 @@ import type { DirtReleaseRecord } from '../lib/dirt-db'
 import { mergeDirtFeed } from '../lib/dirt-feed'
 import type { ExpandedEventRecord } from '../lib/event-repeat'
 import { homeBlocksFromPage, homePageIncludesEventsFeed } from '../lib/home-page'
-import { renderPageContent, type PageBlock } from '../lib/page-blocks'
+import { heroTextStyleClass, renderPageContent, type PageBlock } from '../lib/page-blocks'
 import type { PageRecord } from '../lib/pages-db'
 import type { PostRecord } from '../lib/posts-db'
 import { getAssetUrl } from '../lib/r2-assets'
@@ -16,12 +16,16 @@ const HOME_DESCRIPTION =
   'NUCA of Las Vegas chapter — members, events, advocacy, and industry resources.'
 
 function HomeHeroBlock({ block }: { block: PageBlock & { type: 'hero' } }) {
+  const eyebrowClass = `eyebrow${heroTextStyleClass(block.eyebrow_color, block.eyebrow_size)}`
+  const titleClass = heroTextStyleClass(block.title_color, block.title_size).trim()
+  const leadClass = `hero-lead${heroTextStyleClass(block.lead_color, block.lead_size)}`
+
   return (
     <section class="hero">
       <div class="container hero-copy">
-        {block.eyebrow.trim() ? <p class="eyebrow">{block.eyebrow}</p> : null}
-        <h1>{block.title}</h1>
-        {block.lead.trim() ? <p class="hero-lead">{block.lead}</p> : null}
+        {block.eyebrow.trim() ? <p class={eyebrowClass}>{block.eyebrow}</p> : null}
+        <h1 class={titleClass || undefined}>{block.title}</h1>
+        {block.lead.trim() ? <p class={leadClass}>{block.lead}</p> : null}
         <div class="hero-cta">
           {block.cta_primary_label.trim() ? (
             <a class="btn btn-primary" href={block.cta_primary_href}>

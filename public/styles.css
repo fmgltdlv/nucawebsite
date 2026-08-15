@@ -933,6 +933,60 @@ a:hover {
   margin: 0 0 1.5rem;
 }
 
+.hero .eyebrow.page-block-size-sm {
+  font-size: 0.7rem;
+}
+
+.hero .eyebrow.page-block-size-lg {
+  font-size: 0.95rem;
+}
+
+.hero .eyebrow.page-block-size-xl {
+  font-size: 1.15rem;
+}
+
+.hero h1.page-block-size-sm {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+}
+
+.hero h1.page-block-size-lg {
+  font-size: clamp(2.75rem, 5vw, 4rem);
+}
+
+.hero h1.page-block-size-xl {
+  font-size: clamp(3.25rem, 6vw, 4.75rem);
+}
+
+.hero .hero-lead.page-block-size-sm {
+  font-size: 0.95rem;
+}
+
+.hero .hero-lead.page-block-size-lg {
+  font-size: 1.25rem;
+}
+
+.hero .hero-lead.page-block-size-xl {
+  font-size: 1.45rem;
+}
+
+.hero .eyebrow.page-block-color-muted,
+.hero h1.page-block-color-muted,
+.hero .hero-lead.page-block-color-muted {
+  color: var(--color-muted);
+}
+
+.hero .eyebrow.page-block-color-accent,
+.hero h1.page-block-color-accent,
+.hero .hero-lead.page-block-color-accent {
+  color: var(--color-accent);
+}
+
+.hero .eyebrow.page-block-color-primary,
+.hero h1.page-block-color-primary,
+.hero .hero-lead.page-block-color-primary {
+  color: var(--color-primary);
+}
+
 .hero-cta {
   display: flex;
   flex-wrap: wrap;
@@ -5137,6 +5191,16 @@ button.pill {
 .page-block-field {
   display: grid;
   gap: 0.35rem;
+  margin-bottom: 0.65rem;
+}
+
+.page-block-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.page-block-field-row .page-block-field {
   margin-bottom: 0.65rem;
 }
 

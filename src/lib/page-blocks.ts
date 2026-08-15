@@ -7,6 +7,7 @@ import { getAssetUrl } from './r2-assets'
 
 export type TextAlign = 'left' | 'center' | 'right'
 export type BlockColor = 'default' | 'muted' | 'accent' | 'primary'
+export type BlockTextSize = 'sm' | 'md' | 'lg' | 'xl'
 export type BlockFont =
   | 'body'
   | 'display'
@@ -61,6 +62,12 @@ export type PageBlock =
       eyebrow: string
       title: string
       lead: string
+      eyebrow_color?: BlockColor
+      eyebrow_size?: BlockTextSize
+      title_color?: BlockColor
+      title_size?: BlockTextSize
+      lead_color?: BlockColor
+      lead_size?: BlockTextSize
       cta_primary_label: string
       cta_primary_href: string
       cta_secondary_label: string
@@ -221,6 +228,14 @@ function parseBlockColor(value: unknown): BlockColor | undefined {
   return isBlockColor(value) && value !== 'default' ? value : undefined
 }
 
+function isBlockTextSize(value: unknown): value is BlockTextSize {
+  return value === 'sm' || value === 'md' || value === 'lg' || value === 'xl'
+}
+
+function parseBlockTextSize(value: unknown): BlockTextSize | undefined {
+  return isBlockTextSize(value) && value !== 'md' ? value : undefined
+}
+
 function parseBlockFont(value: unknown): BlockFont | undefined {
   return isBlockFont(value) && value !== 'body' ? value : undefined
 }
@@ -295,12 +310,24 @@ function parseBlock(value: unknown, allowSection = true): PageBlock | null {
       const committee_keys = parseCalendarCommitteeKeys(value.committee_keys)
       return { type: 'calendar', title, view, committee_keys }
     }
-    case 'hero':
+    case 'hero': {
+      const eyebrow_color = parseBlockColor(value.eyebrow_color)
+      const eyebrow_size = parseBlockTextSize(value.eyebrow_size)
+      const title_color = parseBlockColor(value.title_color)
+      const title_size = parseBlockTextSize(value.title_size)
+      const lead_color = parseBlockColor(value.lead_color)
+      const lead_size = parseBlockTextSize(value.lead_size)
       return {
         type: 'hero',
         eyebrow: typeof value.eyebrow === 'string' ? value.eyebrow : '',
         title: typeof value.title === 'string' ? value.title : '',
         lead: typeof value.lead === 'string' ? value.lead : '',
+        ...(eyebrow_color ? { eyebrow_color } : {}),
+        ...(eyebrow_size ? { eyebrow_size } : {}),
+        ...(title_color ? { title_color } : {}),
+        ...(title_size ? { title_size } : {}),
+        ...(lead_color ? { lead_color } : {}),
+        ...(lead_size ? { lead_size } : {}),
         cta_primary_label:
           typeof value.cta_primary_label === 'string' ? value.cta_primary_label : 'Learn more',
         cta_primary_href: typeof value.cta_primary_href === 'string' ? value.cta_primary_href : '/',
@@ -309,6 +336,7 @@ function parseBlock(value: unknown, allowSection = true): PageBlock | null {
         cta_secondary_href:
           typeof value.cta_secondary_href === 'string' ? value.cta_secondary_href : '/',
       }
+    }
     case 'events_feed': {
       const limit = typeof value.limit === 'number' && value.limit > 0 ? value.limit : 3
       return {
@@ -567,6 +595,15 @@ function fontClass(font: BlockFont | undefined): string {
 
 function textStyleClass(color?: BlockColor, font?: BlockFont): string {
   return `${colorClass(color)}${fontClass(font)}`
+}
+
+function sizeClass(size: BlockTextSize | undefined): string {
+  if (!size || size === 'md') return ''
+  return ` page-block-size-${size}`
+}
+
+export function heroTextStyleClass(color?: BlockColor, size?: BlockTextSize): string {
+  return `${colorClass(color)}${sizeClass(size)}`
 }
 
 function sectionBackgroundClass(background: SectionBackground): string {
