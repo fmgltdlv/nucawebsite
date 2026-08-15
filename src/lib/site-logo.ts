@@ -19,7 +19,7 @@ export const DEFAULT_SITE_LOGO_URL = '/images/nuca-logo.png'
 
 export const DEFAULT_LOGO_SIZE_PERCENT = 100
 export const LOGO_SIZE_MIN_PERCENT = 50
-export const LOGO_SIZE_MAX_PERCENT = 200
+export const LOGO_SIZE_MAX_PERCENT = 400
 
 export function parseLogoSizePercent(value: unknown): number {
   const n = typeof value === 'number' ? value : Number(value)

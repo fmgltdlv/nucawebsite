@@ -79,7 +79,7 @@ export function AdminContentSettingsPage({
               value={logoSizePercent}
             />
             <p class="form-hint">
-              100% is the default header size. Use a lower value for a smaller logo or higher for a larger one.
+              100% is the default header size. Range is {LOGO_SIZE_MIN_PERCENT}–{LOGO_SIZE_MAX_PERCENT}%.
             </p>
           </div>
           {logoUrl !== DEFAULT_SITE_LOGO_URL && (
