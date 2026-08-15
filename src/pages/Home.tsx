@@ -158,7 +158,7 @@ function renderHomeBlock(
       break
     default:
       content =
-        block.type === 'image' && block.layout === 'overlay' ? (
+        block.type === 'image' && (block.layout === 'overlay' || block.layout === 'banner') ? (
           renderPageContent('', JSON.stringify([block]), {
             calendarEvents: data.calendarEvents,
           })

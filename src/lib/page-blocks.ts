@@ -20,7 +20,7 @@ export type BlockFont =
   | 'inter'
 export type CalendarView = 'list' | 'week' | 'month'
 export type ButtonStyle = 'primary' | 'secondary'
-export type ImageLayout = 'inline' | 'section' | 'background' | 'overlay'
+export type ImageLayout = 'inline' | 'section' | 'background' | 'overlay' | 'banner'
 export type ImageWidth = 'auto' | 'small' | 'medium' | 'large' | 'full'
 export type ImageHeight = 'auto' | 'small' | 'medium' | 'large' | 'viewport'
 export type ImageScroll = 'normal' | 'fixed'
@@ -170,7 +170,13 @@ function isButtonStyle(value: unknown): value is ButtonStyle {
 }
 
 function isImageLayout(value: unknown): value is ImageLayout {
-  return value === 'inline' || value === 'section' || value === 'background' || value === 'overlay'
+  return (
+    value === 'inline' ||
+    value === 'section' ||
+    value === 'background' ||
+    value === 'overlay' ||
+    value === 'banner'
+  )
 }
 
 function isImageWidth(value: unknown): value is ImageWidth {
@@ -643,6 +649,19 @@ function renderImageBlockHtml(block: PageBlock & { type: 'image' }): string {
   const url = escapeHtml(getAssetUrl(block.asset_key))
   const alt = escapeHtml(block.alt?.trim() || '')
   const caption = block.caption?.trim()
+
+  if (block.layout === 'banner') {
+    const bannerCaption = caption
+      ? `<p class="page-block-image-banner-caption">${escapeHtml(caption)}</p>`
+      : ''
+    return `<div class="page-block-image page-block-image-banner" data-image-banner role="img" aria-label="${alt || 'Banner'}">
+  <div class="page-block-image-banner-fixed">
+    <div class="page-block-image-banner-media" style="background-image: url('${url}')"></div>
+    ${bannerCaption}
+    <div class="page-block-image-banner-fade" data-image-banner-fade></div>
+  </div>
+</div>`
+  }
 
   if (block.layout === 'overlay') {
     const overlayKey = escapeHtml(block.asset_key.trim())

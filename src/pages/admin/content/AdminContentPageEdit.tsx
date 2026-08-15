@@ -112,14 +112,14 @@ export function AdminContentPageEditPage({
               <label>Page content</label>
               <p class="admin-help">
                 {slug === 'home'
-                  ? 'Build the home page with a hero banner, upcoming events list, THE DIRT feed, and any other content blocks (sections, headings, paragraphs, calendars, images, and more). Add an image with Display mode set to full-page overlay when page opens to show a social-style banner when visitors arrive. Event and news feed items are pulled automatically from the calendar and THE DIRT content.'
+                  ? 'Build the home page with a hero banner, upcoming events list, THE DIRT feed, and any other content blocks (sections, headings, paragraphs, calendars, images, and more). Use an image Display mode of full-screen banner for a fixed social banner that fades as visitors scroll, or popup overlay for a dismissible flyer. Event and news feed items are pulled automatically from the calendar and THE DIRT content.'
                   : slug === 'join'
                     ? 'Build Join page content with benefits, stats, and membership types blocks. Application form chrome stays fixed below. Manage type labels in Membership types.'
                     : slug === 'contact'
                       ? 'Edit contact form labels and newsletter panel copy. Chapter contact details still come from Site settings.'
                       : slug === 'resources'
                         ? 'Edit the Resources intro below. Manage structured links separately in Resource links.'
-                        : 'Build the page with sections, headings, paragraphs, lists, callout boxes, and event calendars. Style text color, fonts, and section backgrounds. Images can sit in the page or open as a full-page overlay when visitors arrive. The preview updates as you edit.'}
+                        : 'Build the page with sections, headings, paragraphs, lists, callout boxes, and event calendars. Style text color, fonts, and section backgrounds. Images can sit in the page, fill the screen as a fading banner, or open as a popup. The preview updates as you edit.'}
               </p>
               {slug === 'join' && (
                 <p class="admin-note">
@@ -218,7 +218,7 @@ export function AdminContentPageEditPage({
         </div>
       </form>
       <script src="/admin-link-picker.js" defer></script>
-      <script src="/page-blocks-editor.js?v=15" defer></script>
+      <script src="/page-blocks-editor.js?v=16" defer></script>
     </AdminShell>
   )
 }

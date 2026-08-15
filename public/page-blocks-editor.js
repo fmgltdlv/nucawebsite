@@ -74,7 +74,7 @@
   /** @typedef {{ type: 'events_feed', title: string, lead: string, limit: number }} EventsFeedBlock */
   /** @typedef {{ type: 'dirt_feed', title: string, lead: string, limit: number }} DirtFeedBlock */
   /** @typedef {{ type: 'button', label: string, href: string, style: 'primary' | 'secondary', align?: TextAlign, new_tab?: boolean }} ButtonBlock */
-  /** @typedef {{ type: 'image', asset_key: string, alt?: string, caption?: string, layout: 'inline' | 'section' | 'background' | 'overlay', align?: TextAlign, width?: 'auto' | 'small' | 'medium' | 'large' | 'full', height?: 'auto' | 'small' | 'medium' | 'large' | 'viewport', scroll?: 'normal' | 'fixed', full_width?: boolean }} ImageBlock */
+  /** @typedef {{ type: 'image', asset_key: string, alt?: string, caption?: string, layout: 'inline' | 'section' | 'background' | 'overlay' | 'banner', align?: TextAlign, width?: 'auto' | 'small' | 'medium' | 'large' | 'full', height?: 'auto' | 'small' | 'medium' | 'large' | 'viewport', scroll?: 'normal' | 'fixed', full_width?: boolean }} ImageBlock */
   /** @typedef {{ type: 'benefits_grid', title?: string, items: { title: string, body: string }[] }} BenefitsGridBlock */
   /** @typedef {{ type: 'stats_panel', items: { value: string, label: string }[] }} StatsPanelBlock */
   /** @typedef {{ type: 'member_types', title?: string }} MemberTypesBlock */
@@ -155,7 +155,9 @@
         const label = block.asset_key
           ? truncate(block.alt || block.caption || block.asset_key)
           : 'No image selected'
-        return block.layout === 'overlay' ? `Page-open overlay · ${label}` : label
+        if (block.layout === 'banner') return `Full-screen banner · ${label}`
+        if (block.layout === 'overlay') return `Page-open overlay · ${label}`
+        return label
       }
       case 'benefits_grid':
         return truncate(block.title || `Benefits · ${block.items.length} items`)
@@ -1295,7 +1297,8 @@
               ['inline', 'Inline with content'],
               ['section', 'Full-width section (scrolls with page)'],
               ['background', 'Background section'],
-              ['overlay', 'Full-page overlay when page opens'],
+              ['banner', 'Full-screen banner (fixed, fades on scroll)'],
+              ['overlay', 'Popup overlay when page opens'],
             ],
             block.layout,
             (layout) => {
@@ -1312,7 +1315,7 @@
                     next.height = b.height || 'auto'
                     next.scroll = undefined
                     next.full_width = undefined
-                  } else if (layout === 'overlay') {
+                  } else if (layout === 'overlay' || layout === 'banner') {
                     next.width = undefined
                     next.height = undefined
                     next.scroll = undefined
@@ -1360,7 +1363,13 @@
       const hint = document.createElement('p')
       hint.className = 'form-hint'
       hint.textContent =
-        'Shows as a full-page banner overlay the first time a visitor opens this page (like a social flyer). They can dismiss it and optionally hide it on later visits. Place this block near the top of the page.'
+        'Shows as a dismissible popup flyer the first time a visitor opens this page. They can close it and optionally hide it on later visits.'
+      fields.push(hint)
+    } else if (layout === 'banner') {
+      const hint = document.createElement('p')
+      hint.className = 'form-hint'
+      hint.textContent =
+        'Fills the screen below the header. The banner stays fixed while page content scrolls over it and fades into the page background. Place this block first on the page.'
       fields.push(hint)
     } else if (layout === 'section') {
       fields.push(

@@ -2634,4 +2634,48 @@
   })
 
   dialog.showModal()
+})();
+
+(function () {
+  const banners = document.querySelectorAll('[data-image-banner]')
+  if (banners.length === 0) return
+
+  const header = document.querySelector('.site-header')
+
+  function headerBottom() {
+    if (!(header instanceof HTMLElement)) return 0
+    return Math.max(0, Math.round(header.getBoundingClientRect().bottom))
+  }
+
+  function update() {
+    const top = headerBottom()
+    banners.forEach((banner) => {
+      if (!(banner instanceof HTMLElement)) return
+      const fixed = banner.querySelector('.page-block-image-banner-fixed')
+      const fade = banner.querySelector('[data-image-banner-fade]')
+      if (!(fixed instanceof HTMLElement) || !(fade instanceof HTMLElement)) return
+
+      banner.style.setProperty('--banner-top', `${top}px`)
+      const rect = banner.getBoundingClientRect()
+      const fadeEnd = Math.max(rect.height * 0.35, 1)
+      const scrolled = top - rect.top
+      const progress = Math.min(Math.max(scrolled / fadeEnd, 0), 1)
+      fade.style.opacity = String(progress)
+      fixed.style.visibility = rect.bottom <= top ? 'hidden' : 'visible'
+    })
+  }
+
+  let ticking = false
+  function onScroll() {
+    if (ticking) return
+    ticking = true
+    requestAnimationFrame(() => {
+      update()
+      ticking = false
+    })
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true })
+  window.addEventListener('resize', onScroll)
+  update()
 })()
