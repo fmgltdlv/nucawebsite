@@ -21,6 +21,7 @@
     transparent
   );
   --header-height: 4.5rem;
+  --logo-base-height: 3.15rem;
 }
 
 [data-theme='desert'] {
@@ -277,11 +278,7 @@
   --hero-pad-y: 2.25rem;
   --container-gutter: 1.5rem;
   --header-height: 4rem;
-}
-
-[data-layout='compact'] .brand-logo {
-  max-height: calc(2.75rem * var(--logo-scale, 1));
-  max-width: calc(200px * var(--logo-scale, 1));
+  --logo-base-height: 2.75rem;
 }
 
 [data-layout='spacious'] .page-header h1 {
@@ -566,24 +563,26 @@ a:hover {
 
 .brand-logo-link {
   line-height: 0;
-  flex-shrink: 1;
-  min-width: 0;
+  flex-shrink: 0;
 }
 
 .brand-logo {
   display: block;
   width: auto;
-  height: auto;
-  max-height: calc(3.15rem * var(--logo-scale, 1));
-  max-width: min(calc(209px * var(--logo-scale, 1)), 48vw);
+  height: calc(var(--logo-base-height, 3.15rem) * var(--logo-scale, 1));
+  max-width: 90vw;
   object-fit: contain;
   object-position: left center;
 }
 
 @media (min-width: 901px) {
-  .brand-logo {
-    max-height: calc(3.45rem * var(--logo-scale, 1));
-    max-width: calc(231px * var(--logo-scale, 1));
+  :root,
+  [data-layout] {
+    --logo-base-height: 3.45rem;
+  }
+
+  [data-layout='compact'] {
+    --logo-base-height: 2.75rem;
   }
 }
 
@@ -2700,9 +2699,9 @@ button.pill {
 }
 
 .leader-bubble .member-bubble-avatar {
-  width: 5.25rem;
-  height: 5.25rem;
-  font-size: 1.5rem;
+  width: 6.25rem;
+  height: 6.25rem;
+  font-size: 1.65rem;
 }
 
 .leadership-featured-grid {
@@ -2736,9 +2735,9 @@ button.pill {
 }
 
 .leader-bubble-featured .member-bubble-avatar {
-  width: 7.5rem;
-  height: 7.5rem;
-  font-size: 2.25rem;
+  width: 8.75rem;
+  height: 8.75rem;
+  font-size: 2.5rem;
 }
 
 .leader-bubble-featured .member-bubble-company {
@@ -2747,6 +2746,12 @@ button.pill {
 
 .leader-bubble-detailed .bubble-card-btn {
   padding: 1.75rem 1.35rem;
+}
+
+.leader-bubble-detailed .member-bubble-avatar {
+  width: 6.75rem;
+  height: 6.75rem;
+  font-size: 1.75rem;
 }
 
 .leader-bubble-detailed .member-bubble-body {
@@ -4167,64 +4172,6 @@ button.pill {
   font-weight: 700;
   color: var(--color-primary);
   background: #eef4ff;
-}
-
-.admin-member-logo-size-fieldset {
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.admin-member-logo-size-options {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.admin-member-logo-size-option {
-  display: grid;
-  grid-template-columns: auto auto 1fr;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 0.85rem 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: 0.85rem;
-  background: var(--color-surface);
-  cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.admin-member-logo-size-option:has(input:checked) {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 1px var(--color-primary);
-}
-
-.admin-member-logo-size-option input {
-  margin: 0;
-}
-
-.admin-member-logo-size-preview {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 6.5rem;
-  height: 6.5rem;
-}
-
-.admin-member-logo-size-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  min-width: 0;
-}
-
-.admin-member-logo-size-label {
-  font-weight: 600;
-}
-
-.admin-member-logo-size-desc {
-  font-size: 0.9rem;
-  color: var(--color-muted);
-  line-height: 1.4;
 }
 
 .admin-table-file {
