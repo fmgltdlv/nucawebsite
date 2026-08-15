@@ -10,6 +10,7 @@ export function ContentPage({
   footer,
   breakingNews,
   logoUrl,
+  logoSizePercent,
   navigation,
   staffInboxCount,
   page,
@@ -22,7 +23,7 @@ export function ContentPage({
 }) {
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, navigation, staffInboxCount })}
       title={page.title}
       description={page.meta_description ?? undefined}
     >

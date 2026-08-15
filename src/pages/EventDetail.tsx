@@ -93,6 +93,7 @@ export function EventDetailPage({
   footer,
   breakingNews,
   logoUrl,
+  logoSizePercent,
   navigation,
   staffInboxCount,
   occurrence,
@@ -114,7 +115,7 @@ export function EventDetailPage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, navigation, staffInboxCount })}
       title={master.title}
       description={master.description ?? undefined}
     >

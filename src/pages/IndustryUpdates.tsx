@@ -13,6 +13,7 @@ export function IndustryUpdateDetailPage({
   footer,
   breakingNews,
   logoUrl,
+  logoSizePercent,
   navigation,
   staffInboxCount,
   post,
@@ -23,7 +24,7 @@ export function IndustryUpdateDetailPage({
   const coverWidth = clampCoverWidthPct(post.cover_width_pct, 100)
 
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })} title={post.title}>
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, navigation, staffInboxCount })} title={post.title}>
       <PageHeader
         title={post.title}
         lead={post.excerpt ?? formatArchiveDate(post.published_at)}

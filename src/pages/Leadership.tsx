@@ -110,6 +110,7 @@ export function LeadershipPage({
   footer,
   breakingNews,
   logoUrl,
+  logoSizePercent,
   navigation,
   staffInboxCount,
   leaders,
@@ -124,7 +125,7 @@ export function LeadershipPage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, navigation, staffInboxCount })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, navigation, staffInboxCount })}
       title={title}
       description={page?.meta_description ?? undefined}
     >
