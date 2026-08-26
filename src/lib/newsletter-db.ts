@@ -3,6 +3,8 @@ import { toCsv } from './csv'
 export type NewsletterSubscriber = {
   id: string
   email: string
+  name: string | null
+  company: string | null
   subscribed_at: string
   source: string | null
   status: string
@@ -10,20 +12,27 @@ export type NewsletterSubscriber = {
 
 export async function subscribeNewsletter(
   db: D1Database,
-  email: string,
-  source?: string,
+  data: {
+    email: string
+    name?: string
+    company?: string
+    source?: string
+  },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const normalized = email.trim().toLowerCase()
+  const normalized = data.email.trim().toLowerCase()
   if (!normalized || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
     return { ok: false, error: 'Please enter a valid email address.' }
   }
 
+  const name = data.name?.trim() || null
+  const company = data.company?.trim() || null
+
   try {
     await db
       .prepare(
-        `INSERT INTO newsletter_subscribers (id, email, source, status) VALUES (?, ?, ?, 'new')`,
+        `INSERT INTO newsletter_subscribers (id, email, name, company, source, status) VALUES (?, ?, ?, ?, ?, 'new')`,
       )
-      .bind(crypto.randomUUID(), normalized, source ?? 'contact')
+      .bind(crypto.randomUUID(), normalized, name, company, data.source ?? 'contact')
       .run()
     return { ok: true }
   } catch {
@@ -38,7 +47,7 @@ export async function listNewsletterSubscribers(
   const limit = options?.limit ?? 500
   const { results } = await db
     .prepare(
-      `SELECT id, email, subscribed_at, source, status
+      `SELECT id, email, name, company, subscribed_at, source, status
        FROM newsletter_subscribers ORDER BY subscribed_at DESC LIMIT ?`,
     )
     .bind(limit)
@@ -49,7 +58,7 @@ export async function listNewsletterSubscribers(
 export async function listAllNewsletterSubscribers(db: D1Database): Promise<NewsletterSubscriber[]> {
   const { results } = await db
     .prepare(
-      `SELECT id, email, subscribed_at, source, status
+      `SELECT id, email, name, company, subscribed_at, source, status
        FROM newsletter_subscribers ORDER BY subscribed_at DESC`,
     )
     .all<NewsletterSubscriber>()
@@ -58,8 +67,10 @@ export async function listAllNewsletterSubscribers(db: D1Database): Promise<News
 
 export function buildNewsletterSubscribersCsv(subscribers: NewsletterSubscriber[]): string {
   const rows: string[][] = [
-    ['email', 'subscribed_at', 'source', 'status'],
+    ['name', 'company', 'email', 'subscribed_at', 'source', 'status'],
     ...subscribers.map((subscriber) => [
+      subscriber.name ?? '',
+      subscriber.company ?? '',
       subscriber.email,
       subscriber.subscribed_at,
       subscriber.source ?? '',

@@ -801,8 +801,16 @@ function renderBlockHtml(
 <p>${escapeHtml(block.body)}</p>
 <form class="form" method="post" action="/newsletter/subscribe">
 <div class="form-field">
+<label for="newsletter_name">Name</label>
+<input type="text" name="newsletter_name" id="newsletter_name" required autoComplete="name" />
+</div>
+<div class="form-field">
+<label for="newsletter_company">Company</label>
+<input type="text" name="newsletter_company" id="newsletter_company" autoComplete="organization" />
+</div>
+<div class="form-field">
 <label for="newsletter_email">Email</label>
-<input type="email" name="newsletter_email" id="newsletter_email" required />
+<input type="email" name="newsletter_email" id="newsletter_email" required autoComplete="email" />
 </div>
 <p class="form-hint">${escapeHtml(block.consent_hint)}</p>
 <button type="submit" class="btn btn-secondary">${escapeHtml(block.button_label)}</button>

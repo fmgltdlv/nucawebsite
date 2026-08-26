@@ -1,5 +1,7 @@
 import { site } from '../data/demo'
 import {
+  JOIN_DIGITAL_FORM_ENABLED,
+  MEMBERSHIP_APPLICATION_PDF_MAX_BYTES,
   MEMBERSHIP_APPLICATION_PDF_URL,
   KEY_PERSON_ROW_COUNT,
   associateProducts,
@@ -27,10 +29,47 @@ function applicationDateDefault(): string {
 }
 
 export function JoinApplyButton({ className = 'btn btn-primary' }: { className?: string }) {
+  if (!JOIN_DIGITAL_FORM_ENABLED) return null
   return (
     <button type="button" class={className} data-join-application-open>
       Apply now
     </button>
+  )
+}
+
+export function JoinPdfUploadForm() {
+  return (
+    <form
+      class="form form-wide join-pdf-upload-form"
+      method="post"
+      action="/join"
+      enctype="multipart/form-data"
+      id="join-pdf-upload-form"
+    >
+      <p class="form-hint">
+        Download the blank application, complete it, then upload the PDF here. Membership renews every January.
+      </p>
+      <div class="form-field">
+        <label for="join_upload_name">Your name</label>
+        <input type="text" name="name" id="join_upload_name" required autoComplete="name" />
+      </div>
+      <div class="form-field">
+        <label for="join_upload_company">Company name</label>
+        <input type="text" name="company_name" id="join_upload_company" required autoComplete="organization" />
+      </div>
+      <div class="form-field">
+        <label for="join_upload_email">Email</label>
+        <input type="email" name="email" id="join_upload_email" required autoComplete="email" />
+      </div>
+      <div class="form-field">
+        <label for="join_upload_pdf">Completed application (PDF)</label>
+        <input type="file" name="application_pdf" id="join_upload_pdf" accept="application/pdf" required />
+        <p class="form-hint">
+          PDF only, max {Math.round(MEMBERSHIP_APPLICATION_PDF_MAX_BYTES / 1024 / 1024)} MB.
+        </p>
+      </div>
+      <button type="submit" class="btn btn-primary">Submit application</button>
+    </form>
   )
 }
 
@@ -56,6 +95,8 @@ export function JoinApplicationModal({
       id="join-application-dialog"
       class="join-application-dialog"
       aria-labelledby="join-application-dialog-title"
+      hidden={!JOIN_DIGITAL_FORM_ENABLED}
+      aria-hidden={JOIN_DIGITAL_FORM_ENABLED ? undefined : 'true'}
     >
       <article class="join-application-dialog-card">
         <header class="join-application-dialog-header">
@@ -83,7 +124,14 @@ export function JoinApplicationModal({
           ))}
         </ol>
 
-        <form class="form form-wide join-application-form" method="post" action="/join" id="join-form">
+        <form
+          class="form form-wide join-application-form"
+          method="post"
+          action="/join"
+          id="join-form"
+          inert={!JOIN_DIGITAL_FORM_ENABLED ? true : undefined}
+        >
+          <fieldset disabled={!JOIN_DIGITAL_FORM_ENABLED} class="join-application-fieldset">
           <div class="join-application-dialog-body">
             <section class="join-application-step is-active" data-join-step="membership" aria-label="Membership">
               <fieldset class="form-section">
@@ -339,16 +387,13 @@ export function JoinApplicationModal({
                   {paymentMethods.map((method) => (
                     <li key={method.id}>
                       <label class="form-radio-label">
-                        <input type="radio" name="payment_method" value={method.id} required />
+                        <input type="radio" name="payment_method" value={method.id} required={JOIN_DIGITAL_FORM_ENABLED} />
                         <span>{method.label}</span>
                       </label>
                     </li>
                   ))}
                 </ul>
               </fieldset>
-              <p class="form-hint form-hint-warn">
-                Demo form — submissions are not stored yet. Production will email {site.email} and save to D1.
-              </p>
             </section>
           </div>
 
@@ -363,6 +408,7 @@ export function JoinApplicationModal({
               Submit application
             </button>
           </footer>
+          </fieldset>
         </form>
       </article>
     </dialog>
@@ -374,9 +420,7 @@ export function JoinApplicationAside() {
     <aside class="join-aside">
       <h3>PDF application</h3>
       <p>
-        Prefer paper? Download the application, complete it, and email to{' '}
-        <a href="mailto:jennifer@nucalasvegas.com">jennifer@nucalasvegas.com</a> or{' '}
-        <a href="mailto:info@nucalasvegas.com">{site.email}</a>.
+        Download the blank application, complete it, then upload it using the form on this page.
       </p>
       <a class="btn btn-secondary" href={MEMBERSHIP_APPLICATION_PDF_URL} target="_blank" rel="noopener noreferrer">
         Download PDF application

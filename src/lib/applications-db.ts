@@ -10,9 +10,9 @@ export type ApplicationPayload = Record<string, string>
 
 export async function createApplication(
   db: D1Database,
-  data: { member_type?: string; payload: ApplicationPayload },
+  data: { id?: string; member_type?: string; payload: ApplicationPayload },
 ): Promise<string> {
-  const id = crypto.randomUUID()
+  const id = data.id ?? crypto.randomUUID()
   await db
     .prepare(
       `INSERT INTO applications (id, member_type, payload_json, status) VALUES (?, ?, ?, 'new')`,
@@ -30,6 +30,17 @@ export async function listApplications(db: D1Database): Promise<ApplicationRecor
     )
     .all<ApplicationRecord>()
   return results ?? []
+}
+
+export async function getApplication(db: D1Database, id: string): Promise<ApplicationRecord | null> {
+  const row = await db
+    .prepare(
+      `SELECT id, member_type, payload_json, status, submitted_at
+       FROM applications WHERE id = ?`,
+    )
+    .bind(id)
+    .first<ApplicationRecord>()
+  return row ?? null
 }
 
 export async function updateApplicationStatus(

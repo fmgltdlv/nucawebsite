@@ -3,7 +3,6 @@ import type { MembershipTypeRecord } from '../../lib/membership-types-db'
 import type { AdminMember } from '../../lib/members-db'
 import {
   MEMBER_GRID_LOGO_SIZE_OPTIONS,
-  memberGridLogoStyle,
   type MemberGridLogoSizeId,
 } from '../../lib/member-directory-settings'
 import { AdminShell } from '../../views/AdminShell'
@@ -178,44 +177,41 @@ function MemberEditModal({
 
 function MemberDirectorySettings({
   memberGridLogoSize,
+  memberListPaginationEnabled,
 }: {
   memberGridLogoSize: MemberGridLogoSizeId
+  memberListPaginationEnabled: boolean
 }) {
   return (
     <form class="form admin-form-section" method="post" action="/admin/members/settings">
       <h2>Directory display</h2>
       <p class="admin-note">
-        Logo size on the public member grid at <a href="/members">/members</a>. Larger sizes work
+        Options for the public member grid at <a href="/members">/members</a>. Larger logo sizes work
         best when most members have uploaded logos.
       </p>
-      <fieldset class="admin-member-logo-size-fieldset">
-        <legend class="visually-hidden">Member grid logo size</legend>
-        <div class="admin-member-logo-size-options">
+      <div class="form-field">
+        <label for="member_grid_logo_size">Logo size</label>
+        <select name="member_grid_logo_size" id="member_grid_logo_size">
           {MEMBER_GRID_LOGO_SIZE_OPTIONS.map((option) => (
-            <label
-              key={option.id}
-              class="admin-member-logo-size-option"
-              style={memberGridLogoStyle(option.id)}
-            >
-              <input
-                type="radio"
-                name="member_grid_logo_size"
-                value={option.id}
-                checked={memberGridLogoSize === option.id}
-              />
-              <span class="admin-member-logo-size-preview" aria-hidden="true">
-                <span class="member-bubble-avatar">NU</span>
-              </span>
-              <span class="admin-member-logo-size-copy">
-                <span class="admin-member-logo-size-label">
-                  {option.label} ({option.px}px)
-                </span>
-                <span class="admin-member-logo-size-desc">{option.description}</span>
-              </span>
-            </label>
+            <option key={option.id} value={option.id} selected={memberGridLogoSize === option.id}>
+              {option.label} ({option.px}px) — {option.description}
+            </option>
           ))}
-        </div>
-      </fieldset>
+        </select>
+      </div>
+      <label class="admin-check">
+        <input
+          type="checkbox"
+          name="member_list_pagination"
+          value="1"
+          checked={memberListPaginationEnabled}
+        />
+        Paginate the public member directory
+      </label>
+      <p class="admin-note">
+        When enabled, visitors see Previous/Next controls when the filtered list is longer than one
+        page. This only affects the public directory, not the admin member table below.
+      </p>
       <button type="submit" class="btn btn-primary">Save display settings</button>
     </form>
   )
@@ -226,6 +222,7 @@ export function AdminMembersPage({
   members,
   membershipTypes,
   memberGridLogoSize = 'default',
+  memberListPaginationEnabled = true,
   flash,
   error,
   ...site
@@ -234,6 +231,7 @@ export function AdminMembersPage({
   members: AdminMember[]
   membershipTypes: MembershipTypeRecord[]
   memberGridLogoSize?: MemberGridLogoSizeId
+  memberListPaginationEnabled?: boolean
   flash?: string
   error?: string
 }) {
@@ -254,7 +252,10 @@ export function AdminMembersPage({
         <a href="/admin/content/member-types">Membership types</a>.
       </p>
 
-      <MemberDirectorySettings memberGridLogoSize={memberGridLogoSize} />
+      <MemberDirectorySettings
+        memberGridLogoSize={memberGridLogoSize}
+        memberListPaginationEnabled={memberListPaginationEnabled}
+      />
 
       <AdminCrudSections
         flash={flash}

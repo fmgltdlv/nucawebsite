@@ -6,6 +6,7 @@ import { AdminCrudSections } from '../../../views/admin/AdminCrudSections'
 import { AdminEditModalFooter } from '../../../views/admin/AdminEditActions'
 import { AdminEditButton } from '../../../views/admin/AdminListSection'
 import { AdminModal } from '../../../views/admin/AdminModal'
+import { LeadershipRoleSelect } from '../../../views/admin/LeadershipRoleSelect'
 import type { AdminContext } from '../../../lib/admin-context'
 import type { PageProps } from '../../../types/page'
 
@@ -88,13 +89,7 @@ function LeaderEditModal({ person }: { person: LeadershipRecord }) {
         </div>
         <div class="form-field">
           <label for={`${formId}-role`}>Role</label>
-          <input
-            type="text"
-            name="role_title"
-            id={`${formId}-role`}
-            value={person.role_title}
-            required
-          />
+          <LeadershipRoleSelect id={`${formId}-role`} value={person.role_title} />
         </div>
       </div>
       <div class="form-row">
@@ -172,8 +167,9 @@ export function AdminContentLeadershipPage({
   ctx,
   leaders,
   flash,
+  error,
   ...site
-}: PageProps & { ctx: AdminContext; leaders: LeadershipRecord[]; flash?: string }) {
+}: PageProps & { ctx: AdminContext; leaders: LeadershipRecord[]; flash?: string; error?: string }) {
   return (
     <AdminShell
       {...site}
@@ -192,6 +188,7 @@ export function AdminContentLeadershipPage({
           </p>
         }
         flash={flash}
+        error={error}
         addButtonLabel="Add leader"
         addModalId="add-leader-dialog"
         addModalTitle="Add leader"
@@ -206,7 +203,7 @@ export function AdminContentLeadershipPage({
             </div>
             <div class="form-field">
               <label for="role_title">Role</label>
-              <input type="text" name="role_title" id="role_title" required />
+              <LeadershipRoleSelect id="role_title" />
             </div>
             <div class="form-field">
               <label for="chair_title">Chair / committee title (optional)</label>

@@ -29,8 +29,10 @@ import { getPostBySlug, listPublishedPosts } from './lib/posts-db'
 import { listQaItems } from './lib/qa-db'
 import { listResourceItems } from './lib/resource-items-db'
 import { listMembershipTypes } from './lib/membership-types-db'
-import { getMemberGridLogoSize } from './lib/site-settings'
-import { getAssetObject } from './lib/r2-assets'
+import { getMemberGridLogoSize, getMemberListPaginationEnabled } from './lib/site-settings'
+import { getAssetObject, applicationPdfKey, deleteAsset, uploadAsset } from './lib/r2-assets'
+import { MEMBERSHIP_APPLICATION_PDF_MAX_BYTES } from './data/membership-application'
+import { parseUploadFiles } from './lib/library-asset-upload'
 import { subscribeNewsletter } from './lib/newsletter-db'
 import { loadAdminLayoutProps, loadPublicSiteContext, type AdminLayoutProps } from './lib/site-context'
 import { resolveAdminContext } from './lib/admin-context'
@@ -48,7 +50,7 @@ import { EventDetailPage, EventNotFoundPage, EventRsvpThanksPage } from './pages
 import { EventsPage, type EventsView } from './pages/Events'
 import { HomePage } from './pages/Home'
 import { IndustryUpdateDetailPage } from './pages/IndustryUpdates'
-import { JoinPage, JoinThanksPage } from './pages/Join'
+import { JoinPage, JoinErrorPage, JoinThanksPage } from './pages/Join'
 import { MembersPage } from './pages/Members'
 import { LeadershipPage } from './pages/Leadership'
 import { QaPage } from './pages/Qa'
@@ -272,10 +274,11 @@ app.get('/api/members/:id', async (c) => {
 app.get('/members', async (c) => {
   await seedDemoMembersIfEmpty(c.env)
   const site = await siteProps(c)
-  const [members, membershipTypes, memberGridLogoSize] = await Promise.all([
+  const [members, membershipTypes, memberGridLogoSize, memberListPaginationEnabled] = await Promise.all([
     listActiveMemberSummaries(c.env.DB),
     listMembershipTypes(c.env.DB, true),
     getMemberGridLogoSize(c.env.DB),
+    getMemberListPaginationEnabled(c.env.DB),
   ])
   const type = c.req.query('type')
   const valid = new Set(membershipTypes.map((t) => t.key))
@@ -287,6 +290,7 @@ app.get('/members', async (c) => {
       filter={filter}
       membershipTypes={membershipTypes}
       memberGridLogoSize={memberGridLogoSize}
+      memberListPaginationEnabled={memberListPaginationEnabled}
     />,
   )
 })
@@ -433,14 +437,52 @@ app.get('/join', async (c) => {
 app.post('/join', async (c) => {
   const site = await siteProps(c)
   const body = await c.req.parseBody()
-  const payload: Record<string, string> = {}
-  for (const [key, value] of Object.entries(body)) {
-    if (typeof value === 'string' && value.trim()) payload[key] = value.trim()
+  const name = typeof body.name === 'string' ? body.name.trim() : ''
+  const company_name = typeof body.company_name === 'string' ? body.company_name.trim() : ''
+  const email = typeof body.email === 'string' ? body.email.trim() : ''
+  const pdfFile = parseUploadFiles(body.application_pdf)[0]
+
+  if (!name || !company_name || !email || !pdfFile) {
+    return c.html(
+      <JoinErrorPage {...site} error="Name, company name, email, and a PDF application are required." />,
+    )
   }
-  const member_type = typeof body.member_type === 'string' ? body.member_type : undefined
-  const id = await createApplication(c.env.DB, { member_type, payload })
-  const company = payload.company_name || payload.company || 'New application'
-  await notifyStaffOfApplication(c.env, id, `Membership application from ${company}.\n\nReview at /admin/applications`)
+
+  const id = crypto.randomUUID()
+  const pdfKey = applicationPdfKey(id)
+  const uploadResult = await uploadAsset(c.env.R2, pdfFile, pdfKey, {
+    maxBytes: MEMBERSHIP_APPLICATION_PDF_MAX_BYTES,
+    allowedTypes: ['application/pdf'],
+  })
+  if (!uploadResult.ok) {
+    return c.html(<JoinErrorPage {...site} error={uploadResult.error} />)
+  }
+
+  const payload = {
+    name,
+    company_name,
+    email,
+    pdf_key: pdfKey,
+    submission_type: 'pdf_upload',
+  }
+
+  try {
+    await createApplication(c.env.DB, { id, payload })
+  } catch {
+    await deleteAsset(c.env.R2, pdfKey)
+    return c.html(
+      <JoinErrorPage
+        {...site}
+        error="Could not save your application. Please try again or contact the chapter."
+      />,
+    )
+  }
+
+  await notifyStaffOfApplication(
+    c.env,
+    id,
+    `Membership application (PDF upload) from ${company_name}.\n\nSubmitted by ${name} (${email}).\n\nReview at /admin/applications`,
+  )
   return c.html(<JoinThanksPage {...site} />)
 })
 
@@ -474,7 +516,9 @@ app.post('/newsletter/subscribe', async (c) => {
   const site = await siteProps(c)
   const body = await c.req.parseBody()
   const email = typeof body.newsletter_email === 'string' ? body.newsletter_email : ''
-  const result = await subscribeNewsletter(c.env.DB, email, 'contact')
+  const name = typeof body.newsletter_name === 'string' ? body.newsletter_name : ''
+  const company = typeof body.newsletter_company === 'string' ? body.newsletter_company : ''
+  const result = await subscribeNewsletter(c.env.DB, { email, name, company, source: 'contact' })
   if (!result.ok) return c.html(<NewsletterErrorPage {...site} error={result.error} />)
   return c.html(<NewsletterThanksPage {...site} />)
 })

@@ -1,4 +1,5 @@
-import { parseApplicationPayload, type ApplicationRecord } from '../../lib/applications-db'
+import { parseApplicationPayload, type ApplicationPayload, type ApplicationRecord } from '../../lib/applications-db'
+import { getAssetUrl } from '../../lib/r2-assets'
 import { AdminShell } from '../../views/AdminShell'
 import { AdminEditButton, AdminListSection, AdminListSearch } from '../../views/admin/AdminListSection'
 import { AdminInboxToolbar } from '../../views/admin/AdminInboxToolbar'
@@ -9,11 +10,16 @@ import type { PageProps } from '../../types/page'
 
 const STATUSES = ['new', 'reviewed', 'approved', 'rejected'] as const
 
+function applicationSummary(payload: ApplicationPayload, memberType: string | null): string {
+  return payload.company_name || payload.name || payload.contact_name || memberType || 'Application'
+}
+
 function applicationSearchText(app: ApplicationRecord): string {
   const payload = parseApplicationPayload(app.payload_json)
   return [
     payload.company_name,
     payload.name,
+    payload.contact_name,
     app.member_type,
     app.status,
     app.submitted_at,
@@ -26,7 +32,7 @@ function applicationSearchText(app: ApplicationRecord): string {
 
 function ApplicationListRow({ app }: { app: ApplicationRecord }) {
   const payload = parseApplicationPayload(app.payload_json)
-  const summary = payload.company_name || payload.name || app.member_type || 'Application'
+  const summary = applicationSummary(payload, app.member_type)
   const editModalId = `edit-app-${app.id}`
 
   return (
@@ -57,7 +63,9 @@ function ApplicationListRow({ app }: { app: ApplicationRecord }) {
 function ApplicationEditModal({ app }: { app: ApplicationRecord }) {
   const payload = parseApplicationPayload(app.payload_json)
   const formId = `form-app-${app.id}`
-  const summary = payload.company_name || payload.name || app.member_type || 'Application'
+  const summary = applicationSummary(payload, app.member_type)
+  const pdfKey = payload.pdf_key
+  const detailEntries = Object.entries(payload).filter(([key]) => key !== 'pdf_key')
 
   return (
     <AdminModal
@@ -75,8 +83,15 @@ function ApplicationEditModal({ app }: { app: ApplicationRecord }) {
         />
       }
     >
+      {pdfKey ? (
+        <p class="admin-detail-pdf-link">
+          <a class="btn btn-secondary" href={getAssetUrl(pdfKey)} target="_blank" rel="noopener noreferrer">
+            Download application PDF
+          </a>
+        </p>
+      ) : null}
       <dl class="admin-detail-list admin-detail-list-modal">
-        {Object.entries(payload).map(([key, value]) => (
+        {detailEntries.map(([key, value]) => (
           <div key={key}>
             <dt>{key}</dt>
             <dd>{value}</dd>

@@ -91,11 +91,13 @@ export function MembersPage({
   members,
   membershipTypes = [],
   memberGridLogoSize = 'default',
+  memberListPaginationEnabled = true,
 }: PageProps & {
   filter?: MemberType
   members: MemberSummary[]
   membershipTypes?: MembershipTypeRecord[]
   memberGridLogoSize?: MemberGridLogoSizeId
+  memberListPaginationEnabled?: boolean
 }) {
   const sorted = [...members].sort((a, b) =>
     a.company.localeCompare(b.company, undefined, { sensitivity: 'base' }),
@@ -149,7 +151,11 @@ export function MembersPage({
             </div>
           </div>
 
-          <ul class="member-grid" id="member-grid">
+          <ul
+            class="member-grid"
+            id="member-grid"
+            data-pagination={memberListPaginationEnabled ? '1' : '0'}
+          >
             {sorted.map((member) => (
               <MemberBubble key={member.id} member={member} labels={labels} />
             ))}

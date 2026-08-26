@@ -1,5 +1,9 @@
 import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
-import { JoinApplicationAside, JoinApplicationModal, JoinApplyButton } from '../views/JoinApplicationForm'
+import {
+  JoinApplicationAside,
+  JoinApplicationModal,
+  JoinPdfUploadForm,
+} from '../views/JoinApplicationForm'
 import { StatusPage } from '../views/StatusPage'
 import { renderPageContent } from '../lib/page-blocks'
 import type { CommitteeRecord } from '../lib/committees-db'
@@ -36,7 +40,7 @@ export function JoinPage({
       title={title}
       description={page?.meta_description ?? undefined}
     >
-      <PageHeader title={title} lead={lead} actions={<JoinApplyButton />} />
+      <PageHeader title={title} lead={lead} />
 
       {hasBlocks ? (
         <section class="section">
@@ -55,12 +59,12 @@ export function JoinPage({
       <section class="section">
         <div class="container join-grid join-grid--application">
           <div>
-            <h2>Apply online</h2>
+            <h2>Submit your application</h2>
             <p class="section-lead">
-              Complete the same information as the chapter membership application. You can also download the PDF and
-              return it by email.
+              Download the membership application PDF, complete it, then upload it here with your name, company, and
+              email.
             </p>
-            <JoinApplyButton />
+            <JoinPdfUploadForm />
           </div>
           <JoinApplicationAside />
         </div>
@@ -83,5 +87,18 @@ export function JoinThanksPage(props: PageProps) {
       <p>Questions? Contact the chapter through the <a href="/contact">Contact page</a>.</p>
       <a class="btn btn-primary" href="/">Back to home</a>
     </StatusPage>
+  )
+}
+
+export function JoinErrorPage({ error, ...props }: PageProps & { error: string }) {
+  return (
+    <StatusPage
+      {...props}
+      title="Application"
+      heading="Submit application"
+      lead={error}
+      ctaHref="/join"
+      ctaLabel="Try again"
+    />
   )
 }

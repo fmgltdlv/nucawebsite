@@ -30,6 +30,7 @@
 
   if (grid && empty) {
     const items = Array.from(grid.querySelectorAll('.member-bubble'))
+    const paginationEnabled = grid.dataset.pagination !== '0'
     const validTypes = new Set(['contractor', 'associate', 'institutional'])
     const desktopMemberMq = window.matchMedia('(min-width: 700px)')
     const MEMBER_PAGE_SIZE_MOBILE = 10
@@ -60,7 +61,7 @@
 
     function updateMemberPagination(filteredCount, totalPages) {
       const pageSize = getMemberPageSize()
-      const usePagination = filteredCount > pageSize
+      const usePagination = paginationEnabled && filteredCount > pageSize
 
       if (memberPagination instanceof HTMLElement) {
         memberPagination.hidden = !usePagination
@@ -84,7 +85,7 @@
     function applyMemberFilters() {
       const filtered = getFilteredMemberItems()
       const pageSize = getMemberPageSize()
-      const usePagination = filtered.length > pageSize
+      const usePagination = paginationEnabled && filtered.length > pageSize
       const totalPages = usePagination
         ? Math.max(1, Math.ceil(filtered.length / pageSize))
         : 1
@@ -143,6 +144,7 @@
     })
 
     memberPageNext?.addEventListener('click', () => {
+      if (!paginationEnabled) return
       const filtered = getFilteredMemberItems()
       const pageSize = getMemberPageSize()
       const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))

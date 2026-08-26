@@ -1,3 +1,9 @@
+/** When false, the multi-step online form is disabled; users submit a completed PDF instead. */
+export const JOIN_DIGITAL_FORM_ENABLED = false
+
+/** Max size for uploaded membership application PDFs. */
+export const MEMBERSHIP_APPLICATION_PDF_MAX_BYTES = 10 * 1024 * 1024
+
 /** Official chapter membership PDF (Oct 2025). */
 export const MEMBERSHIP_APPLICATION_PDF_URL =
   'https://nucalasvegas.com/wp-content/uploads/2025/10/NUCA-Application_MASTER-updated-OCT-2025.pdf'

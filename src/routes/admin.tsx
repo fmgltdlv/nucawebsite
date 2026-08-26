@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import type { ThemeId } from '../config/themes'
 import type { AdminLayoutProps } from '../lib/site-context'
-import { getMemberGridLogoSize, setMemberGridLogoSize } from '../lib/site-settings'
+import { getMemberGridLogoSize, getMemberListPaginationEnabled, setMemberGridLogoSize, setMemberListPaginationEnabled } from '../lib/site-settings'
 import { MEMBER_TYPES, type MemberType } from '../data/demo'
 import type { Env } from '../env'
 import { createUser, changeUserPassword, deleteUser, getSessionVersion, listUsers, verifyUserLogin, verifyUserPassword } from '../lib/auth'
@@ -528,10 +528,11 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
 
   app.get('/admin/members', async (c) => {
     const ctx = getAdminCtx(c)
-    const [members, membershipTypes, memberGridLogoSize] = await Promise.all([
+    const [members, membershipTypes, memberGridLogoSize, memberListPaginationEnabled] = await Promise.all([
       listMembersForAdmin(c.env.DB),
       listMembershipTypes(c.env.DB),
       getMemberGridLogoSize(c.env.DB),
+      getMemberListPaginationEnabled(c.env.DB),
     ])
     const flash =
       c.req.query('settings') === '1'
@@ -548,6 +549,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
         members={members}
         membershipTypes={membershipTypes}
         memberGridLogoSize={memberGridLogoSize}
+        memberListPaginationEnabled={memberListPaginationEnabled}
         flash={flash}
       />,
     )
@@ -562,6 +564,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
         typeof body.member_grid_logo_size === 'string' ? body.member_grid_logo_size : undefined,
       ),
     )
+    await setMemberListPaginationEnabled(c.env.DB, body.member_list_pagination === '1')
     await writeAuditLog(c.env.DB, {
       userId: ctx.user.id,
       action: 'members.settings.update',

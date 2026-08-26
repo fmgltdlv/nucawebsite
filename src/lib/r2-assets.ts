@@ -1,5 +1,18 @@
 const MAX_PDF_BYTES = 25 * 1024 * 1024
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const PDF_MIME_TYPES = new Set(['application/pdf', 'application/x-pdf'])
+
+function isPdfFile(file: File): boolean {
+  if (PDF_MIME_TYPES.has(file.type)) return true
+  if (!/\.pdf$/i.test(file.name)) return false
+  return !file.type || file.type === 'application/octet-stream'
+}
+
+function isAllowedFileType(file: File, allowedTypes: string[]): boolean {
+  if (allowedTypes.includes(file.type)) return true
+  if (allowedTypes.includes('application/pdf') && isPdfFile(file)) return true
+  return false
+}
 
 export function getAssetUrl(key: string): string {
   return `/assets/${key}`
@@ -14,16 +27,20 @@ export async function uploadAsset(
   const maxBytes = options?.maxBytes ?? MAX_PDF_BYTES
   const allowedTypes = options?.allowedTypes ?? ['application/pdf']
 
-  if (!allowedTypes.includes(file.type)) {
+  if (!isAllowedFileType(file, allowedTypes)) {
     return { ok: false, error: `File type not allowed: ${file.type || 'unknown'}` }
   }
   if (file.size > maxBytes) {
     return { ok: false, error: `File too large (max ${Math.round(maxBytes / 1024 / 1024)} MB).` }
   }
 
+  const contentType =
+    file.type ||
+    (allowedTypes.includes('application/pdf') && isPdfFile(file) ? 'application/pdf' : file.type)
+
   const buffer = await file.arrayBuffer()
   await r2.put(key, buffer, {
-    httpMetadata: { contentType: file.type },
+    httpMetadata: { contentType },
   })
   return { ok: true }
 }
@@ -48,6 +65,10 @@ export async function deleteAsset(r2: R2Bucket, key: string): Promise<void> {
 
 export async function getAssetObject(r2: R2Bucket, key: string): Promise<R2ObjectBody | null> {
   return (await r2.get(key)) ?? null
+}
+
+export function applicationPdfKey(id: string): string {
+  return `applications/${id}.pdf`
 }
 
 export function dirtPdfKey(id: string): string {

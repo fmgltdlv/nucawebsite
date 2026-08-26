@@ -37,6 +37,13 @@ export type MemberGridLogoSizeId = (typeof MEMBER_GRID_LOGO_SIZE_OPTIONS)[number
 
 export const DEFAULT_MEMBER_GRID_LOGO_SIZE: MemberGridLogoSizeId = 'default'
 
+export const DEFAULT_MEMBER_LIST_PAGINATION = true
+
+export function parseMemberListPaginationEnabled(value: unknown): boolean {
+  if (typeof value === 'boolean') return value
+  return DEFAULT_MEMBER_LIST_PAGINATION
+}
+
 const sizeById = Object.fromEntries(
   MEMBER_GRID_LOGO_SIZE_OPTIONS.map((option) => [option.id, option]),
 ) as Record<MemberGridLogoSizeId, (typeof MEMBER_GRID_LOGO_SIZE_OPTIONS)[number]>

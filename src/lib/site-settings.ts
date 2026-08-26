@@ -2,7 +2,9 @@ import { DEFAULT_THEME, parseThemeId, type ThemeId } from '../config/themes'
 import { site as defaultSite } from '../data/demo'
 import {
   DEFAULT_MEMBER_GRID_LOGO_SIZE,
+  DEFAULT_MEMBER_LIST_PAGINATION,
   parseMemberGridLogoSize,
+  parseMemberListPaginationEnabled,
   type MemberGridLogoSizeId,
 } from './member-directory-settings'
 import {
@@ -158,6 +160,20 @@ export async function setMemberGridLogoSize(
     return
   }
   await setSetting(db, 'member_grid_logo_size', value)
+}
+
+export async function getMemberListPaginationEnabled(db: D1Database): Promise<boolean> {
+  const stored = await getSetting<boolean>(db, 'member_list_pagination')
+  return parseMemberListPaginationEnabled(stored ?? DEFAULT_MEMBER_LIST_PAGINATION)
+}
+
+export async function setMemberListPaginationEnabled(db: D1Database, enabled: boolean): Promise<void> {
+  const value = parseMemberListPaginationEnabled(enabled)
+  if (value === DEFAULT_MEMBER_LIST_PAGINATION) {
+    await db.prepare('DELETE FROM site_settings WHERE key = ?').bind('member_list_pagination').run()
+    return
+  }
+  await setSetting(db, 'member_list_pagination', value)
 }
 
 export function phoneTelHref(phone: string): string {

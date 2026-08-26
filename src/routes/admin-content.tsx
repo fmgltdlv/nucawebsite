@@ -20,6 +20,7 @@ import {
   listLeadership,
   updateLeadership,
 } from '../lib/leadership-db'
+import { parseLeadershipRole } from '../lib/leadership-roles'
 import { createPost, deletePost, getPostById, listAllPosts, clampCoverWidthPct, updatePost } from '../lib/posts-db'
 import { buildPageLabels, createCustomPage, deleteCustomPage, getPageBySlug, listCustomPages, listPages, upsertPage } from '../lib/pages-db'
 import { listSiteInternalLinks } from '../lib/site-internal-links'
@@ -103,7 +104,8 @@ import { AdminContentMemberTypesPage } from '../pages/admin/content/AdminContent
 import { AdminContentNavigationPage } from '../pages/admin/content/AdminContentNavigation'
 import { AdminContentSettingsPage } from '../pages/admin/content/AdminContentSettings'
 import { PagePreviewFrame } from '../views/PagePreviewBanner'
-import { listApplications, updateApplicationStatus, deleteApplication, acknowledgeAllApplications } from '../lib/applications-db'
+import { listApplications, getApplication, parseApplicationPayload, updateApplicationStatus, deleteApplication, acknowledgeAllApplications } from '../lib/applications-db'
+import { deleteAsset } from '../lib/r2-assets'
 
 type AdminVariables = { theme: ThemeId; adminSite: AdminLayoutProps; adminCtx: import('../lib/admin-context').AdminContext | null }
 
@@ -136,10 +138,11 @@ function optionalText(body: Record<string, unknown>, key: string): string | null
   return trimmed || null
 }
 
-function leadershipFromBody(body: Record<string, unknown>) {
+function leadershipFromBody(body: Record<string, unknown>, existingRole?: string | null) {
+  const role_title = parseLeadershipRole(body.role_title, existingRole)
   return {
     name: typeof body.name === 'string' ? body.name.trim() : '',
-    role_title: typeof body.role_title === 'string' ? body.role_title.trim() : '',
+    role_title: role_title ?? '',
     chair_title: optionalText(body, 'chair_title'),
     company: optionalText(body, 'company'),
     website: optionalText(body, 'website'),
@@ -858,6 +861,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
         ctx={ctx}
         leaders={leaders}
         flash={flashMessage(c, '1')}
+        error={c.req.query('error')}
       />,
     )
   })
@@ -866,7 +870,9 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
     const fields = leadershipFromBody(body)
-    if (!fields.name || !fields.role_title) return c.redirect('/admin/content/leadership', 303)
+    if (!fields.name || !fields.role_title) {
+      return c.redirect('/admin/content/leadership?error=Name%20and%20role%20required', 303)
+    }
     const id = await createLeadership(c.env.DB, fields)
     const photo = body.photo instanceof File && body.photo.size > 0 ? body.photo : null
     if (photo) {
@@ -900,10 +906,13 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
         photo_r2_key = key
       }
     }
+    const fields = leadershipFromBody(body, existing.role_title)
+    if (!fields.name || !fields.role_title) {
+      return c.redirect('/admin/content/leadership?error=Name%20and%20role%20required', 303)
+    }
     await updateLeadership(c.env.DB, id, {
-      ...leadershipFromBody(body),
-      name: typeof body.name === 'string' ? body.name.trim() : existing.name,
-      role_title: typeof body.role_title === 'string' ? body.role_title.trim() : existing.role_title,
+      ...fields,
+      name: fields.name || existing.name,
       sort_order: parseSortOrder(typeof body.sort_order === 'string' ? body.sort_order : '0'),
       photo_r2_key,
       published: body.published === '1',
@@ -1119,7 +1128,15 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
 
   app.post('/admin/applications/:id/delete', async (c) => {
     const ctx = getAdminCtx(c)
-    await deleteApplication(c.env.DB, c.req.param('id'))
+    const id = c.req.param('id')
+    const app = await getApplication(c.env.DB, id)
+    if (app) {
+      const payload = parseApplicationPayload(app.payload_json)
+      if (payload.pdf_key) {
+        await deleteAsset(c.env.R2, payload.pdf_key)
+      }
+    }
+    await deleteApplication(c.env.DB, id)
     return c.redirect('/admin/applications?ok=1', 303)
   })
 

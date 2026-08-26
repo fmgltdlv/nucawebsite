@@ -1,6 +1,7 @@
 import type { LeadershipRecord } from './leadership-db'
+import { classifyKnownLeadershipRole, type LeadershipTier } from './leadership-roles'
 
-export type LeadershipTier = 'featured' | 'officers' | 'board' | 'nonVoting' | 'other'
+export type { LeadershipTier } from './leadership-roles'
 
 const OFFICER_ROLE_ORDER: [string, number][] = [
   ['secretary', 0],
@@ -11,6 +12,9 @@ const OFFICER_ROLE_ORDER: [string, number][] = [
 ]
 
 export function classifyLeadershipRole(roleTitle: string): { tier: LeadershipTier; roleOrder: number } {
+  const known = classifyKnownLeadershipRole(roleTitle)
+  if (known) return known
+
   const lower = roleTitle.toLowerCase().trim()
 
   if (/non[\s-]?voting/.test(lower)) {

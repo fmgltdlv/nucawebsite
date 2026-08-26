@@ -7,7 +7,14 @@ import type { AdminContext } from '../../lib/admin-context'
 import type { PageProps } from '../../types/page'
 
 function subscriberSearchText(subscriber: NewsletterSubscriber): string {
-  return [subscriber.email, subscriber.source, subscriber.status, subscriber.subscribed_at]
+  return [
+    subscriber.name,
+    subscriber.company,
+    subscriber.email,
+    subscriber.source,
+    subscriber.status,
+    subscriber.subscribed_at,
+  ]
     .filter(Boolean)
     .join(' ')
     .toLowerCase()
@@ -19,6 +26,8 @@ function SubscriberListRow({ subscriber }: { subscriber: NewsletterSubscriber })
       <td>
         <time dateTime={subscriber.subscribed_at}>{formatEventDateShort(subscriber.subscribed_at)}</time>
       </td>
+      <td>{subscriber.name ?? '—'}</td>
+      <td>{subscriber.company ?? '—'}</td>
       <td>
         <a href={`mailto:${subscriber.email}`}>{subscriber.email}</a>
       </td>
@@ -89,6 +98,8 @@ export function AdminNewsletterSubscribersPage({
         tableHead={
           <tr>
             <th>Subscribed</th>
+            <th>Name</th>
+            <th>Company</th>
             <th>Email</th>
             <th>Source</th>
             <th>Status</th>
