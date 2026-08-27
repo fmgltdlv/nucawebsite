@@ -125,6 +125,7 @@ export type PageBlock =
       body: string
       consent_hint: string
       button_label: string
+      source?: string
     }
   | {
       type: 'contact_form'
@@ -423,6 +424,7 @@ function parseBlock(value: unknown, allowSection = true): PageBlock | null {
             ? value.consent_hint
             : 'By subscribing you agree to receive chapter emails. We will not sell your information.',
         button_label: typeof value.button_label === 'string' ? value.button_label : 'Subscribe',
+        source: typeof value.source === 'string' ? value.source : undefined,
       }
     case 'contact_form':
       return {
@@ -449,6 +451,13 @@ export function parsePageBlocks(json: string | null | undefined): PageBlock[] | 
   } catch {
     return null
   }
+}
+
+export function findPageBlock<T extends PageBlock['type']>(
+  blocks: PageBlock[] | null,
+  type: T,
+): Extract<PageBlock, { type: T }> | undefined {
+  return blocks?.find((block): block is Extract<PageBlock, { type: T }> => block.type === type)
 }
 
 export function serializePageBlocks(blocks: PageBlock[]): string {
@@ -800,6 +809,7 @@ function renderBlockHtml(
 <h2>${escapeHtml(block.title)}</h2>
 <p>${escapeHtml(block.body)}</p>
 <form class="form" method="post" action="/newsletter/subscribe">
+<input type="hidden" name="newsletter_source" value="${escapeHtml(block.source ?? 'contact')}" />
 <div class="form-field">
 <label for="newsletter_name">Name</label>
 <input type="text" name="newsletter_name" id="newsletter_name" required autoComplete="name" />

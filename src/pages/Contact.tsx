@@ -2,16 +2,15 @@ import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
 import { StatusPage } from '../views/StatusPage'
 import type { ContactInfo } from '../lib/site-settings'
 import { phoneTelHref } from '../lib/site-settings'
-import { parsePageBlocks, renderPageContent, type PageBlock } from '../lib/page-blocks'
+import { SocialLinksList } from '../views/SocialLinks'
+import {
+  findPageBlock,
+  parsePageBlocks,
+  renderPageContent,
+  type PageBlock,
+} from '../lib/page-blocks'
 import type { PageRecord } from '../lib/pages-db'
 import type { PageProps } from '../types/page'
-
-function findBlock<T extends PageBlock['type']>(
-  blocks: PageBlock[] | null,
-  type: T,
-): Extract<PageBlock, { type: T }> | undefined {
-  return blocks?.find((b): b is Extract<PageBlock, { type: T }> => b.type === type)
-}
 
 const DEFAULT_CONTACT_FORM: Extract<PageBlock, { type: 'contact_form' }> = {
   type: 'contact_form',
@@ -19,15 +18,6 @@ const DEFAULT_CONTACT_FORM: Extract<PageBlock, { type: 'contact_form' }> = {
   email_label: 'Email',
   message_label: 'Message',
   submit_label: 'Send message',
-}
-
-const DEFAULT_NEWSLETTER: Extract<PageBlock, { type: 'newsletter_panel' }> = {
-  type: 'newsletter_panel',
-  title: 'Newsletter — THE DIRT',
-  body: 'Join the mailing list for chapter news and upcoming events.',
-  consent_hint:
-    'By subscribing you agree to receive chapter emails. We will not sell your information.',
-  button_label: 'Subscribe',
 }
 
 export function ContactPage({
@@ -45,10 +35,9 @@ export function ContactPage({
   const lead =
     page?.meta_description ?? 'Reach the Las Vegas chapter by phone, email, or the form below.'
   const blocks = parsePageBlocks(page?.body_json ?? null)
-  const formBlock = findBlock(blocks, 'contact_form') ?? DEFAULT_CONTACT_FORM
-  const newsBlock = findBlock(blocks, 'newsletter_panel') ?? DEFAULT_NEWSLETTER
+  const formBlock = findPageBlock(blocks, 'contact_form') ?? DEFAULT_CONTACT_FORM
   const introBlocks = (blocks ?? []).filter(
-    (b) => b.type !== 'contact_form' && b.type !== 'newsletter_panel',
+    (block) => block.type !== 'contact_form' && block.type !== 'newsletter_panel',
   )
 
   return (
@@ -81,11 +70,15 @@ export function ContactPage({
                   Email: <a href={`mailto:${contact.email}`}>{contact.email}</a>
                 </p>
                 {contact.hours && <p>Hours: {contact.hours}</p>}
+                <SocialLinksList social={contact.social} />
               </>
             )}
             {renderPageContent('', JSON.stringify([formBlock]))}
+            <p class="section-lead">
+              For THE DIRT email delivery,{' '}
+              <a href="/the-dirt#newsletter">subscribe on the THE DIRT page</a>.
+            </p>
           </div>
-          {renderPageContent('', JSON.stringify([newsBlock]))}
         </div>
       </section>
     </Layout>

@@ -225,8 +225,7 @@ const HYBRID_PAGE_SEEDS: Array<{
     slug: 'the-dirt',
     title: 'THE DIRT',
     meta_description: 'News, policy, and chapter announcements from NUCA of Las Vegas.',
-    body_md:
-      'Want email delivery? [Subscribe to the mailing list](/contact#newsletter) on the Contact page.',
+    body_md: '',
   },
 ]
 

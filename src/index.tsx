@@ -518,7 +518,11 @@ app.post('/newsletter/subscribe', async (c) => {
   const email = typeof body.newsletter_email === 'string' ? body.newsletter_email : ''
   const name = typeof body.newsletter_name === 'string' ? body.newsletter_name : ''
   const company = typeof body.newsletter_company === 'string' ? body.newsletter_company : ''
-  const result = await subscribeNewsletter(c.env.DB, { email, name, company, source: 'contact' })
+  const source =
+    typeof body.newsletter_source === 'string' && body.newsletter_source.trim()
+      ? body.newsletter_source.trim()
+      : 'contact'
+  const result = await subscribeNewsletter(c.env.DB, { email, name, company, source })
   if (!result.ok) return c.html(<NewsletterErrorPage {...site} error={result.error} />)
   return c.html(<NewsletterThanksPage {...site} />)
 })

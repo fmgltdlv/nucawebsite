@@ -11,6 +11,7 @@ import {
   DEFAULT_LOGO_SIZE_PERCENT,
   parseLogoSizePercent,
 } from './site-logo'
+import type { SocialLinks } from './social-links'
 
 export type ContactInfo = {
   name: string
@@ -18,6 +19,7 @@ export type ContactInfo = {
   email: string
   address: string
   hours?: string
+  social?: SocialLinks
 }
 
 export type FooterInfo = {

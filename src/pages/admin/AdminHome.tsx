@@ -62,7 +62,7 @@ export function AdminHomePage({ ctx, ...site }: PageProps & { ctx: AdminContext 
               <AdminCountBadge count={inboxCardBadge(counts, 'newsletter')!} />
             )}
           </h2>
-          <p>View THE DIRT mailing list signups from the Contact page.</p>
+          <p>View THE DIRT mailing list signups from the THE DIRT page.</p>
         </a>
       </div>
     </AdminShell>

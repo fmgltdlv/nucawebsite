@@ -27,7 +27,7 @@ export function NewsletterErrorPage({
       title="Subscribe"
       heading="Could not subscribe"
       lead={error}
-      ctaHref="/contact#newsletter"
+      ctaHref="/the-dirt#newsletter"
       ctaLabel="Try again"
     />
   )

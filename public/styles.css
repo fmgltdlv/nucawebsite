@@ -2682,6 +2682,10 @@ button.pill {
   margin: 0 0 0.5rem;
 }
 
+.dirt-newsletter .newsletter-panel {
+  max-width: 36rem;
+}
+
 /* Leadership roster */
 
 .leader-bubble {
@@ -3656,6 +3660,21 @@ body:has(.page-preview-banner) .page-image-overlay-card::before,
   font-weight: 600;
 }
 
+.social-links,
+.footer-social-links {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.social-links a,
+.footer-social-links a {
+  font-weight: 600;
+}
+
 .footer-bottom {
   padding: 1rem 0;
   border-top: 1px solid rgb(255 255 255 / 0.12);
@@ -3987,6 +4006,10 @@ body:has(.page-preview-banner) .page-image-overlay-card::before,
   height: min(75vh, 720px);
   border: 0;
   background: #fff;
+}
+
+.pdf-viewer--compact {
+  height: min(50vh, 480px);
 }
 
 .pdf-fallback {
@@ -4383,6 +4406,14 @@ body:has(.page-preview-banner) .page-image-overlay-card::before,
   border-radius: var(--radius);
   background: var(--color-surface, #fff);
   box-shadow: var(--shadow-md);
+}
+
+.admin-modal--wide {
+  width: min(56rem, calc(100vw - 2rem));
+}
+
+.admin-modal .pdf-preview {
+  margin-bottom: 1rem;
 }
 
 .admin-modal::backdrop {

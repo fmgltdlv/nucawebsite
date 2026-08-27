@@ -6,6 +6,7 @@ import { phoneTelHref } from '../lib/site-settings'
 import { siteNavigation } from '../nav/site-nav'
 import { BreakingNewsBanner } from './BreakingNewsBanner'
 import { SiteNav } from './SiteNav'
+import { SocialLinksList } from './SocialLinks'
 import { StaffPortalLink } from './StaffPortalLink'
 import type { SiteLayoutProps } from '../types/page'
 
@@ -122,13 +123,14 @@ export function Layout({
                 <br />
                 <a href={`mailto:${contact.email}`}>{contact.email}</a>
               </p>
+              <SocialLinksList social={contact.social} className="footer-social-links" />
             </div>
             <div>
               <p class="footer-title">THE DIRT</p>
               <p class="footer-muted">{dirtBlurb}</p>
               <a class="footer-link" href="/the-dirt">Browse THE DIRT</a>
               <br />
-              <a class="footer-link" href="/contact#newsletter">Subscribe by email</a>
+              <a class="footer-link" href="/the-dirt#newsletter">Subscribe by email</a>
             </div>
           </div>
           <div class="container footer-bottom">

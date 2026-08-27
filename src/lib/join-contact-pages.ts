@@ -73,14 +73,6 @@ export const DEFAULT_CONTACT_BLOCKS: PageBlock[] = [
     message_label: 'Message',
     submit_label: 'Send message',
   },
-  {
-    type: 'newsletter_panel',
-    title: 'Newsletter — THE DIRT',
-    body: 'Join the mailing list for chapter news and upcoming events.',
-    consent_hint:
-      'By subscribing you agree to receive chapter emails. We will not sell your information.',
-    button_label: 'Subscribe',
-  },
 ]
 
 export function defaultJoinPageSeed() {

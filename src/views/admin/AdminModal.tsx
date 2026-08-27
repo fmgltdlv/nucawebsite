@@ -8,6 +8,7 @@ type AdminModalProps = {
   formEncType?: string
   formId?: string
   memberLogoForm?: boolean
+  wide?: boolean
 }
 
 export function AdminModal({
@@ -20,11 +21,12 @@ export function AdminModal({
   formEncType,
   formId,
   memberLogoForm,
+  wide = false,
 }: AdminModalProps) {
   const resolvedFormId = formId ?? `${id}-form`
 
   return (
-    <dialog id={id} class="admin-modal">
+    <dialog id={id} class={wide ? 'admin-modal admin-modal--wide' : 'admin-modal'}>
       <div class="admin-modal-form">
         <header class="admin-modal-header">
           <h2>{title}</h2>

@@ -116,7 +116,7 @@ export function AdminContentPageEditPage({
                   : slug === 'join'
                     ? 'Build Join page content with benefits, stats, and membership types blocks. Application form chrome stays fixed below. Manage type labels in Membership types.'
                     : slug === 'contact'
-                      ? 'Edit contact form labels and newsletter panel copy. Chapter contact details still come from Site settings.'
+                      ? 'Edit contact form labels. Chapter contact details still come from Site settings. Newsletter signup is on the THE DIRT page.'
                       : slug === 'resources'
                         ? 'Edit the Resources intro below. Manage structured links separately in Resource links.'
                         : 'Build the page with sections, headings, paragraphs, lists, callout boxes, and event calendars. Style text color, fonts, and section backgrounds. Images can sit in the page, fill the screen as a fading banner, or open as a popup. The preview updates as you edit.'}

@@ -1,5 +1,6 @@
 import { themeOptions } from '../../../config/themes'
 import { toDatetimeLocalValue } from '../../../lib/datetime'
+import { SOCIAL_PLATFORMS } from '../../../lib/social-links'
 import { DEFAULT_SITE_LOGO_URL, LOGO_SIZE_MAX_PERCENT, LOGO_SIZE_MIN_PERCENT } from '../../../lib/site-logo'
 import type { BreakingNews, ContactInfo, FooterInfo } from '../../../lib/site-settings'
 import { AdminShell } from '../../../views/AdminShell'
@@ -113,6 +114,21 @@ export function AdminContentSettingsPage({
           <label for="hours">Hours (optional)</label>
           <input type="text" name="hours" id="hours" value={contact.hours ?? ''} />
         </div>
+
+        <h2>Social media</h2>
+        <p class="admin-note">Optional profile or page URLs. Leave blank to hide on the site.</p>
+        {SOCIAL_PLATFORMS.map((platform) => (
+          <div class="form-field" key={platform.key}>
+            <label for={`social_${platform.key}`}>{platform.label}</label>
+            <input
+              type="url"
+              name={`social_${platform.key}`}
+              id={`social_${platform.key}`}
+              value={contact.social?.[platform.key] ?? ''}
+              placeholder={platform.placeholder}
+            />
+          </div>
+        ))}
 
         <h2>Footer</h2>
         <div class="form-field">

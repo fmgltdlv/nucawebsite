@@ -1,5 +1,6 @@
 import { parseApplicationPayload, type ApplicationPayload, type ApplicationRecord } from '../../lib/applications-db'
 import { getAssetUrl } from '../../lib/r2-assets'
+import { PdfViewer } from '../../views/PdfViewer'
 import { AdminShell } from '../../views/AdminShell'
 import { AdminEditButton, AdminListSection, AdminListSearch } from '../../views/admin/AdminListSection'
 import { AdminInboxToolbar } from '../../views/admin/AdminInboxToolbar'
@@ -65,6 +66,7 @@ function ApplicationEditModal({ app }: { app: ApplicationRecord }) {
   const formId = `form-app-${app.id}`
   const summary = applicationSummary(payload, app.member_type)
   const pdfKey = payload.pdf_key
+  const pdfUrl = pdfKey ? getAssetUrl(pdfKey) : null
   const detailEntries = Object.entries(payload).filter(([key]) => key !== 'pdf_key')
 
   return (
@@ -73,6 +75,7 @@ function ApplicationEditModal({ app }: { app: ApplicationRecord }) {
       title={`Review: ${summary}`}
       formAction={`/admin/applications/${app.id}`}
       formId={formId}
+      wide={Boolean(pdfUrl)}
       footer={
         <AdminEditModalFooter
           formId={formId}
@@ -83,12 +86,8 @@ function ApplicationEditModal({ app }: { app: ApplicationRecord }) {
         />
       }
     >
-      {pdfKey ? (
-        <p class="admin-detail-pdf-link">
-          <a class="btn btn-secondary" href={getAssetUrl(pdfKey)} target="_blank" rel="noopener noreferrer">
-            Download application PDF
-          </a>
-        </p>
+      {pdfUrl ? (
+        <PdfViewer pdfUrl={pdfUrl} title={`Application PDF: ${summary}`} compact />
       ) : null}
       <dl class="admin-detail-list admin-detail-list-modal">
         {detailEntries.map(([key, value]) => (

@@ -67,6 +67,7 @@ import {
   uploadPdf,
 } from '../lib/r2-assets'
 import { applySiteLogoChange, parseLogoSizePercent, resolveSiteLogoUrl } from '../lib/site-logo'
+import { parseSocialLinksFromBody } from '../lib/social-links'
 import {
   getBreakingNewsSettings,
   getContactInfo,
@@ -253,6 +254,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
       email: typeof body.email === 'string' ? body.email.trim() : '',
       address: typeof body.address === 'string' ? body.address.trim() : '',
       hours: typeof body.hours === 'string' && body.hours.trim() ? body.hours.trim() : undefined,
+      social: parseSocialLinksFromBody(body),
     })
     await setFooterInfo(c.env.DB, {
       dirtBlurb: typeof body.dirt_blurb === 'string' ? body.dirt_blurb.trim() : undefined,

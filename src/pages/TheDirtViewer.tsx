@@ -1,4 +1,5 @@
 import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
+import { PdfViewer } from '../views/PdfViewer'
 import { StatusPage } from '../views/StatusPage'
 import type { DirtReleaseRecord } from '../lib/dirt-db'
 import { formatArchiveDate } from '../lib/format'
@@ -27,20 +28,7 @@ export function TheDirtViewerPage({
             <a class="btn btn-secondary btn-sm" href="/the-dirt">← Back to THE DIRT</a>
           </p>
           {release.summary && <p class="section-lead">{release.summary}</p>}
-          <div class="pdf-toolbar">
-            <a class="btn btn-secondary btn-sm" href={pdfUrl} download>
-              Download PDF
-            </a>
-            <a class="btn btn-secondary btn-sm" href={pdfUrl} target="_blank" rel="noopener noreferrer">
-              Open in new tab ↗
-            </a>
-          </div>
-          <div class="pdf-viewer-wrap">
-            <iframe class="pdf-viewer" title={`PDF: ${release.title}`} src={pdfUrl} />
-          </div>
-          <p class="pdf-fallback">
-            If the preview does not load, use <a href={pdfUrl}>Open in new tab</a> or download the file.
-          </p>
+          <PdfViewer pdfUrl={pdfUrl} title={`PDF: ${release.title}`} />
         </div>
       </section>
     </Layout>

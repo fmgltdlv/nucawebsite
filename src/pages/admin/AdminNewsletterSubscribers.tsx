@@ -70,7 +70,7 @@ export function AdminNewsletterSubscribersPage({
       activePath="/admin/newsletter"
     >
       <p class="admin-note">
-        THE DIRT mailing list signups from the Contact page. Export a CSV to import into your email provider.
+        THE DIRT mailing list signups from the THE DIRT page. Export a CSV to import into your email provider.
       </p>
       {flash && <p class="admin-flash">{flash}</p>}
 

@@ -3,13 +3,33 @@ import { ArchiveCard, ArchiveCardList } from '../views/ArchiveCard'
 import type { DirtReleaseRecord } from '../lib/dirt-db'
 import { mergeDirtFeed, paginateDirtFeed } from '../lib/dirt-feed'
 import { getAssetUrl } from '../lib/r2-assets'
-import { renderPageContent } from '../lib/page-blocks'
+import {
+  findPageBlock,
+  parsePageBlocks,
+  renderPageContent,
+  type PageBlock,
+} from '../lib/page-blocks'
 import type { PageRecord } from '../lib/pages-db'
 import type { PostRecord } from '../lib/posts-db'
 import type { PageProps } from '../types/page'
 
+const DEFAULT_NEWSLETTER: Extract<PageBlock, { type: 'newsletter_panel' }> = {
+  type: 'newsletter_panel',
+  title: 'Newsletter — THE DIRT',
+  body: 'Join the mailing list for chapter news and upcoming events.',
+  consent_hint:
+    'By subscribing you agree to receive chapter emails. We will not sell your information.',
+  button_label: 'Subscribe',
+  source: 'the-dirt',
+}
+
 function dirtPageHref(listPage: number): string {
   return listPage <= 1 ? '/the-dirt' : `/the-dirt?page=${listPage}`
+}
+
+/** Legacy THE DIRT intros may link to Contact newsletter; point to on-page form. */
+function rewriteLegacyNewsletterLinks(md: string): string {
+  return md.replace(/\/contact(?:\/#|#)newsletter/g, '/the-dirt#newsletter')
 }
 
 export function TheDirtArchivePage({
@@ -41,7 +61,11 @@ export function TheDirtArchivePage({
   const lead =
     page?.meta_description ??
     'Chapter news releases, policy updates, and announcements. Open PDF issues in your browser or read web posts.'
-  const intro = page?.body_json || page?.body_md?.trim()
+  const blocks = parsePageBlocks(page?.body_json ?? null)
+  const newsBlock = findPageBlock(blocks, 'newsletter_panel') ?? DEFAULT_NEWSLETTER
+  const introBlocks = (blocks ?? []).filter((block) => block.type !== 'newsletter_panel')
+  const hasBlockIntro = introBlocks.length > 0
+  const hasMarkdownIntro = !blocks && Boolean(page?.body_md?.trim())
 
   return (
     <Layout
@@ -54,14 +78,14 @@ export function TheDirtArchivePage({
       <PageHeader title={title} lead={lead} />
       <section class="section">
         <div class="container">
-          {intro ? (
-            <div class="prose dirt-subscribe">{renderPageContent(page?.body_md ?? '', page?.body_json)}</div>
-          ) : (
-            <p class="section-lead dirt-subscribe">
-              Want email delivery?{' '}
-              <a href="/contact#newsletter">Subscribe to the mailing list</a> on the Contact page.
-            </p>
-          )}
+          {hasBlockIntro ? (
+            <div class="prose dirt-intro">{renderPageContent('', JSON.stringify(introBlocks))}</div>
+          ) : null}
+          {hasMarkdownIntro ? (
+            <div class="prose dirt-intro">
+              {renderPageContent(rewriteLegacyNewsletterLinks(page?.body_md ?? ''), null)}
+            </div>
+          ) : null}
           {totalItems > 0 ? (
             <>
               <ArchiveCardList>
@@ -137,6 +161,11 @@ export function TheDirtArchivePage({
           ) : (
             <p class="prose">No releases have been published yet.</p>
           )}
+        </div>
+      </section>
+      <section class="section section-muted">
+        <div class="container dirt-newsletter">
+          {renderPageContent('', JSON.stringify([{ ...newsBlock, source: 'the-dirt' }]))}
         </div>
       </section>
     </Layout>
