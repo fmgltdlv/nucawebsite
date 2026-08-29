@@ -1,5 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
+  "account_id": "ded6f41ae76367e770374f96348202dc",
   "name": "nucawebsite",
   "main": "src/index.tsx",
   "compatibility_date": "2025-04-01",
@@ -11,7 +12,7 @@
     {
       "binding": "DB",
       "database_name": "nuca-lv",
-      "database_id": "5c1a2747-1aa5-40e8-bccc-23ca40c1af7f",
+      "database_id": "7aae6100-3d3f-4d53-aba7-b0d19b8c0328",
       "migrations_dir": "migrations"
     }
   ],
