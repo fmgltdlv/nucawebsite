@@ -1,5 +1,5 @@
 import type { ThemeId } from '../config/themes'
-import type { BreakingNews, ContactInfo, FooterInfo } from '../lib/site-settings'
+import type { BreakingNews, ContactInfo, FooterInfo, HeaderBranding } from '../lib/site-settings'
 import type { NavEntry } from '../nav/site-nav'
 
 export type SiteLayoutProps = {
@@ -9,6 +9,7 @@ export type SiteLayoutProps = {
   breakingNews?: BreakingNews | null
   logoUrl?: string
   logoSizePercent?: number
+  headerBranding?: HeaderBranding
   navigation?: NavEntry[]
   staffInboxCount?: number
 }

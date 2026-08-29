@@ -188,6 +188,7 @@ export function HomePage({
   breakingNews,
   logoUrl,
   logoSizePercent,
+  headerBranding,
   navigation,
   staffInboxCount,
   page,
@@ -207,7 +208,7 @@ export function HomePage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, navigation, staffInboxCount })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount })}
       title="Home"
       description={page?.meta_description ?? HOME_DESCRIPTION}
     >

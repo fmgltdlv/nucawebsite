@@ -17,6 +17,7 @@ export function EventsPage({
   breakingNews,
   logoUrl,
   logoSizePercent,
+  headerBranding,
   navigation,
   staffInboxCount,
   events,
@@ -54,7 +55,7 @@ export function EventsPage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, navigation, staffInboxCount })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount })}
       title={title}
       description={cmsPage?.meta_description ?? undefined}
     >

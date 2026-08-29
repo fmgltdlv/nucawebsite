@@ -36,6 +36,20 @@ export type BreakingNews = {
   showPopup?: boolean
 }
 
+export type HeaderTitlePlacement = 'none' | 'beside' | 'below'
+
+export type HeaderBranding = {
+  title: string
+  subtitle?: string
+  placement: HeaderTitlePlacement
+}
+
+const DEFAULT_HEADER_BRANDING: HeaderBranding = {
+  title: '',
+  subtitle: '',
+  placement: 'none',
+}
+
 const DEFAULT_BREAKING_NEWS: BreakingNews = {
   active: false,
   title: '',
@@ -145,6 +159,42 @@ export async function setSiteLogoSizePercent(db: D1Database, percent: number): P
     return
   }
   await setSetting(db, 'logo_size_percent', value)
+}
+
+export function parseHeaderTitlePlacement(value: unknown): HeaderTitlePlacement {
+  if (value === 'beside' || value === 'below') return value
+  return 'none'
+}
+
+export function parseHeaderBranding(value: unknown): HeaderBranding {
+  if (!value || typeof value !== 'object') return { ...DEFAULT_HEADER_BRANDING }
+  const raw = value as Partial<HeaderBranding>
+  const title = typeof raw.title === 'string' ? raw.title.trim() : ''
+  const subtitle = typeof raw.subtitle === 'string' ? raw.subtitle.trim() : ''
+  const placement = parseHeaderTitlePlacement(raw.placement)
+  return {
+    title,
+    ...(subtitle ? { subtitle } : {}),
+    placement,
+  }
+}
+
+export async function getHeaderBranding(db: D1Database): Promise<HeaderBranding> {
+  const stored = await getSetting<HeaderBranding>(db, 'header_branding')
+  return parseHeaderBranding(stored)
+}
+
+export async function setHeaderBranding(db: D1Database, branding: HeaderBranding): Promise<void> {
+  const value = parseHeaderBranding(branding)
+  const isDefault =
+    value.title === '' &&
+    !value.subtitle &&
+    value.placement === DEFAULT_HEADER_BRANDING.placement
+  if (isDefault) {
+    await db.prepare('DELETE FROM site_settings WHERE key = ?').bind('header_branding').run()
+    return
+  }
+  await setSetting(db, 'header_branding', value)
 }
 
 export async function getMemberGridLogoSize(db: D1Database): Promise<MemberGridLogoSizeId> {

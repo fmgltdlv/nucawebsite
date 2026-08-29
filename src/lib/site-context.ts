@@ -10,12 +10,14 @@ import {
   getBreakingNews,
   getContactInfo,
   getFooterInfo,
+  getHeaderBranding,
   getSiteLogoR2Key,
   getSiteLogoSizePercent,
   getThemeId,
   type BreakingNews,
   type ContactInfo,
   type FooterInfo,
+  type HeaderBranding,
 } from './site-settings'
 
 export type PublicSiteContext = {
@@ -25,6 +27,7 @@ export type PublicSiteContext = {
   breakingNews: BreakingNews | null
   logoUrl: string
   logoSizePercent: number
+  headerBranding: HeaderBranding
   navigation: NavEntry[]
 }
 
@@ -34,12 +37,13 @@ export type AdminLayoutProps = PublicSiteContext & {
 
 export async function loadPublicSiteContext(env: Env): Promise<PublicSiteContext> {
   const theme = await getThemeId(env.DB)
-  const [contact, footer, breakingNews, logoR2Key, logoSizePercent, navigation] = await Promise.all([
+  const [contact, footer, breakingNews, logoR2Key, logoSizePercent, headerBranding, navigation] = await Promise.all([
     getContactInfo(env.DB),
     getFooterInfo(env.DB),
     getBreakingNews(env.DB),
     getSiteLogoR2Key(env.DB),
     getSiteLogoSizePercent(env.DB),
+    getHeaderBranding(env.DB),
     getPublishedSiteNavigation(env.DB),
   ])
   return {
@@ -49,6 +53,7 @@ export async function loadPublicSiteContext(env: Env): Promise<PublicSiteContext
     breakingNews,
     logoUrl: resolveSiteLogoUrl(logoR2Key),
     logoSizePercent,
+    headerBranding,
     navigation,
   }
 }

@@ -15,6 +15,7 @@ export function AdminShell({
   breakingNews,
   logoUrl,
   logoSizePercent,
+  headerBranding,
   navigation,
   user,
   inboxCounts,
@@ -53,6 +54,7 @@ export function AdminShell({
         breakingNews,
         logoUrl,
         logoSizePercent,
+        headerBranding,
         navigation,
         staffInboxCount: totalNew > 0 ? totalNew : undefined,
       })}

@@ -12,6 +12,7 @@ export function ResourcesPage({
   breakingNews,
   logoUrl,
   logoSizePercent,
+  headerBranding,
   navigation,
   staffInboxCount,
   page,
@@ -27,7 +28,7 @@ export function ResourcesPage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, navigation, staffInboxCount })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount })}
       title="Resources"
       description={page?.meta_description ?? undefined}
     >

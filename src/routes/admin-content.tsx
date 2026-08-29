@@ -72,12 +72,15 @@ import {
   getBreakingNewsSettings,
   getContactInfo,
   getFooterInfo,
+  getHeaderBranding,
   getSiteLogoR2Key,
   getSiteLogoSizePercent,
   getThemeId,
+  parseHeaderBranding,
   setBreakingNews,
   setContactInfo,
   setFooterInfo,
+  setHeaderBranding,
   setSiteLogoR2Key,
   setSiteLogoSizePercent,
   setThemeId,
@@ -211,6 +214,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const themeId = await getThemeId(c.env.DB)
     const logoR2Key = await getSiteLogoR2Key(c.env.DB)
     const logoSizePercent = await getSiteLogoSizePercent(c.env.DB)
+    const headerBranding = await getHeaderBranding(c.env.DB)
     const breaking = await getBreakingNewsSettings(c.env.DB)
     return c.html(
       <AdminContentSettingsPage
@@ -222,6 +226,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
         breakingNews={breaking}
         logoUrl={resolveSiteLogoUrl(logoR2Key)}
         logoSizePercent={logoSizePercent}
+        headerBranding={headerBranding}
         flash={flashMessage(c, '1')}
         error={c.req.query('error')}
       />,
@@ -247,6 +252,15 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
       parseLogoSizePercent(
         typeof body.logo_size_percent === 'string' ? body.logo_size_percent : undefined,
       ),
+    )
+    await setHeaderBranding(
+      c.env.DB,
+      parseHeaderBranding({
+        title: typeof body.header_title === 'string' ? body.header_title : '',
+        subtitle: typeof body.header_subtitle === 'string' ? body.header_subtitle : '',
+        placement:
+          typeof body.header_title_placement === 'string' ? body.header_title_placement : 'none',
+      }),
     )
     await setContactInfo(c.env.DB, {
       name: typeof body.name === 'string' ? body.name.trim() : '',

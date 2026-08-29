@@ -85,6 +85,7 @@ export function MembersPage({
   breakingNews,
   logoUrl,
   logoSizePercent,
+  headerBranding,
   navigation,
   staffInboxCount,
   filter,
@@ -118,7 +119,7 @@ export function MembersPage({
   ]
 
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, navigation, staffInboxCount })} title="Members">
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount })} title="Members">
       <PageHeader title="Members" />
       <section class="section" style={memberGridLogoStyle(memberGridLogoSize)}>
         <div class="container">

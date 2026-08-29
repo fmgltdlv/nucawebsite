@@ -2,7 +2,7 @@ import { themeOptions } from '../../../config/themes'
 import { toDatetimeLocalValue } from '../../../lib/datetime'
 import { SOCIAL_PLATFORMS } from '../../../lib/social-links'
 import { DEFAULT_SITE_LOGO_URL, LOGO_SIZE_MAX_PERCENT, LOGO_SIZE_MIN_PERCENT } from '../../../lib/site-logo'
-import type { BreakingNews, ContactInfo, FooterInfo } from '../../../lib/site-settings'
+import type { BreakingNews, ContactInfo, FooterInfo, HeaderBranding } from '../../../lib/site-settings'
 import { AdminShell } from '../../../views/AdminShell'
 import type { AdminContext } from '../../../lib/admin-context'
 import type { PageProps } from '../../../types/page'
@@ -15,6 +15,7 @@ export function AdminContentSettingsPage({
   breakingNews,
   logoUrl,
   logoSizePercent,
+  headerBranding,
   flash,
   error,
   ...site
@@ -26,6 +27,7 @@ export function AdminContentSettingsPage({
   breakingNews: BreakingNews
   logoUrl: string
   logoSizePercent: number
+  headerBranding: HeaderBranding
   flash?: string
   error?: string
 }) {
@@ -36,6 +38,7 @@ export function AdminContentSettingsPage({
       footer={footer}
       logoUrl={logoUrl}
       logoSizePercent={logoSizePercent}
+      headerBranding={headerBranding}
       breakingNews={breakingNews}
       user={ctx.user}
       inboxCounts={ctx.inboxCounts}
@@ -90,6 +93,59 @@ export function AdminContentSettingsPage({
             </label>
           )}
         </div>
+
+        <h3>Header title</h3>
+        <p class="admin-note">Optional title and tagline shown in the site header next to or under the logo.</p>
+        <div class="form-field">
+          <label for="header_title">Header title</label>
+          <input
+            type="text"
+            name="header_title"
+            id="header_title"
+            value={headerBranding.title}
+            placeholder="NUCA of Las Vegas"
+          />
+        </div>
+        <div class="form-field">
+          <label for="header_subtitle">Header subtitle (optional)</label>
+          <input
+            type="text"
+            name="header_subtitle"
+            id="header_subtitle"
+            value={headerBranding.subtitle ?? ''}
+            placeholder="We Dig Las Vegas"
+          />
+        </div>
+        <fieldset class="form-field">
+          <legend>Title placement</legend>
+          <label class="admin-check">
+            <input
+              type="radio"
+              name="header_title_placement"
+              value="none"
+              checked={headerBranding.placement === 'none'}
+            />
+            Hidden (logo only)
+          </label>
+          <label class="admin-check">
+            <input
+              type="radio"
+              name="header_title_placement"
+              value="beside"
+              checked={headerBranding.placement === 'beside'}
+            />
+            Next to logo
+          </label>
+          <label class="admin-check">
+            <input
+              type="radio"
+              name="header_title_placement"
+              value="below"
+              checked={headerBranding.placement === 'below'}
+            />
+            Under logo
+          </label>
+        </fieldset>
 
         <h2>Contact information</h2>
         <div class="form-field">

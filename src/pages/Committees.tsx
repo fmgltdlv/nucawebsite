@@ -34,6 +34,7 @@ export function CommitteesPage({
   breakingNews,
   logoUrl,
   logoSizePercent,
+  headerBranding,
   navigation,
   staffInboxCount,
   page,
@@ -45,7 +46,7 @@ export function CommitteesPage({
   committees: CommitteeRecord[]
 }) {
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, navigation, staffInboxCount })} title="Committees">
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount })} title="Committees">
       <PageHeader
         title={page?.title ?? 'Committees'}
         lead={

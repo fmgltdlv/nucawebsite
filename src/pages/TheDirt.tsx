@@ -39,6 +39,7 @@ export function TheDirtArchivePage({
   breakingNews,
   logoUrl,
   logoSizePercent,
+  headerBranding,
   navigation,
   staffInboxCount,
   posts,
@@ -69,7 +70,7 @@ export function TheDirtArchivePage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, navigation, staffInboxCount })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount })}
       title={title}
       description={
         page?.meta_description ?? 'News, policy, and chapter announcements from NUCA of Las Vegas.'
