@@ -1,6 +1,7 @@
 import type { EventOccurrenceView } from '../lib/events'
 import { eventFlyerUrl } from '../lib/events'
 import { formatEventDate } from '../lib/format'
+import { plainTextToSafeHtml } from '../lib/markdown'
 import type { PageProps } from '../types/page'
 import { Layout, pickLayoutSite } from '../views/Layout'
 import { StatusPage } from '../views/StatusPage'
@@ -187,7 +188,7 @@ export function EventDetailPage({
               {master.description && (
                 <section class="event-detail-section">
                   <h2>About event</h2>
-                  <div class="event-detail-description prose">{master.description}</div>
+                  <div class="event-detail-description prose">{plainTextToSafeHtml(master.description)}</div>
                 </section>
               )}
 
