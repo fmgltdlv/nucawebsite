@@ -60,3 +60,16 @@ export function renderMarkdown(md: string): string {
 export function markdownToSafeHtml(md: string) {
   return raw(renderMarkdown(md))
 }
+
+const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g
+
+/** Escape plain text, then auto-link email addresses for safe HTML output. */
+export function plainTextToSafeHtml(text: string) {
+  const escaped = escapeHtml(text)
+  const linked = escaped.replace(EMAIL_PATTERN, (email) => {
+    const trimmed = email.replace(/[.,;:!?)]+$/, '')
+    const trailing = email.slice(trimmed.length)
+    return `<a href="mailto:${trimmed}">${trimmed}</a>${trailing}`
+  })
+  return raw(linked)
+}
