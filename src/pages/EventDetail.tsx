@@ -151,38 +151,36 @@ export function EventDetailPage({
                 )}
               </div>
 
-              <div class="event-detail-card event-detail-registration">
-                <h2 class="event-detail-card-title">Registration</h2>
-                {rsvpEnabled ? (
-                  isFull ? (
-                    <p class="event-detail-card-muted">This event is full. Registration is closed.</p>
+              {(rsvpEnabled || master.registration_url) && (
+                <div class="event-detail-card event-detail-registration">
+                  <h2 class="event-detail-card-title">Registration</h2>
+                  {rsvpEnabled ? (
+                    isFull ? (
+                      <p class="event-detail-card-muted">This event is full. Registration is closed.</p>
+                    ) : (
+                      <EventRsvpForm
+                        eventId={master.id}
+                        startsAt={starts_at}
+                        spotsLeft={spotsLeft}
+                        limit={limit}
+                        errorMessage={errorMessage}
+                      />
+                    )
                   ) : (
-                    <EventRsvpForm
-                      eventId={master.id}
-                      startsAt={starts_at}
-                      spotsLeft={spotsLeft}
-                      limit={limit}
-                      errorMessage={errorMessage}
-                    />
-                  )
-                ) : master.registration_url ? (
-                  <a class="btn btn-primary event-detail-register" href={master.registration_url}>
-                    Register
-                  </a>
-                ) : (
-                  <p class="event-detail-card-muted">
-                    Registration is not required for this event. Attendance is free and open!
-                  </p>
-                )}
-                {rsvpEnabled && master.registration_url && (
-                  <p class="event-detail-card-muted event-rsvp-alt">
-                    Prefer an external form?{' '}
-                    <a href={master.registration_url} target="_blank" rel="noopener noreferrer">
-                      Register elsewhere ↗
+                    <a class="btn btn-primary event-detail-register" href={master.registration_url!}>
+                      Register
                     </a>
-                  </p>
-                )}
-              </div>
+                  )}
+                  {rsvpEnabled && master.registration_url && (
+                    <p class="event-detail-card-muted event-rsvp-alt">
+                      Prefer an external form?{' '}
+                      <a href={master.registration_url} target="_blank" rel="noopener noreferrer">
+                        Register elsewhere ↗
+                      </a>
+                    </p>
+                  )}
+                </div>
+              )}
 
               {master.description && (
                 <section class="event-detail-section">
