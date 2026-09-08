@@ -1,5 +1,7 @@
 (function () {
   const PREVIEW_MODE_KEY = 'page-preview-mode'
+  /** Invalidates in-flight previews when admin-nav replaces the editor. */
+  let pageBlocksPreviewSession = 0
 
   window.initPagePreviewMode = function initPagePreviewMode() {
     const toggle = document.querySelector('[data-preview-mode-toggle]')
@@ -57,6 +59,7 @@
   if (!(root instanceof HTMLElement) || !(hiddenInput instanceof HTMLInputElement)) return
   if (root.dataset.pageBlocksWired === '1') return
   root.dataset.pageBlocksWired = '1'
+  const previewSession = ++pageBlocksPreviewSession
 
   /** @typedef {'left' | 'center' | 'right'} TextAlign */
   /** @typedef {'default' | 'muted' | 'accent' | 'primary'} BlockColor */
@@ -86,6 +89,8 @@
   let blocks = []
   let previewTimer = 0
   let previewRequestId = 0
+  let previewInFlight = false
+  let previewQueued = false
   /** @type {string | null} */
   let activeBlockIndex = null
   /** @type {Set<string>} */
@@ -424,7 +429,7 @@
   ]
 
   function parseInitial() {
-    const raw = root.dataset.initial || '[]'
+    const raw = hiddenInput.value || root.dataset.initial || '[]'
     try {
       const parsed = JSON.parse(raw)
       blocks = Array.isArray(parsed) ? parsed : []
@@ -441,7 +446,7 @@
   function syncHidden(options = {}) {
     hiddenInput.value = JSON.stringify(blocks)
     if (savedSnapshot) markDirty()
-    schedulePreview(Boolean(options.immediate))
+    if (!options.skipPreview) schedulePreview(Boolean(options.immediate))
   }
 
   let savedSnapshot = ''
@@ -483,12 +488,20 @@
     }
   }
 
-  const PREVIEW_DEBOUNCE_MS = 80
+  const PREVIEW_DEBOUNCE_MS = 400
+
+  function stopPreviewUpdates() {
+    window.clearTimeout(previewTimer)
+    previewQueued = false
+    previewRequestId += 1
+  }
 
   function schedulePreview(immediate = false) {
     if (!(previewFrame instanceof HTMLIFrameElement) || !previewDraftUrl) return
     window.clearTimeout(previewTimer)
-    previewTimer = window.setTimeout(updatePreview, immediate ? 0 : PREVIEW_DEBOUNCE_MS)
+    previewTimer = window.setTimeout(() => {
+      void updatePreview()
+    }, immediate ? 0 : PREVIEW_DEBOUNCE_MS)
   }
 
   /**
@@ -545,7 +558,14 @@
 
   async function updatePreview() {
     if (!(previewFrame instanceof HTMLIFrameElement) || !previewDraftUrl) return
+    if (previewSession !== pageBlocksPreviewSession) return
+    if (previewInFlight) {
+      previewQueued = true
+      return
+    }
 
+    previewInFlight = true
+    previewQueued = false
     const requestId = ++previewRequestId
     const title = titleInput instanceof HTMLInputElement ? titleInput.value : ''
     const meta_description = metaInput instanceof HTMLInputElement ? metaInput.value : ''
@@ -563,13 +583,13 @@
         }),
       })
 
-      if (requestId !== previewRequestId) return
+      if (requestId !== previewRequestId || previewSession !== pageBlocksPreviewSession) return
       if (!response.ok) {
         showPreviewError(`Preview failed (${response.status}). Your edits are still in the editor.`)
         return
       }
       const html = await response.text()
-      if (requestId !== previewRequestId) return
+      if (requestId !== previewRequestId || previewSession !== pageBlocksPreviewSession) return
       showPreviewError('')
       applyPreviewHtml(html)
       if (!(previewFrame.contentDocument?.body?.childNodes.length)) {
@@ -584,10 +604,17 @@
         )
       }
     } catch {
-      if (requestId !== previewRequestId) return
+      if (requestId !== previewRequestId || previewSession !== pageBlocksPreviewSession) return
       showPreviewError('Preview could not update. Check your connection and try editing again.')
     } finally {
-      if (requestId === previewRequestId) setPreviewUpdating(false)
+      previewInFlight = false
+      if (requestId === previewRequestId && previewSession === pageBlocksPreviewSession) {
+        setPreviewUpdating(false)
+        if (previewQueued) {
+          previewQueued = false
+          void updatePreview()
+        }
+      }
     }
   }
 
@@ -2254,7 +2281,8 @@
   }
 
   form?.addEventListener('submit', (event) => {
-    syncHidden()
+    stopPreviewUpdates()
+    syncHidden({ skipPreview: true })
     if (titleInput instanceof HTMLInputElement) {
       const title = titleInput.value.trim()
       if (!title) {

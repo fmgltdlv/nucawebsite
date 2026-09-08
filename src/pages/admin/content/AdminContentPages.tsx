@@ -1,7 +1,7 @@
 import {
   PAGE_LABELS,
   PAGE_SLUGS,
-  type PageRecord,
+  type PageSummary,
 } from '../../../lib/pages-db'
 import type { CommitteeRecord } from '../../../lib/committees-db'
 import { committeePageSlug } from '../../../lib/committee-pages'
@@ -20,7 +20,7 @@ function PageListItem({
 }: {
   slug: string
   label: string
-  page: PageRecord | undefined
+  page: PageSummary | undefined
   deletable?: boolean
 }) {
   const publicPath = pagePublicPath(slug)
@@ -71,8 +71,8 @@ export function AdminContentPagesPage({
   ...site
 }: PageProps & {
   ctx: AdminContext
-  pages: PageRecord[]
-  customPages: PageRecord[]
+  pages: PageSummary[]
+  customPages: PageSummary[]
   committees: CommitteeRecord[]
   flash?: string
   error?: string

@@ -1,19 +1,19 @@
 import type { Env } from '../env'
-import type { ThemeId } from '../config/themes'
+import { parseThemeId, type ThemeId } from '../config/themes'
+import { site as defaultSite } from '../data/demo'
 import type { NavEntry } from '../nav/site-nav'
 import type { AdminInboxCounts } from './admin-inbox-counts'
 import { totalInboxCount } from './admin-inbox-counts'
 import { getPublishedSiteNavigation } from './nav-items-db'
 import { seedContentIfEmpty } from './seed'
-import { resolveSiteLogoUrl } from './site-logo'
+import { DEFAULT_LOGO_SIZE_PERCENT, parseLogoSizePercent, resolveSiteLogoUrl } from './site-logo'
 import {
-  getBreakingNews,
-  getContactInfo,
-  getFooterInfo,
-  getHeaderBranding,
-  getSiteLogoR2Key,
-  getSiteLogoSizePercent,
-  getThemeId,
+  DEFAULT_BREAKING_NEWS,
+  DEFAULT_FOOTER,
+  loadSiteSettingsMap,
+  parseHeaderBranding,
+  resolveBreakingNews,
+  settingFromMap,
   type BreakingNews,
   type ContactInfo,
   type FooterInfo,
@@ -36,24 +36,24 @@ export type AdminLayoutProps = PublicSiteContext & {
 }
 
 export async function loadPublicSiteContext(env: Env): Promise<PublicSiteContext> {
-  const theme = await getThemeId(env.DB)
-  const [contact, footer, breakingNews, logoR2Key, logoSizePercent, headerBranding, navigation] = await Promise.all([
-    getContactInfo(env.DB),
-    getFooterInfo(env.DB),
-    getBreakingNews(env.DB),
-    getSiteLogoR2Key(env.DB),
-    getSiteLogoSizePercent(env.DB),
-    getHeaderBranding(env.DB),
+  const [settings, navigation] = await Promise.all([
+    loadSiteSettingsMap(env.DB),
     getPublishedSiteNavigation(env.DB),
   ])
+  const contact = settingFromMap<ContactInfo>(settings, 'contact') ?? { ...defaultSite }
+  const footer = settingFromMap<FooterInfo>(settings, 'footer') ?? { ...DEFAULT_FOOTER }
+  const breakingStored =
+    settingFromMap<BreakingNews>(settings, 'breaking_news') ?? { ...DEFAULT_BREAKING_NEWS }
+  const logoR2Key = settingFromMap<string>(settings, 'logo_r2_key')
+  const logoSizeStored = settingFromMap<number>(settings, 'logo_size_percent')
   return {
-    theme,
+    theme: parseThemeId(settingFromMap<string>(settings, 'theme_id')),
     contact,
     footer,
-    breakingNews,
+    breakingNews: resolveBreakingNews(breakingStored),
     logoUrl: resolveSiteLogoUrl(logoR2Key),
-    logoSizePercent,
-    headerBranding,
+    logoSizePercent: parseLogoSizePercent(logoSizeStored ?? DEFAULT_LOGO_SIZE_PERCENT),
+    headerBranding: parseHeaderBranding(settingFromMap(settings, 'header_branding')),
     navigation,
   }
 }

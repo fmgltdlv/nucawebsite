@@ -29,11 +29,15 @@ export function adminAuthMiddleware(): MiddlewareHandler<AdminApp> {
     if (!c.req.path.startsWith('/admin')) return next()
 
     if (isPublicAdminRoute(c.req.method, c.req.path)) {
-      c.set('adminCtx', null)
+      if (c.get('adminCtx') === undefined) c.set('adminCtx', null)
       return next()
     }
 
-    const ctx = await resolveAdminContext(c)
+    let ctx = c.get('adminCtx')
+    if (ctx === undefined) {
+      ctx = await resolveAdminContext(c)
+      c.set('adminCtx', ctx)
+    }
     if (!ctx) {
       if (c.req.path.startsWith('/admin/api/')) {
         return c.json({ error: 'Unauthorized' }, 401)
@@ -41,7 +45,6 @@ export function adminAuthMiddleware(): MiddlewareHandler<AdminApp> {
       return c.redirect('/admin/login', 303)
     }
 
-    c.set('adminCtx', ctx)
     return next()
   }
 }

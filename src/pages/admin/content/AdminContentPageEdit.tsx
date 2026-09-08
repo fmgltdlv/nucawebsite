@@ -143,7 +143,6 @@ export function AdminContentPageEditPage({
               <div
                 id="page-blocks-editor"
                 class="page-blocks-editor"
-                data-initial={blocksJson}
                 data-committees={committeesJson}
                 data-internal-links={internalLinksJson}
                 data-page-slug={slug}
@@ -218,7 +217,7 @@ export function AdminContentPageEditPage({
         </div>
       </form>
       <script src="/admin-link-picker.js" defer></script>
-      <script src="/page-blocks-editor.js?v=16" defer></script>
+      <script src="/page-blocks-editor.js?v=17" defer></script>
     </AdminShell>
   )
 }

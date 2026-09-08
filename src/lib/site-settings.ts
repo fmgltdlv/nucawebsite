@@ -50,7 +50,7 @@ const DEFAULT_HEADER_BRANDING: HeaderBranding = {
   placement: 'none',
 }
 
-const DEFAULT_BREAKING_NEWS: BreakingNews = {
+export const DEFAULT_BREAKING_NEWS: BreakingNews = {
   active: false,
   title: '',
   body: '',
@@ -68,6 +68,27 @@ export async function getSetting<T>(db: D1Database, key: string): Promise<T | nu
   } catch {
     return null
   }
+}
+
+/** Load all site_settings rows in one query (public layout reads several keys per request). */
+export async function loadSiteSettingsMap(db: D1Database): Promise<Map<string, unknown>> {
+  const { results } = await db
+    .prepare('SELECT key, value_json FROM site_settings')
+    .all<{ key: string; value_json: string }>()
+  const map = new Map<string, unknown>()
+  for (const row of results ?? []) {
+    try {
+      map.set(row.key, JSON.parse(row.value_json) as unknown)
+    } catch {
+      // Skip malformed rows; callers fall back to defaults.
+    }
+  }
+  return map
+}
+
+export function settingFromMap<T>(map: Map<string, unknown>, key: string): T | null {
+  if (!map.has(key)) return null
+  return map.get(key) as T
 }
 
 export async function setSetting(db: D1Database, key: string, value: unknown): Promise<void> {
@@ -92,14 +113,14 @@ export async function setContactInfo(db: D1Database, contact: ContactInfo): Prom
   await setSetting(db, 'contact', contact)
 }
 
+export const DEFAULT_FOOTER: FooterInfo = {
+  dirtBlurb: 'Weekly chapter news and event updates.',
+  copyrightNote: '',
+}
+
 export async function getFooterInfo(db: D1Database): Promise<FooterInfo> {
   const stored = await getSetting<FooterInfo>(db, 'footer')
-  return (
-    stored ?? {
-      dirtBlurb: 'Weekly chapter news and event updates.',
-      copyrightNote: '',
-    }
-  )
+  return stored ?? { ...DEFAULT_FOOTER }
 }
 
 export async function setFooterInfo(db: D1Database, footer: FooterInfo): Promise<void> {
@@ -120,14 +141,17 @@ export async function getBreakingNewsSettings(db: D1Database): Promise<BreakingN
   return stored ?? { ...DEFAULT_BREAKING_NEWS }
 }
 
-export async function getBreakingNews(db: D1Database): Promise<BreakingNews | null> {
-  const stored = await getBreakingNewsSettings(db)
+export function resolveBreakingNews(stored: BreakingNews): BreakingNews | null {
   if (!stored.active && !stored.showPopup) return null
   if (stored.expiresAt) {
     const expires = new Date(stored.expiresAt)
     if (!Number.isNaN(expires.getTime()) && expires.getTime() < Date.now()) return null
   }
   return stored
+}
+
+export async function getBreakingNews(db: D1Database): Promise<BreakingNews | null> {
+  return resolveBreakingNews(await getBreakingNewsSettings(db))
 }
 
 export async function setBreakingNews(db: D1Database, news: BreakingNews): Promise<void> {

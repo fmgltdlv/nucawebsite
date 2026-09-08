@@ -22,7 +22,7 @@ import {
 } from '../lib/leadership-db'
 import { parseLeadershipRole } from '../lib/leadership-roles'
 import { createPost, deletePost, getPostById, listAllPosts, clampCoverWidthPct, updatePost } from '../lib/posts-db'
-import { buildPageLabels, createCustomPage, deleteCustomPage, getPageBySlug, listCustomPages, listPages, upsertPage } from '../lib/pages-db'
+import { buildPageLabels, createCustomPage, deleteCustomPage, getPageBySlug, listCustomPageSummaries, listPageSummaries, upsertPage } from '../lib/pages-db'
 import { listSiteInternalLinks } from '../lib/site-internal-links'
 import { blocksToMarkdown, parsePageBlocks } from '../lib/page-blocks'
 import { loadCmsPageExtras } from '../lib/cms-page-extras'
@@ -86,8 +86,6 @@ import {
   setThemeId,
   type BreakingNews,
 } from '../lib/site-settings'
-import { loadPublicSiteContext } from '../lib/site-context'
-import { seedContentIfEmpty } from '../lib/seed'
 import { listNewsletterSubscribers, updateNewsletterSubscriberStatus, deleteNewsletterSubscriber, acknowledgeAllNewsletterSubscribers, listAllNewsletterSubscribers, buildNewsletterSubscribersCsv, newsletterSubscribersExportFilename } from '../lib/newsletter-db'
 import { listContactSubmissions, updateContactSubmissionStatus, deleteContactSubmission, acknowledgeAllContactSubmissions } from '../lib/contact-db'
 import { parseDatetimeLocal } from '../lib/datetime'
@@ -109,7 +107,6 @@ import { AdminContentNavigationPage } from '../pages/admin/content/AdminContentN
 import { AdminContentSettingsPage } from '../pages/admin/content/AdminContentSettings'
 import { PagePreviewFrame } from '../views/PagePreviewBanner'
 import { listApplications, getApplication, parseApplicationPayload, updateApplicationStatus, deleteApplication, acknowledgeAllApplications } from '../lib/applications-db'
-import { deleteAsset } from '../lib/r2-assets'
 
 type AdminVariables = { theme: ThemeId; adminSite: AdminLayoutProps; adminCtx: import('../lib/admin-context').AdminContext | null }
 
@@ -716,8 +713,8 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   app.get('/admin/content/pages', async (c) => {
     const ctx = getAdminCtx(c)
     const [pages, customPages, committees] = await Promise.all([
-      listPages(c.env.DB),
-      listCustomPages(c.env.DB),
+      listPageSummaries(c.env.DB),
+      listCustomPageSummaries(c.env.DB),
       listCommittees(c.env.DB),
     ])
     return c.html(
@@ -753,19 +750,17 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
   })
 
   app.get('/admin/content/pages/:slug/preview', async (c) => {
-    const ctx = getAdminCtx(c)
+    getAdminCtx(c)
     const slug = c.req.param('slug')
 
-    await seedContentIfEmpty(c.env)
     const page = await getPageBySlug(c.env.DB, slug)
     if (!page) return c.redirect(`/admin/content/pages/${slug}`, 303)
 
-    const site = await loadPublicSiteContext(c.env)
     const extras = await loadCmsPageExtras(c.env.DB, slug, page)
 
     return c.html(
       <PagePreviewFrame slug={slug} published={page.published === 1}>
-        {renderCmsPage(site, slug, page, extras)}
+        {renderCmsPage(c.get('adminSite'), slug, page, extras)}
       </PagePreviewFrame>,
     )
   })
@@ -800,13 +795,8 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
       updated_at: new Date().toISOString(),
     }
 
-    await seedContentIfEmpty(c.env)
-    const site = await loadPublicSiteContext(c.env)
     const extras = await loadCmsPageExtras(c.env.DB, slug, page)
-
-    // Return a single <html> document for iframe srcdoc — PagePreviewFrame would prepend a
-    // sibling <div> and break parsing/styles inside the live preview panel.
-    const preview = renderCmsPage(site, slug, page, extras)
+    const preview = renderCmsPage(c.get('adminSite'), slug, page, extras)
     return c.html(preview as string | Promise<string>)
   })
 
@@ -816,7 +806,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const page = await getPageBySlug(c.env.DB, slug)
     const [committees, customPages, internalLinks] = await Promise.all([
       listCommittees(c.env.DB),
-      listCustomPages(c.env.DB),
+      listCustomPageSummaries(c.env.DB),
       listSiteInternalLinks(c.env.DB),
     ])
     const pageLabels = buildPageLabels(committees, customPages)

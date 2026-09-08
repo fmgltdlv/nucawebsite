@@ -120,23 +120,25 @@ export type CreateCustomPageResult =
   | { ok: true; slug: string }
   | { ok: false; error: string }
 
-export async function listPages(db: D1Database): Promise<PageRecord[]> {
+export type PageSummary = Pick<PageRecord, 'slug' | 'title' | 'published' | 'is_custom'>
+
+export async function listPageSummaries(db: D1Database): Promise<PageSummary[]> {
   const { results } = await db
     .prepare(
-      `SELECT slug, title, body_md, body_json, meta_description, published, is_custom
+      `SELECT slug, title, published, is_custom
        FROM pages ORDER BY slug ASC`,
     )
-    .all<PageRecord>()
+    .all<PageSummary>()
   return results ?? []
 }
 
-export async function listCustomPages(db: D1Database): Promise<PageRecord[]> {
+export async function listCustomPageSummaries(db: D1Database): Promise<PageSummary[]> {
   const { results } = await db
     .prepare(
-      `SELECT slug, title, body_md, body_json, meta_description, published, is_custom
+      `SELECT slug, title, published, is_custom
        FROM pages WHERE is_custom = 1 ORDER BY title COLLATE NOCASE ASC`,
     )
-    .all<PageRecord>()
+    .all<PageSummary>()
   return results ?? []
 }
 

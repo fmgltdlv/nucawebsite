@@ -267,6 +267,9 @@ function parseCalendarCommitteeKeys(value: unknown): string[] {
   )
 }
 
+const MAX_PAGE_BLOCKS_JSON = 250_000
+const MAX_PAGE_BLOCKS = 150
+
 function parseBlock(value: unknown, allowSection = true): PageBlock | null {
   if (!isObject(value) || typeof value.type !== 'string') return null
 
@@ -306,6 +309,7 @@ function parseBlock(value: unknown, allowSection = true): PageBlock | null {
       const muted = background === 'muted'
       const blocks = Array.isArray(value.blocks)
         ? value.blocks
+            .slice(0, MAX_PAGE_BLOCKS)
             .map((block) => parseBlock(block, false))
             .filter((block): block is PageBlock => block !== null)
         : []
@@ -441,10 +445,12 @@ function parseBlock(value: unknown, allowSection = true): PageBlock | null {
 
 export function parsePageBlocks(json: string | null | undefined): PageBlock[] | null {
   if (!json?.trim()) return null
+  if (json.length > MAX_PAGE_BLOCKS_JSON) return null
   try {
     const parsed = JSON.parse(json) as unknown
     if (!Array.isArray(parsed)) return null
     const blocks = parsed
+      .slice(0, MAX_PAGE_BLOCKS)
       .map((block) => parseBlock(block))
       .filter((block): block is PageBlock => block !== null)
     return blocks.length > 0 ? blocks : null

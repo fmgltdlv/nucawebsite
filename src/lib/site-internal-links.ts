@@ -1,7 +1,7 @@
 import { committeePublicPath, SCHOLARSHIPS_COMMITTEE_KEY } from './committee-pages'
 import { listCommittees } from './committees-db'
 import { pagePublicPath } from './page-paths'
-import { listPages, PAGE_LABELS, type PageRecord } from './pages-db'
+import { listPageSummaries, PAGE_LABELS, type PageRecord } from './pages-db'
 
 export type SiteInternalLink = {
   href: string
@@ -46,7 +46,7 @@ export function pageRecordToInternalLink(page: Pick<PageRecord, 'slug' | 'title'
 }
 
 export async function listSiteInternalLinks(db: D1Database): Promise<SiteInternalLink[]> {
-  const [pages, committees] = await Promise.all([listPages(db), listCommittees(db)])
+  const [pages, committees] = await Promise.all([listPageSummaries(db), listCommittees(db)])
 
   const seen = new Set(STATIC_SITE_INTERNAL_LINKS.map((link) => link.href))
   const links: SiteInternalLink[] = [...STATIC_SITE_INTERNAL_LINKS]

@@ -5,7 +5,7 @@ import { demoDirtReleases } from '../data/the-dirt'
 import { demoResourceItems } from '../data/resources'
 import { countUsers, createUser } from './auth'
 import { createEvent } from './events'
-import { setContactInfo, setFooterInfo, setThemeId } from './site-settings'
+import { setContactInfo, setFooterInfo, setThemeId, DEFAULT_FOOTER } from './site-settings'
 import { seedNavItemsIfEmpty } from './nav-items-db'
 import { upsertPage } from './pages-db'
 import { createLeadership } from './leadership-db'
@@ -39,8 +39,35 @@ export async function seedDemoMembersIfEmpty(env: Env): Promise<void> {
   }
 }
 
+let contentSeedGate: Promise<void> | null = null
+let dirtSeedGate: Promise<void> | null = null
+
+function isolateOnce(run: () => Promise<void>, get: () => Promise<void> | null, set: (value: Promise<void> | null) => void): Promise<void> {
+  const existing = get()
+  if (existing) return existing
+  // Assign the gate before `run()` so overlapping requests cannot start a second seed.
+  const pending = Promise.resolve()
+    .then(() => run())
+    .catch((error) => {
+      set(null)
+      throw error
+    })
+  set(pending)
+  return pending
+}
+
 /** Seed Q&A, events, site settings, pages, and leadership from demo data when tables are empty. */
 export async function seedContentIfEmpty(env: Env): Promise<void> {
+  return isolateOnce(
+    () => seedContentTablesIfEmpty(env),
+    () => contentSeedGate,
+    (value) => {
+      contentSeedGate = value
+    },
+  )
+}
+
+async function seedContentTablesIfEmpty(env: Env): Promise<void> {
   await seedSiteSettingsIfEmpty(env)
   await seedCommitteesIfEmpty(env.DB)
   await seedNavItemsIfEmpty(env.DB)
@@ -59,10 +86,7 @@ async function seedSiteSettingsIfEmpty(env: Env): Promise<void> {
   const row = await env.DB.prepare('SELECT COUNT(*) as c FROM site_settings').first<{ c: number }>()
   if ((row?.c ?? 0) > 0) return
   await setContactInfo(env.DB, { ...site })
-  await setFooterInfo(env.DB, {
-    dirtBlurb: 'Weekly chapter news and event updates.',
-    copyrightNote: '',
-  })
+  await setFooterInfo(env.DB, { ...DEFAULT_FOOTER })
   await setThemeId(env.DB, 'desert')
 }
 
@@ -286,6 +310,16 @@ async function seedLeadershipIfEmpty(env: Env): Promise<void> {
 
 /** Seed THE DIRT demo releases when table is empty (PDF keys point to demo uploads). */
 export async function seedDirtIfEmpty(env: Env): Promise<void> {
+  return isolateOnce(
+    () => seedDirtTableIfEmpty(env),
+    () => dirtSeedGate,
+    (value) => {
+      dirtSeedGate = value
+    },
+  )
+}
+
+async function seedDirtTableIfEmpty(env: Env): Promise<void> {
   const row = await env.DB.prepare('SELECT COUNT(*) as c FROM dirt_releases').first<{ c: number }>()
   if ((row?.c ?? 0) > 0) return
 

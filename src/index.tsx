@@ -36,7 +36,7 @@ import { parseUploadFiles } from './lib/library-asset-upload'
 import { subscribeNewsletter } from './lib/newsletter-db'
 import { loadAdminLayoutProps, loadPublicSiteContext, type AdminLayoutProps } from './lib/site-context'
 import { resolveAdminContext } from './lib/admin-context'
-import { adminAuthMiddleware, adminCsrfMiddleware } from './lib/admin-guard'
+import { adminAuthMiddleware, adminCsrfMiddleware, isPublicAdminRoute } from './lib/admin-guard'
 import { assertSafeSecrets, isProductionRequest } from './lib/security/env-check'
 import { applySecurityHeaders } from './lib/security/headers'
 import { totalInboxCount } from './lib/admin-inbox-counts'
@@ -104,8 +104,25 @@ app.get('/assets/*', async (c) => {
 
 app.use(async (c, next) => {
   if (!c.req.path.startsWith('/admin')) return next()
+
+  if (isPublicAdminRoute(c.req.method, c.req.path)) {
+    c.set('adminCtx', null)
+    const adminSite = await loadAdminLayoutProps(c.env)
+    c.set('theme', adminSite.theme)
+    c.set('adminSite', adminSite)
+    return next()
+  }
+
   const ctx = await resolveAdminContext(c)
-  const adminSite = await loadAdminLayoutProps(c.env, ctx?.inboxCounts)
+  c.set('adminCtx', ctx)
+  if (!ctx) {
+    if (c.req.path.startsWith('/admin/api/')) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+    return c.redirect('/admin/login', 303)
+  }
+
+  const adminSite = await loadAdminLayoutProps(c.env, ctx.inboxCounts)
   c.set('theme', adminSite.theme)
   c.set('adminSite', adminSite)
   await next()
