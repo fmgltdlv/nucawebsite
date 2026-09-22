@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/wrangler/config-schema.json",
-  "name": "nuca-frontdoor",
+  "name": "nucawebsite",
   "pages_build_output_dir": "./public",
   "services": [
     {

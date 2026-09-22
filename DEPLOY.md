@@ -5,15 +5,16 @@
 | URL | Purpose |
 |-----|---------|
 | **https://nucawebsite.nucalv-it.workers.dev** | Worker (direct) |
-| **https://master.nuca-frontdoor.pages.dev** | Pages front-door (interim) |
-| **https://www.nucalasvegas.com** | Production (after SiteGround DNS below) |
+| **https://nucawebsite.pages.dev** | Pages front-door (interim) |
+| **https://www.nucalasvegas.com** | Production (SiteGround CNAME) |
+| **https://test.nucalasvegas.com** | Test hostname (same Pages front-door) |
 
 ## Resources
 
 | Resource | Name | Binding |
 |----------|------|---------|
 | Worker | `nucawebsite` | — |
-| Pages front-door | `nuca-frontdoor` | Service binding → `nucawebsite` |
+| Pages front-door | `nucawebsite` (root dir `frontdoor/`) | Service binding `NUCAWEBSITE` → Worker `nucawebsite` |
 | D1 | `nuca-lv` | `DB` |
 | R2 | `nuca-lv-assets` | `R2` |
 | Email | Cloudflare Email Service | `EMAIL` |
@@ -33,7 +34,7 @@ npm run deploy:frontdoor
 
 ## Interim domain cutover (SiteGround DNS — no GoDaddy nameserver change)
 
-The Worker cannot use a custom domain until nameservers point to Cloudflare. Until GoDaddy login is available, **`nuca-frontdoor`** (Cloudflare Pages) accepts a **www CNAME** from SiteGround and proxies all traffic to the `nucawebsite` Worker via a service binding.
+The Worker cannot use a custom domain until nameservers point to Cloudflare. Until GoDaddy login is available, the Git-connected Pages project **`nucawebsite`** (root directory `frontdoor/`) accepts a CNAME from SiteGround and proxies all traffic to the `nucawebsite` Worker via a service binding. Do **not** CNAME to `nuca-frontdoor.pages.dev` — that project no longer exists.
 
 ```mermaid
 flowchart LR
@@ -50,7 +51,8 @@ flowchart LR
 
 | Record | Type | Name | Value | Notes |
 |--------|------|------|-------|-------|
-| www | **CNAME** | `www` | `nuca-frontdoor.pages.dev` | Remove old www A/CNAME to WordPress first |
+| www | **CNAME** | `www` | `nucawebsite.pages.dev` | Remove old www A/CNAME to WordPress first |
+| test | **CNAME** | `test` | `nucawebsite.pages.dev` | Optional test hostname; same Pages front-door as www |
 | apex | **Redirect** | `@` | `https://www.nucalasvegas.com` | SiteGround domain redirect tool (301). Remove old @ A record to WordPress. |
 
 After saving, wait a few minutes, then check custom domain status:
@@ -59,13 +61,14 @@ After saving, wait a few minutes, then check custom domain status:
 node scripts/add-pages-domain.mjs
 ```
 
-`www.nucalasvegas.com` should show status **active** once the CNAME propagates.
+`www.nucalasvegas.com` and `test.nucalasvegas.com` should show status **active** once the CNAME propagates. Both are already attached to the Pages project.
 
 ### Step 2 — Verify
 
 | Check | URL |
 |-------|-----|
 | Homepage | https://www.nucalasvegas.com |
+| Test hostname | https://test.nucalasvegas.com |
 | Apex redirect | https://nucalasvegas.com → www |
 | Admin login | https://www.nucalasvegas.com/admin/login |
 | R2 assets | Member logos, event flyers, PDFs |
@@ -91,7 +94,7 @@ node scripts/add-pages-domain.mjs
 
 4. `npm run deploy`
 5. Change **nameservers at GoDaddy** to Cloudflare's.
-6. Remove Pages custom domain and SiteGround www CNAME; optional: delete `nuca-frontdoor` project.
+6. Remove Pages custom domains and SiteGround www/test CNAMEs after Worker custom domains are live.
 
 ---
 
