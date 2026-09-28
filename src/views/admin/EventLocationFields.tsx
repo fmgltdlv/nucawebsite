@@ -24,37 +24,43 @@ export function EventLocationFields({
       data-initial-longitude={hasCoords ? String(longitude) : ''}
     >
       <label for={`${idPrefix}location`}>Location</label>
-      <div class="event-location-suggest-wrap">
-        <input
-          type="text"
-          name="location"
-          id={`${idPrefix}location`}
-          value={location ?? ''}
-          data-event-location-input
-          autocomplete="off"
-          aria-autocomplete="list"
-          aria-controls={`${idPrefix}location-suggestions`}
-        />
-        <ul
-          id={`${idPrefix}location-suggestions`}
-          class="event-location-suggestions"
-          data-event-location-suggestions
-          hidden
-          role="listbox"
-          aria-label="Address suggestions"
-        />
+      <div class="event-location-controls">
+        <div class="event-location-suggest-wrap">
+          <input
+            type="text"
+            name="location"
+            id={`${idPrefix}location`}
+            value={location ?? ''}
+            data-event-location-input
+            autocomplete="off"
+            aria-autocomplete="list"
+            aria-controls={`${idPrefix}location-suggestions`}
+          />
+          <ul
+            id={`${idPrefix}location-suggestions`}
+            class="event-location-suggestions"
+            data-event-location-suggestions
+            hidden
+            role="listbox"
+            aria-label="Address suggestions"
+          />
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" data-event-location-open-map>
+          Choose on map
+        </button>
       </div>
       <input type="hidden" name="latitude" value={hasCoords ? String(latitude) : ''} data-event-latitude />
       <input type="hidden" name="longitude" value={hasCoords ? String(longitude) : ''} data-event-longitude />
       <input type="hidden" name="map_skip" value="0" data-event-map-skip />
       <p class="form-hint">
-        Full street address when possible. Press Enter to search Clark County addresses for the map.
+        Type the address visitors should see. Press Enter to look it up, or choose the place on the map.
+        Coordinates are saved with the event.
       </p>
-      {hasCoords && (
-        <p class="form-hint" data-event-coords-hint>
-          Map coordinates saved ({latitude!.toFixed(5)}, {longitude!.toFixed(5)}).
-        </p>
-      )}
+      <p class="form-hint" data-event-coords-hint hidden={!hasCoords}>
+        {hasCoords
+          ? `Map coordinates saved (${latitude!.toFixed(5)}, ${longitude!.toFixed(5)}).`
+          : 'Map coordinates saved.'}
+      </p>
     </div>
   )
 }
@@ -71,7 +77,7 @@ export function EventLocationPickerDialog() {
         </header>
         <div class="admin-modal-body">
           <p class="admin-location-picker-lead" data-event-location-picker-message>
-            We could not find that address automatically. Click the map to place a pin, or save without a map.
+            Click the map to set coordinates. The address you typed is what visitors see.
           </p>
           <div id="event-location-map" class="event-location-picker-map" role="application" aria-label="Map for choosing event location"></div>
           <p class="form-hint" data-event-location-picker-coords>

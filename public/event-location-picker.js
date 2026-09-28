@@ -10,6 +10,8 @@
   let pendingForm = null
   /** @type {{ lat: number, lng: number } | null} */
   let pickedPoint = null
+  /** @type {'submit' | 'pin'} */
+  let pickerMode = 'submit'
 
   window.initEventLocationPicker = function initEventLocationPicker() {
     const pickerDialog = document.getElementById('event-location-picker')
@@ -129,8 +131,26 @@
       const empty = document.createElement('li')
       empty.className = 'event-location-suggestion event-location-suggestion-empty'
       empty.setAttribute('role', 'option')
-      empty.textContent = 'No matching Clark County addresses found.'
+      empty.textContent = 'No matching addresses found.'
       list.appendChild(empty)
+
+      const choose = document.createElement('li')
+      choose.className = 'event-location-suggestion'
+      choose.setAttribute('role', 'option')
+      choose.tabIndex = 0
+      choose.textContent = 'Choose this place on the map'
+      choose.addEventListener('click', () => {
+        clearSuggestions(form)
+        openPicker(form, readLocation(form), 'pin')
+      })
+      choose.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          clearSuggestions(form)
+          openPicker(form, readLocation(form), 'pin')
+        }
+      })
+      list.appendChild(choose)
       list.hidden = false
       return
     }
@@ -201,9 +221,28 @@
     }
   }
 
+  function placePin(lat, lng, zoom) {
+    if (!map || typeof window.L === 'undefined') return
+    const latLng = window.L.latLng(lat, lng)
+    pickedPoint = { lat, lng }
+    if (marker) marker.setLatLng(latLng)
+    else marker = window.L.marker(latLng).addTo(map)
+    map.setView(latLng, zoom)
+    if (confirmBtn instanceof HTMLButtonElement) confirmBtn.disabled = false
+    if (coordsEl instanceof HTMLElement) {
+      coordsEl.textContent = `Pin placed at ${lat.toFixed(5)}, ${lng.toFixed(5)}.`
+    }
+  }
+
   function ensureMap() {
     if (!mapEl || typeof window.L === 'undefined') return null
     if (map) return map
+
+    window.L.Icon.Default.mergeOptions({
+      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    })
 
     map = window.L.map(mapEl, {
       scrollWheelZoom: true,
@@ -215,14 +254,7 @@
     }).addTo(map)
 
     map.on('click', (event) => {
-      const { lat, lng } = event.latlng
-      pickedPoint = { lat, lng }
-      if (marker) marker.setLatLng(event.latlng)
-      else marker = window.L.marker(event.latlng).addTo(map)
-      if (confirmBtn instanceof HTMLButtonElement) confirmBtn.disabled = false
-      if (coordsEl instanceof HTMLElement) {
-        coordsEl.textContent = `Pin placed at ${lat.toFixed(5)}, ${lng.toFixed(5)}.`
-      }
+      placePin(event.latlng.lat, event.latlng.lng, map.getZoom())
     })
 
     return map
@@ -233,39 +265,61 @@
     window.setTimeout(() => map.invalidateSize(), 50)
   }
 
-  function openPicker(form, location) {
+  function openPicker(form, location, mode) {
     pendingForm = form
+    pickerMode = mode === 'pin' ? 'pin' : 'submit'
     resetPickerState()
+    if (skipBtn instanceof HTMLButtonElement) skipBtn.hidden = pickerMode === 'pin'
+    if (confirmBtn instanceof HTMLButtonElement) {
+      confirmBtn.textContent = pickerMode === 'pin' ? 'Use this pin' : 'Save with this pin'
+    }
     if (messageEl instanceof HTMLElement) {
-      messageEl.textContent = `We could not find "${location}" automatically. Click the map to place a pin, or save without a map.`
+      const quoted = location ? ` "${location}"` : ''
+      messageEl.textContent =
+        pickerMode === 'pin'
+          ? `Click the map to set coordinates for${quoted}. The address you typed is what visitors see.`
+          : `We could not find${quoted} automatically. The address will still be saved. Click the map to set coordinates, or save without a map.`
     }
 
     const existingCoords = readManualCoords(form)
     pickerDialog.showModal()
     const mapInstance = ensureMap()
     if (!mapInstance) {
-      window.alert('The map could not be loaded. You can still save without a map.')
+      window.alert('The map could not be loaded. You can still save the address without a map.')
       return
     }
 
     if (existingCoords) {
-      const latLng = window.L.latLng(existingCoords.lat, existingCoords.lng)
-      mapInstance.setView(latLng, 15)
-      marker = window.L.marker(latLng).addTo(mapInstance)
-      pickedPoint = existingCoords
-      if (confirmBtn instanceof HTMLButtonElement) confirmBtn.disabled = false
-      if (coordsEl instanceof HTMLElement) {
-        coordsEl.textContent = `Pin placed at ${existingCoords.lat.toFixed(5)}, ${existingCoords.lng.toFixed(5)}.`
-      }
+      placePin(existingCoords.lat, existingCoords.lng, 15)
     } else {
       mapInstance.setView(CLARK_COUNTY_CENTER, CLARK_COUNTY_ZOOM)
       if (marker) {
         marker.remove()
         marker = null
       }
+      if (pickerMode === 'pin' && location) {
+        void centerPickerOnAddress(location)
+      }
     }
 
     invalidateMapSize()
+  }
+
+  async function centerPickerOnAddress(location) {
+    if (coordsEl instanceof HTMLElement) coordsEl.textContent = 'Searching for that address…'
+    try {
+      const result = await geocodeAddress(location)
+      if (pendingForm == null || pickerMode !== 'pin' || pickedPoint) return
+      if (!result) {
+        if (coordsEl instanceof HTMLElement) coordsEl.textContent = 'Click the map to place a pin.'
+        return
+      }
+      placePin(result.lat, result.lng, 16)
+    } catch {
+      if (pendingForm != null && !pickedPoint && coordsEl instanceof HTMLElement) {
+        coordsEl.textContent = 'Click the map to place a pin.'
+      }
+    }
   }
 
   function closePicker() {
@@ -287,10 +341,10 @@
     if (!response.ok) return null
     const data = await response.json()
     if (!data?.ok) return null
-    return {
-      lat: Number(data.latitude),
-      lng: Number(data.longitude),
-    }
+    const lat = Number(data.latitude)
+    const lng = Number(data.longitude)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+    return { lat, lng }
   }
 
   function getLocationFieldRoot(form) {
@@ -350,6 +404,11 @@
       void suggestAddresses(form)
     })
 
+    form.querySelector('[data-event-location-open-map]')?.addEventListener('click', () => {
+      clearSuggestions(form)
+      openPicker(form, readLocation(form), 'pin')
+    })
+
     locationInput?.addEventListener('blur', () => {
       window.setTimeout(() => {
         const list = getSuggestionsList(form)
@@ -381,9 +440,9 @@
           form.requestSubmit(submitter ?? undefined)
           return
         }
-        openPicker(form, location)
+        openPicker(form, location, 'submit')
       } catch {
-        openPicker(form, location)
+        openPicker(form, location, 'submit')
       } finally {
         if (submitter instanceof HTMLElement) {
           submitter.removeAttribute('aria-busy')
@@ -399,6 +458,11 @@
     confirmBtn?.addEventListener('click', () => {
       if (!(pendingForm instanceof HTMLFormElement) || !pickedPoint) return
       setManualCoords(pendingForm, pickedPoint.lat, pickedPoint.lng)
+      if (pickerMode === 'pin') {
+        pendingForm.dataset.locationProcessed = '1'
+        closePicker()
+        return
+      }
       submitPendingForm()
     })
 

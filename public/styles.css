@@ -2066,8 +2066,12 @@ button.pill {
   border: 0;
 }
 
-.admin-location-picker-dialog .admin-modal-form {
+.admin-location-picker-dialog {
   width: min(42rem, calc(100vw - 2rem));
+}
+
+.admin-location-picker-dialog .admin-modal-form {
+  width: 100%;
 }
 
 .admin-location-picker-lead {
@@ -2083,8 +2087,21 @@ button.pill {
   background: var(--color-surface-muted);
 }
 
+.event-location-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
 .event-location-suggest-wrap {
   position: relative;
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.event-location-controls > .btn {
+  flex: 0 0 auto;
 }
 
 .event-location-suggestions {
