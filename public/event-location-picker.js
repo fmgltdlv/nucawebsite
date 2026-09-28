@@ -12,6 +12,8 @@
   let pickedPoint = null
   /** @type {'submit' | 'pin'} */
   let pickerMode = 'submit'
+  /** @type {number} */
+  let pickerSession = 0
 
   window.initEventLocationPicker = function initEventLocationPicker() {
     const pickerDialog = document.getElementById('event-location-picker')
@@ -266,6 +268,8 @@
   }
 
   function openPicker(form, location, mode) {
+    pickerSession += 1
+    const session = pickerSession
     pendingForm = form
     pickerMode = mode === 'pin' ? 'pin' : 'submit'
     resetPickerState()
@@ -298,17 +302,18 @@
         marker = null
       }
       if (pickerMode === 'pin' && location) {
-        void centerPickerOnAddress(location)
+        void centerPickerOnAddress(location, session)
       }
     }
 
     invalidateMapSize()
   }
 
-  async function centerPickerOnAddress(location) {
+  async function centerPickerOnAddress(location, session) {
     if (coordsEl instanceof HTMLElement) coordsEl.textContent = 'Searching for that address…'
     try {
       const result = await geocodeAddress(location)
+      if (session !== pickerSession) return
       if (pendingForm == null || pickerMode !== 'pin' || pickedPoint) return
       if (!result) {
         if (coordsEl instanceof HTMLElement) coordsEl.textContent = 'Click the map to place a pin.'
@@ -316,6 +321,7 @@
       }
       placePin(result.lat, result.lng, 16)
     } catch {
+      if (session !== pickerSession) return
       if (pendingForm != null && !pickedPoint && coordsEl instanceof HTMLElement) {
         coordsEl.textContent = 'Click the map to place a pin.'
       }
@@ -323,6 +329,7 @@
   }
 
   function closePicker() {
+    pickerSession += 1
     pickerDialog.close()
     pendingForm = null
     resetPickerState()
