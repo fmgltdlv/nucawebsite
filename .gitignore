@@ -6,3 +6,7 @@ dist/
 worker-configuration.d.ts
 scripts/.wp-members-cache.json
 scripts/.import-members.sql
+# D1 exports / imports (production data, including admin password hashes)
+scripts/nuca-d1-*.sql
+scripts/wrangler-source.jsonc
+maintainer-manual.html
