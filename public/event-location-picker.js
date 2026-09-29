@@ -196,7 +196,16 @@
     try {
       const response = await fetch(
         `/admin/api/geocode?suggest=1&address=${encodeURIComponent(location)}`,
+        { credentials: 'same-origin' },
       )
+      if (response.status === 401) {
+        renderSuggestions(form, [])
+        const list = getSuggestionsList(form)
+        if (list instanceof HTMLElement && list.firstChild instanceof HTMLElement) {
+          list.firstChild.textContent = 'Sign in again to search addresses.'
+        }
+        return
+      }
       if (!response.ok) {
         renderSuggestions(form, [])
         return
@@ -344,7 +353,9 @@
   }
 
   async function geocodeAddress(address) {
-    const response = await fetch(`/admin/api/geocode?address=${encodeURIComponent(address)}`)
+    const response = await fetch(`/admin/api/geocode?address=${encodeURIComponent(address)}`, {
+      credentials: 'same-origin',
+    })
     if (!response.ok) return null
     const data = await response.json()
     if (!data?.ok) return null

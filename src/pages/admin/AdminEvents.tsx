@@ -403,7 +403,7 @@ export function AdminEventsPage({
         crossorigin=""
         defer
       ></script>
-      <script src="/event-location-picker.js?v=3" defer></script>
+      <script src="/event-location-picker.js?v=4" defer></script>
     </AdminShell>
   )
 }
