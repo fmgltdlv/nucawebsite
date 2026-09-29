@@ -28,7 +28,21 @@ type GeocodeCandidate = {
 
 type GeocodeResponse = {
   error?: { code?: number; message?: string }
+  spatialReference?: { wkid?: number; latestWkid?: number }
   candidates?: GeocodeCandidate[]
+}
+
+/** Clark County locator defaults to State Plane (WKID 3421) unless outSR=4326 is set. */
+function isWgs84SpatialReference(sr?: GeocodeResponse['spatialReference']): boolean {
+  const wkid = sr?.latestWkid ?? sr?.wkid
+  return wkid === 4326 || wkid === 4269
+}
+
+/** Reject State Plane values mistaken for lat/lng (e.g. y ≈ 26_713_298). */
+function isPlausibleClarkCountyLatLng(lat: number, lng: number): boolean {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return false
+  return lat >= 35 && lat <= 37.5 && lng >= -115.75 && lng <= -113.5
 }
 
 type CensusMatch = {
@@ -84,12 +98,17 @@ async function fetchClarkCategory(
   const data = (await response.json()) as GeocodeResponse
   if (data.error) return []
 
+  const wgs84 = isWgs84SpatialReference(data.spatialReference)
+
   const results: GeocodeResult[] = []
   for (const candidate of data.candidates ?? []) {
     if (!candidate?.location || (candidate.score ?? 0) < MIN_GEOCODE_SCORE) continue
+    const lat = candidate.location.y
+    const lng = candidate.location.x
+    if (!wgs84 || !isPlausibleClarkCountyLatLng(lat, lng)) continue
     results.push({
-      lng: candidate.location.x,
-      lat: candidate.location.y,
+      lng,
+      lat,
       formatted: formatClarkAddress(candidate, address),
       score: candidate.score ?? 0,
     })
