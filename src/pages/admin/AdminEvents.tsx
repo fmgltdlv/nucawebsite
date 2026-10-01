@@ -268,7 +268,7 @@ function EventEditModal({
       </div>
       <div class="form-row">
         <div class="form-field">
-          <label for={`${formId}-starts`}>Starts (local date/time)</label>
+          <label for={`${formId}-starts`}>Starts (Pacific time)</label>
           <input
             type="datetime-local"
             name="starts_at"
@@ -348,7 +348,7 @@ export function AdminEventsPage({
             </div>
             <div class="form-row">
               <div class="form-field">
-                <label for="starts_at">Starts (local date/time)</label>
+                <label for="starts_at">Starts (Pacific time)</label>
                 <input type="datetime-local" name="starts_at" id="starts_at" required />
               </div>
               <div class="form-field">

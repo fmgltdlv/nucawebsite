@@ -12,7 +12,9 @@
     "check": "wrangler check",
     "build:admin-editor": "esbuild scripts/admin-post-editor/main.ts --bundle --outfile=public/admin-post-editor.js --format=iife --target=es2020 --minify",
     "import-members": "node scripts/import-wp-members.mjs",
-    "import-leadership": "node scripts/import-wp-leadership.mjs"
+    "import-leadership": "node scripts/import-wp-leadership.mjs",
+    "fix-event-timezones": "node scripts/fix-event-timezones.mjs",
+    "fix-event-timezones:remote": "node scripts/fix-event-timezones.mjs --remote"
   },
   "dependencies": {
     "hono": "^4.7.7"

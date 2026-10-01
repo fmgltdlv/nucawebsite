@@ -1,3 +1,10 @@
+const CHAPTER_TIMEZONE = 'America/Los_Angeles'
+
+function chapterDateKey(isoOrDate) {
+  const date = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate)
+  return date.toLocaleDateString('en-CA', { timeZone: CHAPTER_TIMEZONE })
+}
+
 (function () {
   function safeHref(href) {
     if (!href || typeof href !== 'string') return null
@@ -1762,11 +1769,10 @@
   }
 
   function eventOnDay(event, day) {
-    const start = new Date(event.starts_at)
-    const end = event.ends_at ? new Date(event.ends_at) : start
-    const dayStart = startOfDay(day)
-    const dayEnd = addDays(dayStart, 1)
-    return start < dayEnd && end >= dayStart
+    const dayKey = chapterDateKey(day)
+    const startKey = chapterDateKey(event.starts_at)
+    const endKey = chapterDateKey(event.ends_at || event.starts_at)
+    return startKey <= dayKey && endKey >= dayKey
   }
 
   function filterByCommittee(eventList) {
@@ -1796,6 +1802,7 @@
       year: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
+      timeZone: CHAPTER_TIMEZONE,
     })
   }
 
@@ -1803,11 +1810,12 @@
     return new Date(iso).toLocaleString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
+      timeZone: CHAPTER_TIMEZONE,
     })
   }
 
   function formatMonthYear(date) {
-    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: CHAPTER_TIMEZONE })
   }
 
   function formatWeekRange(weekStart) {
@@ -1816,11 +1824,13 @@
     const startFmt = weekStart.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
+      timeZone: CHAPTER_TIMEZONE,
     })
     const endFmt = weekEnd.toLocaleDateString('en-US', {
       month: sameMonth ? undefined : 'short',
       day: 'numeric',
       year: 'numeric',
+      timeZone: CHAPTER_TIMEZONE,
     })
     return `${startFmt} – ${endFmt}`
   }
@@ -2225,11 +2235,10 @@
   }
 
   function eventOnDay(event, day) {
-    const start = new Date(event.starts_at)
-    const end = event.ends_at ? new Date(event.ends_at) : start
-    const dayStart = startOfDay(day)
-    const dayEnd = addDays(dayStart, 1)
-    return start < dayEnd && end >= dayStart
+    const dayKey = chapterDateKey(day)
+    const startKey = chapterDateKey(event.starts_at)
+    const endKey = chapterDateKey(event.ends_at || event.starts_at)
+    return startKey <= dayKey && endKey >= dayKey
   }
 
   function formatEventDate(iso) {
@@ -2240,6 +2249,7 @@
       year: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
+      timeZone: CHAPTER_TIMEZONE,
     })
   }
 
@@ -2247,11 +2257,12 @@
     return new Date(iso).toLocaleString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
+      timeZone: CHAPTER_TIMEZONE,
     })
   }
 
   function formatMonthYear(date) {
-    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: CHAPTER_TIMEZONE })
   }
 
   function formatWeekRange(weekStart) {
@@ -2260,11 +2271,13 @@
     const startFmt = weekStart.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
+      timeZone: CHAPTER_TIMEZONE,
     })
     const endFmt = weekEnd.toLocaleDateString('en-US', {
       month: sameMonth ? undefined : 'short',
       day: 'numeric',
       year: 'numeric',
+      timeZone: CHAPTER_TIMEZONE,
     })
     return `${startFmt} – ${endFmt}`
   }

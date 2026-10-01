@@ -1,19 +1,27 @@
+import { CHAPTER_TIMEZONE } from './datetime'
+
+const EVENT_DATETIME_FORMAT: Intl.DateTimeFormatOptions = {
+  weekday: 'short',
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZone: CHAPTER_TIMEZONE,
+}
+
+const EVENT_DATETIME_SHORT_FORMAT: Intl.DateTimeFormatOptions = {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: CHAPTER_TIMEZONE,
+}
+
 export function formatEventDate(iso: string) {
-  return new Date(iso).toLocaleString('en-US', {
-    weekday: 'short',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
+  return new Date(iso).toLocaleString('en-US', EVENT_DATETIME_FORMAT)
 }
 
 export function formatEventDateShort(iso: string) {
-  return new Date(iso).toLocaleString('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  })
+  return new Date(iso).toLocaleString('en-US', EVENT_DATETIME_SHORT_FORMAT)
 }
 
 export function formatArchiveDate(iso: string | null | undefined) {
@@ -22,9 +30,13 @@ export function formatArchiveDate(iso: string | null | undefined) {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
+    timeZone: CHAPTER_TIMEZONE,
   })
 }
 
 export function formatAdminDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { dateStyle: 'medium' })
+  return new Date(iso).toLocaleDateString('en-US', {
+    dateStyle: 'medium',
+    timeZone: CHAPTER_TIMEZONE,
+  })
 }
