@@ -4,7 +4,8 @@ export type Env = {
   ASSETS: Fetcher
   EMAIL?: SendEmail
   JWT_SECRET: string
-  ADMIN_PASSWORD: string
+  /** Only used to seed the first admin when `users` is empty. Optional after bootstrap. */
+  ADMIN_PASSWORD?: string
   ADMIN_EMAIL?: string
   /** Cloudflare Turnstile secret key (optional bot protection on login). */
   TURNSTILE_SECRET_KEY?: string
