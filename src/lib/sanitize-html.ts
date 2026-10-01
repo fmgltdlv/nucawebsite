@@ -1,4 +1,6 @@
 import { raw } from 'hono/html'
+import { escapeAttr } from './security/html'
+import { safeHref } from './security/urls'
 
 const ALLOWED_TAGS = new Set([
   'p',
@@ -28,7 +30,7 @@ const ALLOWED_TAGS = new Set([
 
 const VOID_TAGS = new Set(['br', 'hr', 'img'])
 
-const GLOBAL_ATTRS = new Set(['class', 'id', 'title', 'aria-label', 'aria-hidden', 'role'])
+const GLOBAL_ATTRS = new Set(['class', 'title', 'aria-label', 'aria-hidden', 'role'])
 
 const TAG_ATTRS: Record<string, Set<string>> = {
   a: new Set(['href', 'target', 'rel']),
@@ -45,24 +47,13 @@ const TAG_ATTRS: Record<string, Set<string>> = {
   span: new Set(['style', 'data-carousel-dot']),
 }
 
-function escapeAttr(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
-}
-
 function isSafeHref(href: string): boolean {
-  const trimmed = href.trim()
-  if (!trimmed) return false
-  if (trimmed.startsWith('/') || trimmed.startsWith('#') || trimmed.startsWith('mailto:')) return true
-  try {
-    const url = new URL(trimmed)
-    return url.protocol === 'http:' || url.protocol === 'https:'
-  } catch {
-    return false
-  }
+  return safeHref(href) !== null
 }
 
 function isSafeSrc(src: string): boolean {
   const trimmed = src.trim()
+  if (trimmed.startsWith('//')) return false
   if (trimmed.startsWith('/assets/')) return true
   try {
     const url = new URL(trimmed)

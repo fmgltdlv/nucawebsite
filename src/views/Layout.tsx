@@ -27,6 +27,7 @@ export function pickLayoutSite(props: SiteLayoutProps): SiteLayoutProps {
     logoSizePercent: props.logoSizePercent,
     headerBranding: props.headerBranding,
     navigation: props.navigation,
+    turnstileSiteKey: props.turnstileSiteKey,
     staffInboxCount: props.staffInboxCount,
   }
 }
@@ -43,6 +44,7 @@ export function Layout({
   logoSizePercent,
   headerBranding,
   navigation = siteNavigation,
+  turnstileSiteKey,
   staffInboxCount,
 }: LayoutProps) {
   const layout = layoutForTheme(theme)
@@ -81,6 +83,7 @@ export function Layout({
           rel="stylesheet"
         />
         <link rel="stylesheet" href="/styles.css?v=31" />
+        {turnstileSiteKey ? <meta name="cf-turnstile-sitekey" content={turnstileSiteKey} /> : null}
       </head>
       <body>
         <a class="skip-link" href="#main">Skip to content</a>
@@ -158,7 +161,10 @@ export function Layout({
             </p>
           </div>
         </footer>
-        <script src="/site.js?v=20" defer></script>
+        <script src="/site.js?v=21" defer></script>
+        {turnstileSiteKey ? (
+          <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+        ) : null}
         <script src="/admin-nav.js?v=3" defer></script>
       </body>
     </html>

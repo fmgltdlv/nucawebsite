@@ -3,6 +3,15 @@ import type { ExpandedEventRecord } from './event-repeat'
 import { EVENTS_LIST_PAGE_SIZE } from './events'
 import { renderMarkdown } from './markdown'
 import { parseCommitteeKey } from './committee-pages'
+import { escapeHtml } from './security/html'
+import { safeHref } from './security/urls'
+import {
+  PUBLIC_COMPANY_MAX,
+  PUBLIC_EMAIL_MAX,
+  PUBLIC_MESSAGE_MAX,
+  PUBLIC_NAME_MAX,
+} from './security/public-forms'
+import { isValidAssetKey } from './asset-select'
 import { getAssetUrl } from './r2-assets'
 
 export type TextAlign = 'left' | 'center' | 'right'
@@ -341,11 +350,11 @@ function parseBlock(value: unknown, allowSection = true): PageBlock | null {
         ...(lead_size ? { lead_size } : {}),
         cta_primary_label:
           typeof value.cta_primary_label === 'string' ? value.cta_primary_label : 'Learn more',
-        cta_primary_href: typeof value.cta_primary_href === 'string' ? value.cta_primary_href : '/',
+        cta_primary_href: safeHref(typeof value.cta_primary_href === 'string' ? value.cta_primary_href : '/') ?? '/',
         cta_secondary_label:
           typeof value.cta_secondary_label === 'string' ? value.cta_secondary_label : '',
         cta_secondary_href:
-          typeof value.cta_secondary_href === 'string' ? value.cta_secondary_href : '/',
+          safeHref(typeof value.cta_secondary_href === 'string' ? value.cta_secondary_href : '/') ?? '/',
       }
     }
     case 'events_feed': {
@@ -368,14 +377,15 @@ function parseBlock(value: unknown, allowSection = true): PageBlock | null {
     }
     case 'button': {
       const label = typeof value.label === 'string' ? value.label : 'Learn more'
-      const href = typeof value.href === 'string' ? value.href : '/'
+      const href = safeHref(typeof value.href === 'string' ? value.href : '/') ?? '/'
       const style = isButtonStyle(value.style) ? value.style : 'primary'
       const align = isTextAlign(value.align) ? value.align : undefined
       const new_tab = value.new_tab === true
       return { type: 'button', label, href, style, align, new_tab }
     }
     case 'image': {
-      const asset_key = typeof value.asset_key === 'string' ? value.asset_key : ''
+      const rawKey = typeof value.asset_key === 'string' ? value.asset_key : ''
+      const asset_key = isValidAssetKey(rawKey) ? rawKey : ''
       const alt = typeof value.alt === 'string' ? value.alt : undefined
       const caption = typeof value.caption === 'string' ? value.caption : undefined
       const layout = parseImageLayout(value.layout)
@@ -729,11 +739,11 @@ function renderButtonBlockHtml(block: PageBlock & { type: 'button' }): string {
   const label = block.label.trim()
   if (!label) return ''
 
-  const href = escapeHtml(block.href.trim() || '/')
+  const href = safeHref(block.href) ?? '/'
   const align = alignClass(block.align)
   const styleClass = block.style === 'secondary' ? 'btn-secondary' : 'btn-primary'
   const target = block.new_tab ? ' target="_blank" rel="noopener noreferrer"' : ''
-  return `<div class="page-block-buttons${align}"><a class="btn ${styleClass}" href="${href}"${target}>${escapeHtml(label)}</a></div>`
+  return `<div class="page-block-buttons${align}"><a class="btn ${styleClass}" href="${escapeHtml(href)}"${target}>${escapeHtml(label)}</a></div>`
 }
 
 function renderBlockHtml(
@@ -818,15 +828,15 @@ function renderBlockHtml(
 <input type="hidden" name="newsletter_source" value="${escapeHtml(block.source ?? 'contact')}" />
 <div class="form-field">
 <label for="newsletter_name">Name</label>
-<input type="text" name="newsletter_name" id="newsletter_name" required autoComplete="name" />
+<input type="text" name="newsletter_name" id="newsletter_name" required autoComplete="name" maxlength="${PUBLIC_NAME_MAX}" />
 </div>
 <div class="form-field">
 <label for="newsletter_company">Company</label>
-<input type="text" name="newsletter_company" id="newsletter_company" autoComplete="organization" />
+<input type="text" name="newsletter_company" id="newsletter_company" autoComplete="organization" maxlength="${PUBLIC_COMPANY_MAX}" />
 </div>
 <div class="form-field">
 <label for="newsletter_email">Email</label>
-<input type="email" name="newsletter_email" id="newsletter_email" required autoComplete="email" />
+<input type="email" name="newsletter_email" id="newsletter_email" required autoComplete="email" maxlength="${PUBLIC_EMAIL_MAX}" />
 </div>
 <p class="form-hint">${escapeHtml(block.consent_hint)}</p>
 <button type="submit" class="btn btn-secondary">${escapeHtml(block.button_label)}</button>
@@ -836,29 +846,21 @@ function renderBlockHtml(
       return `<form class="form" method="post" action="/contact">
 <div class="form-field">
 <label for="name">${escapeHtml(block.name_label)}</label>
-<input type="text" name="name" id="name" required />
+<input type="text" name="name" id="name" required maxlength="${PUBLIC_NAME_MAX}" />
 </div>
 <div class="form-field">
 <label for="email">${escapeHtml(block.email_label)}</label>
-<input type="email" name="email" id="email" required />
+<input type="email" name="email" id="email" required maxlength="${PUBLIC_EMAIL_MAX}" />
 </div>
 <div class="form-field">
 <label for="message">${escapeHtml(block.message_label)}</label>
-<textarea name="message" id="message" rows="5" required></textarea>
+<textarea name="message" id="message" rows="5" required maxlength="${PUBLIC_MESSAGE_MAX}"></textarea>
 </div>
 <button type="submit" class="btn btn-primary">${escapeHtml(block.submit_label)}</button>
 </form>`
     default:
       return ''
   }
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
 }
 
 export function renderPageContent(

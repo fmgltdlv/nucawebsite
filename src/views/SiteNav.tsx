@@ -1,12 +1,14 @@
 import { isNavGroup, type NavEntry, type NavLink } from '../nav/site-nav'
+import { safeHref } from '../lib/security/urls'
 
 function NavAnchor({ link, nested }: { link: NavLink; nested?: boolean }) {
   const classes = [nested ? 'submenu-link' : '', link.indent ? 'submenu-link-indent' : '']
     .filter(Boolean)
     .join(' ')
+  const href = safeHref(link.href) ?? '#'
 
   return (
-    <a href={link.href} class={classes || undefined}>
+    <a href={href} class={classes || undefined}>
       <span>{link.label}</span>
     </a>
   )
@@ -21,8 +23,8 @@ export function SiteNav({ navigation }: { navigation: NavEntry[] }) {
             return (
               <li class="nav-item has-submenu" key={entry.label}>
                 <div class="nav-parent-row">
-                  {entry.href ? (
-                    <a href={entry.href} class="nav-parent-link">
+                  {entry.href && safeHref(entry.href) ? (
+                    <a href={safeHref(entry.href)!} class="nav-parent-link">
                       <span>{entry.label}</span>
                     </a>
                   ) : (

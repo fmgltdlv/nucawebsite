@@ -1,4 +1,5 @@
 import type { BreakingNews } from '../lib/site-settings'
+import { SafeLink } from './SafeLink'
 
 export function BreakingNewsPopup({ news }: { news: BreakingNews }) {
   return (
@@ -17,9 +18,9 @@ export function BreakingNewsPopup({ news }: { news: BreakingNews }) {
         <p class="breaking-news-popup-body">{news.body}</p>
         <footer class="breaking-news-popup-footer">
           {news.link ? (
-            <a class="btn btn-primary" href={news.link}>
+            <SafeLink class="btn btn-primary" href={news.link}>
               Read more
-            </a>
+            </SafeLink>
           ) : null}
           <button type="button" class="btn btn-secondary" data-breaking-popup-dismiss>
             Dismiss

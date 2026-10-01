@@ -10,3 +10,9 @@ scripts/.import-members.sql
 scripts/nuca-d1-*.sql
 scripts/wrangler-source.jsonc
 maintainer-manual.html
+.wrangler-dry/
+scripts/.r2-copy-tmp/
+scripts/clear-nuca-d1.sql
+scripts/restore-d1-migrations.sql
+scripts/copy-r2-cross-account.mjs
+scripts/verify-r2-count.mjs

@@ -1,4 +1,5 @@
 import type { BreakingNews } from '../lib/site-settings'
+import { SafeLink } from './SafeLink'
 
 export function BreakingNewsBanner({ news }: { news: BreakingNews }) {
   return (
@@ -7,9 +8,9 @@ export function BreakingNewsBanner({ news }: { news: BreakingNews }) {
         <strong>{news.title}</strong>
         <span>{news.body}</span>
         {news.link && (
-          <a class="breaking-news-link" href={news.link}>
+          <SafeLink class="breaking-news-link" href={news.link}>
             Read more →
-          </a>
+          </SafeLink>
         )}
         <button type="button" class="breaking-news-dismiss" data-breaking-dismiss aria-label="Dismiss alert">
           ×

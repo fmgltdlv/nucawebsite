@@ -29,6 +29,7 @@ export type PublicSiteContext = {
   logoSizePercent: number
   headerBranding: HeaderBranding
   navigation: NavEntry[]
+  turnstileSiteKey?: string
 }
 
 export type AdminLayoutProps = PublicSiteContext & {
@@ -55,6 +56,7 @@ export async function loadPublicSiteContext(env: Env): Promise<PublicSiteContext
     logoSizePercent: parseLogoSizePercent(logoSizeStored ?? DEFAULT_LOGO_SIZE_PERCENT),
     headerBranding: parseHeaderBranding(settingFromMap(settings, 'header_branding')),
     navigation,
+    turnstileSiteKey: env.TURNSTILE_SITE_KEY?.trim() || undefined,
   }
 }
 

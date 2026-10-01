@@ -4,17 +4,25 @@
 
 | URL | Purpose |
 |-----|---------|
-| **https://nucawebsite.nucalv-it.workers.dev** | Worker (direct) |
-| **https://nucawebsite.pages.dev** | Pages front-door (interim) |
-| **https://www.nucalasvegas.com** | Production (SiteGround CNAME) |
-| **https://test.nucalasvegas.com** | Test hostname (same Pages front-door) |
+| **https://www.nucalasvegas.com** | Production (Worker custom domain) |
+| **https://nucalasvegas.com** | Production apex (Worker custom domain) |
+| **https://nucawebsite.nucalv-it.workers.dev** | Worker direct (`workers.dev`) |
+
+## Domain & DNS
+
+| Layer | Provider | Notes |
+|-------|----------|--------|
+| Registrar | GoDaddy | Owns `nucalasvegas.com` |
+| DNS | Cloudflare | Zone on Nucalv.it account; nameservers at GoDaddy point to Cloudflare |
+| Hosting | Cloudflare Worker | `nucawebsite` with custom domains on apex and www |
+
+The legacy **Pages front-door** (`frontdoor/`, `nucawebsite.pages.dev`, `test.nucalasvegas.com`, SiteGround web DNS) is **retired**. Confirm **MX / SPF / DKIM** for chapter email in the Cloudflare zone before changing mail records.
 
 ## Resources
 
 | Resource | Name | Binding |
 |----------|------|---------|
 | Worker | `nucawebsite` | — |
-| Pages front-door | `nucawebsite` (root dir `frontdoor/`) | Service binding `NUCAWEBSITE` → Worker `nucawebsite` |
 | D1 | `nuca-lv` | `DB` |
 | R2 | `nuca-lv-assets` | `R2` |
 | Email | Cloudflare Email Service | `EMAIL` |
@@ -23,78 +31,20 @@
 ## Deploy
 
 ```bash
-# Main app (Worker + D1 + R2)
 npm run deploy
-
-# Pages front-door (proxies www → Worker; only needed when frontdoor/ changes)
-npm run deploy:frontdoor
 ```
 
----
+Optional legacy script `npm run deploy:frontdoor` only applies if you intentionally use `frontdoor/` again.
 
-## Interim domain cutover (SiteGround DNS — no GoDaddy nameserver change)
-
-The Worker cannot use a custom domain until nameservers point to Cloudflare. Until GoDaddy login is available, the Git-connected Pages project **`nucawebsite`** (root directory `frontdoor/`) accepts a CNAME from SiteGround and proxies all traffic to the `nucawebsite` Worker via a service binding. Do **not** CNAME to `nuca-frontdoor.pages.dev` — that project no longer exists.
-
-```mermaid
-flowchart LR
-  User --> SiteGroundDNS
-  SiteGroundDNS -->|CNAME www| PagesFrontdoor
-  SiteGroundDNS -->|redirect apex| WWW
-  PagesFrontdoor --> Worker
-  SiteGroundDNS --> SiteGroundMX[MX unchanged]
-```
-
-### Step 1 — SiteGround DNS (web only)
-
-**Do not change MX, SPF, or DKIM records** — SiteGround email keeps working.
-
-| Record | Type | Name | Value | Notes |
-|--------|------|------|-------|-------|
-| www | **CNAME** | `www` | `nucawebsite.pages.dev` | Remove old www A/CNAME to WordPress first |
-| test | **CNAME** | `test` | `nucawebsite.pages.dev` | Optional test hostname; same Pages front-door as www |
-| apex | **Redirect** | `@` | `https://www.nucalasvegas.com` | SiteGround domain redirect tool (301). Remove old @ A record to WordPress. |
-
-After saving, wait a few minutes, then check custom domain status:
-
-```bash
-node scripts/add-pages-domain.mjs
-```
-
-`www.nucalasvegas.com` and `test.nucalasvegas.com` should show status **active** once the CNAME propagates. Both are already attached to the Pages project.
-
-### Step 2 — Verify
+### Verify
 
 | Check | URL |
 |-------|-----|
-| Homepage | https://www.nucalasvegas.com |
-| Test hostname | https://test.nucalasvegas.com |
-| Apex redirect | https://nucalasvegas.com → www |
+| Homepage | https://www.nucalasvegas.com and https://nucalasvegas.com |
 | Admin login | https://www.nucalasvegas.com/admin/login |
 | R2 assets | Member logos, event flyers, PDFs |
 | Contact form | Submit a test message |
-| SiteGround inbox | Send to `info@nucalasvegas.com` |
-
-**Note:** Admin and sessions work on **www** only during the interim phase. Bare apex redirects to www.
-
----
-
-## Phase 2 — Full cutover (when GoDaddy login is available)
-
-1. Add `nucalasvegas.com` as a **Cloudflare zone** on the Nucalv.it account.
-2. Copy MX / SPF / DKIM from SiteGround into Cloudflare DNS (grey-cloud MX records).
-3. Add Worker custom domains in `wrangler.jsonc`:
-
-```jsonc
-"routes": [
-  { "pattern": "nucalasvegas.com", "custom_domain": true },
-  { "pattern": "www.nucalasvegas.com", "custom_domain": true }
-]
-```
-
-4. `npm run deploy`
-5. Change **nameservers at GoDaddy** to Cloudflare's.
-6. Remove Pages custom domains and SiteGround www/test CNAMEs after Worker custom domains are live.
+| Email | Send to `info@nucalasvegas.com` (per MX in Cloudflare DNS) |
 
 ---
 
@@ -115,11 +65,14 @@ Default email (Wrangler var): `info@nucalasvegas.com` — change in `wrangler.js
 | Session cookies | HttpOnly JWT, `Secure` on HTTPS, `SameSite=Lax`, 24-hour TTL |
 | CSRF | Token in JWT; `admin-security.js` adds to forms and `fetch` POSTs |
 | Login rate limit | 5 failed attempts / IP / 15 min (D1 `login_attempts` table) |
+| Public form rate limit | 8 submissions / IP / action / 15 min (D1 `form_attempts`; contact, join, newsletter, RSVP) |
 | Session invalidation | `users.session_version` checked on each request |
+| JWT in production | Worker refuses admin sessions if `JWT_SECRET` is missing, under 32 characters, or a known dev default |
+| Private R2 objects | `applications/` is admin-only; public `/assets/*` cannot fetch membership PDFs |
 | Audit log | D1 `admin_audit_log` — login, logout, user create, settings, newsletter export |
-| Response headers | `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy` |
+| Response headers | `Content-Security-Policy`, `Strict-Transport-Security` (HTTPS), `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy` |
 
-Apply migration `0021_security.sql` before deploying security updates.
+Apply migrations `0021_security.sql` and `0030_form_attempts.sql` before deploying these updates.
 
 ### Login rate limiting: code vs Cloudflare dashboard
 
@@ -131,7 +84,7 @@ Use both for defense in depth, or code-only if you prefer everything in the repo
 
 ### Turnstile (optional bot protection)
 
-Turnstile is **wired but off** until you add keys.
+Turnstile is **wired but off** until you add **both** keys. If only one key is set, login and public forms fail closed (the security check is rejected).
 
 1. In [Cloudflare Turnstile](https://dash.cloudflare.com/?to=/:account/turnstile), create a widget for your site hostname.
 2. Set the **site key** (public) as a Worker var and the **secret key** as a Worker secret:
@@ -143,10 +96,19 @@ Turnstile is **wired but off** until you add keys.
 npx wrangler secret put TURNSTILE_SECRET_KEY
 ```
 
-3. Redeploy. The login form shows the Turnstile widget automatically when `TURNSTILE_SITE_KEY` is set.
-4. The Worker verifies `cf-turnstile-response` on POST `/admin/login` when `TURNSTILE_SECRET_KEY` is set.
+3. Redeploy. The login form and public POST forms (contact, join, newsletter, RSVP) show the widget when `TURNSTILE_SITE_KEY` is set.
+4. The Worker verifies `cf-turnstile-response` when `TURNSTILE_SECRET_KEY` is set.
 
-If neither Turnstile key is set, login works as before (rate limiting still applies).
+If **neither** Turnstile key is set, forms work as before (rate limiting still applies).
+
+### Bootstrap admin password
+
+`ADMIN_PASSWORD` is only used to create the first admin when the `users` table is empty. After you sign in and (if you want) create another admin:
+
+1. Change the seeded account password in **Staff portal → Profile**.
+2. Remove the Worker secret (`npx wrangler secret delete ADMIN_PASSWORD`) so wiping `users` cannot recreate that password.
+
+Keep `JWT_SECRET` as a long random value (32+ characters). Production login returns 500 if it is missing, too short, or still a documented dev default.
 
 ## Secrets (Worker)
 

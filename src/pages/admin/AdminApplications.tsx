@@ -87,7 +87,7 @@ function ApplicationEditModal({ app }: { app: ApplicationRecord }) {
       }
     >
       {pdfUrl ? (
-        <PdfViewer pdfUrl={pdfUrl} title={`Application PDF: ${summary}`} compact />
+        <PdfViewer pdfUrl={pdfUrl} title={`Application PDF: ${summary}`} compact untrusted />
       ) : null}
       <dl class="admin-detail-list admin-detail-list-modal">
         {detailEntries.map(([key, value]) => (

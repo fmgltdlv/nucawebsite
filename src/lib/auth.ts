@@ -94,13 +94,24 @@ export async function createUser(
   return id
 }
 
+const DUMMY_SALT_HEX = '00'.repeat(16)
+let dummyHashPromise: Promise<string> | null = null
+
+function dummyPasswordHash(): Promise<string> {
+  dummyHashPromise ??= hashPassword('timing-dummy', DUMMY_SALT_HEX)
+  return dummyHashPromise
+}
+
 export async function verifyUserLogin(
   env: Env,
   email: string,
   password: string,
 ): Promise<User | null> {
   const row = await findUserByEmail(env.DB, email)
-  if (!row || row.role !== 'admin') return null
+  if (!row || row.role !== 'admin') {
+    await verifyPassword(password, DUMMY_SALT_HEX, await dummyPasswordHash())
+    return null
+  }
   const ok = await verifyPassword(password, row.password_salt, row.password_hash)
   if (!ok) return null
   return mapUser(row)

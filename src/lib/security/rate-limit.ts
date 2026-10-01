@@ -1,5 +1,6 @@
 const WINDOW_MS = 15 * 60 * 1000
 const MAX_FAILED_ATTEMPTS = 5
+const MAX_FORM_ATTEMPTS = 8
 const RETENTION_MS = 24 * 60 * 60 * 1000
 
 function windowStartIso(): string {
@@ -37,10 +38,33 @@ export async function recordLoginAttempt(
     .run()
 }
 
+export async function isFormRateLimited(db: D1Database, ip: string, action: string): Promise<boolean> {
+  const row = await db
+    .prepare(
+      `SELECT COUNT(*) as c FROM form_attempts
+       WHERE ip = ? AND action = ? AND attempted_at > ?`,
+    )
+    .bind(ip, action, windowStartIso())
+    .first<{ c: number }>()
+  return (row?.c ?? 0) >= MAX_FORM_ATTEMPTS
+}
+
+export async function recordFormAttempt(db: D1Database, ip: string, action: string): Promise<void> {
+  await db
+    .prepare(`INSERT INTO form_attempts (ip, action) VALUES (?, ?)`)
+    .bind(ip, action)
+    .run()
+
+  await db
+    .prepare(`DELETE FROM form_attempts WHERE attempted_at < ?`)
+    .bind(retentionCutoffIso())
+    .run()
+}
+
+/** Prefer Cloudflare's connecting IP; ignore spoofable XFF when the request hit CF. */
 export function clientIp(headers: { get(name: string): string | null | undefined }): string {
-  return (
-    headers.get('CF-Connecting-IP') ??
-    headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ??
-    'unknown'
-  )
+  const cf = headers.get('CF-Connecting-IP')?.trim()
+  if (cf) return cf
+  if (headers.get('CF-RAY')) return 'unknown'
+  return headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ?? 'unknown'
 }

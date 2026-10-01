@@ -89,9 +89,9 @@ export function AdminNewsletterSubscribersPage({
           <AdminListToolbar>
             <AdminListSearch />
             {subscribers.length > 0 && (
-              <a class="btn btn-secondary btn-sm" href="/admin/newsletter/export">
-                Export CSV
-              </a>
+              <form method="post" action="/admin/newsletter/export" class="admin-inline-form">
+                <button type="submit" class="btn btn-secondary btn-sm">Export CSV</button>
+              </form>
             )}
           </AdminListToolbar>
         }

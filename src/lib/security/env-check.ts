@@ -8,13 +8,17 @@ const WEAK_JWT_SECRETS = new Set([
 
 let checked = false
 
+export function isUnsafeJwtSecret(secret: string | undefined): boolean {
+  const value = secret?.trim() ?? ''
+  return !value || value.length < 32 || WEAK_JWT_SECRETS.has(value)
+}
+
 /** Warn once per isolate when production-like secrets look weak. */
 export function assertSafeSecrets(env: Env, isProduction: boolean): void {
   if (checked || !isProduction) return
   checked = true
 
-  const secret = env.JWT_SECRET?.trim() ?? ''
-  if (!secret || secret.length < 32 || WEAK_JWT_SECRETS.has(secret)) {
+  if (isUnsafeJwtSecret(env.JWT_SECRET)) {
     console.error(
       'JWT_SECRET is missing, too short, or uses a known dev default. Set a strong random secret via wrangler secret put JWT_SECRET.',
     )

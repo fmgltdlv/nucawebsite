@@ -10,6 +10,7 @@ import { heroTextStyleClass, renderPageContent, type PageBlock } from '../lib/pa
 import type { PageRecord } from '../lib/pages-db'
 import type { PostRecord } from '../lib/posts-db'
 import { getAssetUrl } from '../lib/r2-assets'
+import { safeHref } from '../lib/security/urls'
 import type { PageProps } from '../types/page'
 
 const HOME_DESCRIPTION =
@@ -27,13 +28,13 @@ function HomeHeroBlock({ block }: { block: PageBlock & { type: 'hero' } }) {
         <h1 class={titleClass || undefined}>{block.title}</h1>
         {block.lead.trim() ? <p class={leadClass}>{block.lead}</p> : null}
         <div class="hero-cta">
-          {block.cta_primary_label.trim() ? (
-            <a class="btn btn-primary" href={block.cta_primary_href}>
+          {block.cta_primary_label.trim() && safeHref(block.cta_primary_href) ? (
+            <a class="btn btn-primary" href={safeHref(block.cta_primary_href)!}>
               {block.cta_primary_label}
             </a>
           ) : null}
-          {block.cta_secondary_label.trim() ? (
-            <a class="btn btn-secondary" href={block.cta_secondary_href}>
+          {block.cta_secondary_label.trim() && safeHref(block.cta_secondary_href) ? (
+            <a class="btn btn-secondary" href={safeHref(block.cta_secondary_href)!}>
               {block.cta_secondary_label}
             </a>
           ) : null}

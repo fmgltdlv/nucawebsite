@@ -11,6 +11,7 @@ export type SiteLayoutProps = {
   logoSizePercent?: number
   headerBranding?: HeaderBranding
   navigation?: NavEntry[]
+  turnstileSiteKey?: string
   staffInboxCount?: number
 }
 

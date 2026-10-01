@@ -87,9 +87,9 @@ export function AdminEventRsvpsPage({
           <>
             <AdminListSearch />
             {rsvps.length > 0 && (
-              <a class="btn btn-secondary btn-sm" href={`/admin/events/${event.id}/rsvps/export`}>
-                Export CSV
-              </a>
+              <form method="post" action={`/admin/events/${event.id}/rsvps/export`} class="admin-inline-form">
+                <button type="submit" class="btn btn-secondary btn-sm">Export CSV</button>
+              </form>
             )}
           </>
         }

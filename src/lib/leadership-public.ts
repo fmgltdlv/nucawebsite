@@ -13,6 +13,8 @@ export type LeadershipPublicProfile = {
   photoUrl: string | null
 }
 
+import { optionalSafeHref } from './security/urls'
+
 export function toLeadershipPublicProfile(person: LeadershipRecord): LeadershipPublicProfile {
   return {
     id: person.id,
@@ -20,8 +22,8 @@ export function toLeadershipPublicProfile(person: LeadershipRecord): LeadershipP
     role_title: person.role_title,
     chair_title: person.chair_title,
     company: person.company,
-    website: person.website,
-    linkedin_url: person.linkedin_url,
+    website: optionalSafeHref(person.website) ?? null,
+    linkedin_url: optionalSafeHref(person.linkedin_url) ?? null,
     bio: person.bio,
     photoUrl: person.photo_r2_key ? getAssetUrl(person.photo_r2_key) : null,
   }

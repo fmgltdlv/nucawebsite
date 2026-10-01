@@ -2,9 +2,11 @@ type PdfViewerProps = {
   pdfUrl: string
   title: string
   compact?: boolean
+  /** Restrict the iframe when the file came from an untrusted upload. */
+  untrusted?: boolean
 }
 
-export function PdfViewer({ pdfUrl, title, compact = false }: PdfViewerProps) {
+export function PdfViewer({ pdfUrl, title, compact = false, untrusted = false }: PdfViewerProps) {
   return (
     <div class="pdf-preview">
       <div class="pdf-toolbar">
@@ -20,6 +22,8 @@ export function PdfViewer({ pdfUrl, title, compact = false }: PdfViewerProps) {
           class={compact ? 'pdf-viewer pdf-viewer--compact' : 'pdf-viewer'}
           title={title}
           src={pdfUrl}
+          sandbox={untrusted ? '' : undefined}
+          referrerpolicy="no-referrer"
         />
       </div>
       <p class="pdf-fallback">

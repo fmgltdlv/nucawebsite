@@ -30,7 +30,7 @@ import { listQaItems } from './lib/qa-db'
 import { listResourceItems } from './lib/resource-items-db'
 import { listMembershipTypes } from './lib/membership-types-db'
 import { getMemberGridLogoSize, getMemberListPaginationEnabled } from './lib/site-settings'
-import { getAssetObject, applicationPdfKey, deleteAsset, uploadAsset } from './lib/r2-assets'
+import { getAssetObject, applicationPdfKey, deleteAsset, uploadAsset, isPrivateAssetKey } from './lib/r2-assets'
 import { MEMBERSHIP_APPLICATION_PDF_MAX_BYTES } from './data/membership-application'
 import { parseUploadFiles } from './lib/library-asset-upload'
 import { subscribeNewsletter } from './lib/newsletter-db'
@@ -39,6 +39,16 @@ import { resolveAdminContext } from './lib/admin-context'
 import { adminAuthMiddleware, adminCsrfMiddleware, isPublicAdminRoute } from './lib/admin-guard'
 import { assertSafeSecrets, isProductionRequest } from './lib/security/env-check'
 import { applySecurityHeaders } from './lib/security/headers'
+import { clientIp } from './lib/security/rate-limit'
+import {
+  PUBLIC_COMPANY_MAX,
+  PUBLIC_MESSAGE_MAX,
+  PUBLIC_NAME_MAX,
+  clampField,
+  enforcePublicFormGuard,
+  isValidPublicEmail,
+  turnstileTokenFromBody,
+} from './lib/security/public-forms'
 import { totalInboxCount } from './lib/admin-inbox-counts'
 import { seedContentIfEmpty, seedDemoMembersIfEmpty, seedDirtIfEmpty } from './lib/seed'
 import { registerAdminRoutes } from './routes/admin'
@@ -92,13 +102,23 @@ async function siteProps(c: Context<{ Bindings: Env; Variables: Variables }>) {
 }
 
 app.get('/assets/*', async (c) => {
-  const key = c.req.path.replace(/^\/assets\//, '')
+  const key = decodeURIComponent(c.req.path.replace(/^\/assets\//, '')).replace(/^\/+/, '')
   if (!key) return c.notFound()
+  if (isPrivateAssetKey(key)) {
+    const ctx = await resolveAdminContext(c)
+    if (!ctx) return c.notFound()
+  }
   const object = await getAssetObject(c.env.R2, key)
   if (!object) return c.notFound()
   const headers = new Headers()
   object.writeHttpMetadata(headers)
-  headers.set('Cache-Control', 'public, max-age=86400')
+  headers.set('X-Content-Type-Options', 'nosniff')
+  if (isPrivateAssetKey(key)) {
+    headers.set('Cache-Control', 'private, no-store')
+    headers.set('Content-Disposition', 'inline; filename="application.pdf"')
+  } else {
+    headers.set('Cache-Control', 'public, max-age=86400')
+  }
   return new Response(object.body, { headers })
 })
 
@@ -384,6 +404,12 @@ app.get('/events/:id', async (c) => {
   )
 })
 
+function publicFormError(result: 'rate' | 'turnstile'): string {
+  return result === 'rate'
+    ? 'Too many submissions from this network. Please wait a few minutes and try again.'
+    : 'Security check failed. Please try again.'
+}
+
 app.post('/events/:id/rsvp', async (c) => {
   const site = await siteProps(c)
   const master = await getPublishedEventById(c.env.DB, c.req.param('id'))
@@ -396,7 +422,14 @@ app.post('/events/:id/rsvp', async (c) => {
   if (!occurrence) return c.html(<EventNotFoundPage {...site} />, 404)
 
   const eventHref = eventPublicHref({ series_id: master.id, starts_at: occurrence.starts_at })
-  const name = typeof body.name === 'string' ? body.name : ''
+  const ip = clientIp(c.req.raw.headers)
+  const guard = await enforcePublicFormGuard(c.env, ip, 'rsvp', turnstileTokenFromBody(body))
+  if (guard !== 'ok') {
+    const sep = eventHref.includes('?') ? '&' : '?'
+    return c.redirect(`${eventHref}${sep}rsvp_error=${guard === 'rate' ? 'rate' : 'security'}`, 303)
+  }
+
+  const name = typeof body.name === 'string' ? clampField(body.name, PUBLIC_NAME_MAX) : ''
   const email = typeof body.email === 'string' ? body.email : ''
   const spotsUsed =
     master.rsvp_enabled === 1 && master.registration_limit != null
@@ -454,8 +487,15 @@ app.get('/join', async (c) => {
 app.post('/join', async (c) => {
   const site = await siteProps(c)
   const body = await c.req.parseBody()
-  const name = typeof body.name === 'string' ? body.name.trim() : ''
-  const company_name = typeof body.company_name === 'string' ? body.company_name.trim() : ''
+  const ip = clientIp(c.req.raw.headers)
+  const guard = await enforcePublicFormGuard(c.env, ip, 'join', turnstileTokenFromBody(body))
+  if (guard !== 'ok') {
+    return c.html(<JoinErrorPage {...site} error={publicFormError(guard)} />, guard === 'rate' ? 429 : 403)
+  }
+
+  const name = typeof body.name === 'string' ? clampField(body.name, PUBLIC_NAME_MAX) : ''
+  const company_name =
+    typeof body.company_name === 'string' ? clampField(body.company_name, PUBLIC_COMPANY_MAX) : ''
   const email = typeof body.email === 'string' ? body.email.trim() : ''
   const pdfFile = parseUploadFiles(body.application_pdf)[0]
 
@@ -463,6 +503,9 @@ app.post('/join', async (c) => {
     return c.html(
       <JoinErrorPage {...site} error="Name, company name, email, and a PDF application are required." />,
     )
+  }
+  if (!isValidPublicEmail(email)) {
+    return c.html(<JoinErrorPage {...site} error="Please enter a valid email address." />)
   }
 
   const id = crypto.randomUUID()
@@ -512,11 +555,22 @@ app.get('/contact', async (c) => {
 app.post('/contact', async (c) => {
   const site = await siteProps(c)
   const body = await c.req.parseBody()
-  const name = typeof body.name === 'string' ? body.name.trim() : ''
+  const ip = clientIp(c.req.raw.headers)
+  const guard = await enforcePublicFormGuard(c.env, ip, 'contact', turnstileTokenFromBody(body))
+  if (guard !== 'ok') {
+    return c.html(
+      <ContactErrorPage {...site} error={publicFormError(guard)} />,
+      guard === 'rate' ? 429 : 403,
+    )
+  }
+  const name = typeof body.name === 'string' ? clampField(body.name, PUBLIC_NAME_MAX) : ''
   const email = typeof body.email === 'string' ? body.email.trim() : ''
-  const message = typeof body.message === 'string' ? body.message.trim() : ''
+  const message = typeof body.message === 'string' ? clampField(body.message, PUBLIC_MESSAGE_MAX) : ''
   if (!name || !email || !message) {
     return c.html(<ContactErrorPage {...site} error="Name, email, and message are required." />)
+  }
+  if (!isValidPublicEmail(email)) {
+    return c.html(<ContactErrorPage {...site} error="Please enter a valid email address." />)
   }
   try {
     await createContactSubmission(c.env.DB, { name, email, message })
@@ -532,12 +586,21 @@ app.post('/contact', async (c) => {
 app.post('/newsletter/subscribe', async (c) => {
   const site = await siteProps(c)
   const body = await c.req.parseBody()
+  const ip = clientIp(c.req.raw.headers)
+  const guard = await enforcePublicFormGuard(c.env, ip, 'newsletter', turnstileTokenFromBody(body))
+  if (guard !== 'ok') {
+    return c.html(
+      <NewsletterErrorPage {...site} error={publicFormError(guard)} />,
+      guard === 'rate' ? 429 : 403,
+    )
+  }
   const email = typeof body.newsletter_email === 'string' ? body.newsletter_email : ''
-  const name = typeof body.newsletter_name === 'string' ? body.newsletter_name : ''
-  const company = typeof body.newsletter_company === 'string' ? body.newsletter_company : ''
+  const name = typeof body.newsletter_name === 'string' ? clampField(body.newsletter_name, PUBLIC_NAME_MAX) : ''
+  const company =
+    typeof body.newsletter_company === 'string' ? clampField(body.newsletter_company, PUBLIC_COMPANY_MAX) : ''
   const source =
     typeof body.newsletter_source === 'string' && body.newsletter_source.trim()
-      ? body.newsletter_source.trim()
+      ? clampField(body.newsletter_source, 80)
       : 'contact'
   const result = await subscribeNewsletter(c.env.DB, { email, name, company, source })
   if (!result.ok) return c.html(<NewsletterErrorPage {...site} error={result.error} />)

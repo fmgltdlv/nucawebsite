@@ -1,4 +1,5 @@
 import { toCsv } from './csv'
+import { isValidPublicEmail } from './security/public-forms'
 
 export type NewsletterSubscriber = {
   id: string
@@ -20,7 +21,7 @@ export async function subscribeNewsletter(
   },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const normalized = data.email.trim().toLowerCase()
-  if (!normalized || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+  if (!isValidPublicEmail(normalized)) {
     return { ok: false, error: 'Please enter a valid email address.' }
   }
 

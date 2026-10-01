@@ -6,6 +6,7 @@ import type { Env } from '../env'
 import { getAdminCtx } from '../lib/admin-guard'
 import { writeAuditLog } from '../lib/security/audit-log'
 import { clientIp } from '../lib/security/rate-limit'
+import { optionalSafeHref } from '../lib/security/urls'
 import {
   createDirtRelease,
   deleteDirtRelease,
@@ -122,9 +123,10 @@ function optionalParentId(body: Record<string, unknown>): string | null {
 }
 
 function navItemFromBody(body: Record<string, unknown>, existing?: { sort_order: number }) {
+  const rawHref = typeof body.href === 'string' ? body.href.trim() : ''
   return {
     label: typeof body.label === 'string' ? body.label.trim() : '',
-    href: typeof body.href === 'string' ? body.href.trim() : '',
+    href: rawHref ? optionalSafeHref(rawHref) ?? '' : '',
     parent_id: optionalParentId(body),
     sort_order: parseSortOrder(typeof body.sort_order === 'string' ? body.sort_order : String(existing?.sort_order ?? 0)),
     published: body.published === '1',
@@ -146,8 +148,8 @@ function leadershipFromBody(body: Record<string, unknown>, existingRole?: string
     role_title: role_title ?? '',
     chair_title: optionalText(body, 'chair_title'),
     company: optionalText(body, 'company'),
-    website: optionalText(body, 'website'),
-    linkedin_url: optionalText(body, 'linkedin_url'),
+    website: optionalSafeHref(optionalText(body, 'website') ?? ''),
+    linkedin_url: optionalSafeHref(optionalText(body, 'linkedin_url') ?? ''),
     bio: optionalText(body, 'bio'),
   }
 }
@@ -277,7 +279,10 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
       active: body.breaking_active === '1',
       title: typeof body.breaking_title === 'string' ? body.breaking_title.trim() : '',
       body: typeof body.breaking_body === 'string' ? body.breaking_body.trim() : '',
-      link: typeof body.breaking_link === 'string' && body.breaking_link.trim() ? body.breaking_link.trim() : undefined,
+      link:
+        typeof body.breaking_link === 'string' && body.breaking_link.trim()
+          ? optionalSafeHref(body.breaking_link)
+          : undefined,
       expiresAt:
         typeof body.breaking_expires === 'string' && body.breaking_expires.trim()
           ? parseDatetimeLocal(body.breaking_expires) ?? undefined
@@ -952,7 +957,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const ctx = getAdminCtx(c)
     const body = await c.req.parseBody()
     const label = typeof body.label === 'string' ? body.label.trim() : ''
-    const url = typeof body.url === 'string' ? body.url.trim() : ''
+    const url = optionalSafeHref(typeof body.url === 'string' ? body.url : '') ?? ''
     const category = typeof body.category === 'string' ? body.category.trim() : ''
     if (label && url) await createResourceItem(c.env.DB, { label, url, category })
     return c.redirect('/admin/content/resources?ok=1', 303)
@@ -963,7 +968,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     const body = await c.req.parseBody()
     await updateResourceItem(c.env.DB, c.req.param('id'), {
       label: typeof body.label === 'string' ? body.label.trim() : '',
-      url: typeof body.url === 'string' ? body.url.trim() : '',
+      url: optionalSafeHref(typeof body.url === 'string' ? body.url : '') ?? '',
       category: typeof body.category === 'string' ? body.category.trim() : '',
       sort_order: parseSortOrder(typeof body.sort_order === 'string' ? body.sort_order : '0'),
       published: body.published === '1',
@@ -1038,7 +1043,7 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     )
   })
 
-  app.get('/admin/newsletter/export', async (c) => {
+  app.post('/admin/newsletter/export', async (c) => {
     const ctx = getAdminCtx(c)
     const subscribers = await listAllNewsletterSubscribers(c.env.DB)
     await writeAuditLog(c.env.DB, {

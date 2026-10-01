@@ -4,6 +4,7 @@ import { parsePointsOfContactJson, visibleMemberContacts } from './member-contac
 import { getMemberById } from './members-db'
 import { memberLogoUrl } from './member-logos'
 import { membershipTypeLabelMap } from './membership-types-db'
+import { optionalSafeHref } from './security/urls'
 
 export type MemberPublicProfile = {
   id: string
@@ -50,7 +51,7 @@ export async function getActiveMemberPublicProfile(
     company: member.company,
     typeLabel: resolveMemberTypeLabel(member.type, labels),
     description: member.description ?? null,
-    website: member.website ?? null,
+    website: optionalSafeHref(member.website) ?? null,
     phone: member.phone ?? null,
     logoUrl: member.logoUrl ?? null,
     contacts: visibleMemberContacts(member.contacts ?? []),

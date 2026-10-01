@@ -5,6 +5,7 @@ import { plainTextToSafeHtml } from '../lib/markdown'
 import type { PageProps } from '../types/page'
 import { Layout, pickLayoutSite } from '../views/Layout'
 import { StatusPage } from '../views/StatusPage'
+import { SafeLink } from '../views/SafeLink'
 
 function formatEventDateRange(startsAt: string, endsAt: string | null): string {
   if (!endsAt) return formatEventDate(startsAt)
@@ -28,6 +29,8 @@ const RSVP_ERROR_MESSAGES: Record<string, string> = {
   duplicate: 'That email is already registered for this event.',
   invalid: 'Please enter a valid name, email, and number of spots.',
   disabled: 'RSVPs are not open for this event.',
+  rate: 'Too many submissions from this network. Please wait a few minutes and try again.',
+  security: 'Security check failed. Please try again.',
 }
 
 function EventRsvpForm({
@@ -168,16 +171,16 @@ export function EventDetailPage({
                       />
                     )
                   ) : (
-                    <a class="btn btn-primary event-detail-register" href={master.registration_url!}>
+                    <SafeLink class="btn btn-primary event-detail-register" href={master.registration_url}>
                       Register
-                    </a>
+                    </SafeLink>
                   )}
                   {rsvpEnabled && master.registration_url && (
                     <p class="event-detail-card-muted event-rsvp-alt">
                       Prefer an external form?{' '}
-                      <a href={master.registration_url} target="_blank" rel="noopener noreferrer">
+                      <SafeLink href={master.registration_url} target="_blank" rel="noopener noreferrer">
                         Register elsewhere ↗
-                      </a>
+                      </SafeLink>
                     </p>
                   )}
                 </div>

@@ -1,4 +1,58 @@
 (function () {
+  function safeHref(href) {
+    if (!href || typeof href !== 'string') return null
+    const trimmed = href.trim()
+    if (!trimmed || trimmed.startsWith('//') || /[\r\n\\]/.test(trimmed)) return null
+    if (trimmed.startsWith('#') || (trimmed.startsWith('/') && !trimmed.startsWith('//'))) return trimmed
+    if (/^mailto:/i.test(trimmed)) return trimmed
+    try {
+      const url = new URL(trimmed)
+      if (url.protocol === 'http:' || url.protocol === 'https:') return trimmed
+    } catch {
+      return null
+    }
+    return null
+  }
+
+  window.nucaSafeHref = safeHref
+
+  function isPublicProtectedForm(form) {
+    if (!(form instanceof HTMLFormElement)) return false
+    if ((form.getAttribute('method') || 'get').toLowerCase() !== 'post') return false
+    try {
+      const path = new URL(form.getAttribute('action') || '', window.location.origin).pathname
+      if (path === '/contact' || path === '/join' || path === '/newsletter/subscribe') return true
+      return /^\/events\/[^/]+\/rsvp$/.test(path)
+    } catch {
+      return false
+    }
+  }
+
+  function injectTurnstile() {
+    const sitekey = document.querySelector('meta[name="cf-turnstile-sitekey"]')?.getAttribute('content')
+    if (!sitekey) return
+    document.querySelectorAll('form').forEach((form) => {
+      if (!isPublicProtectedForm(form) || form.querySelector('.cf-turnstile')) return
+      const el = document.createElement('div')
+      el.className = 'cf-turnstile'
+      el.setAttribute('data-sitekey', sitekey)
+      const submit = form.querySelector('[type="submit"]')
+      if (submit) submit.before(el)
+      else form.append(el)
+      if (window.turnstile && typeof window.turnstile.render === 'function') {
+        window.turnstile.render(el, { sitekey })
+      }
+    })
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectTurnstile)
+  } else {
+    injectTurnstile()
+  }
+})();
+
+(function () {
   // NUCA public site interactions (v13)
   const toggle = document.getElementById('nav-toggle')
   const nav = document.getElementById('site-nav')
@@ -989,7 +1043,13 @@
           previewLink.href = asset.url
           previewLink.textContent = asset.label
         } else {
-          preview.innerHTML = `<a href="${asset.url}" target="_blank" rel="noopener noreferrer" data-asset-picker-preview-link>${asset.label}</a>`
+          const link = document.createElement('a')
+          link.href = asset.url
+          link.target = '_blank'
+          link.rel = 'noopener noreferrer'
+          link.setAttribute('data-asset-picker-preview-link', '')
+          link.textContent = asset.label
+          preview.replaceChildren(link)
         }
         return
       }
@@ -1000,7 +1060,14 @@
         previewImage.src = asset.url
         previewImage.alt = ''
       } else {
-        preview.innerHTML = `<img src="${asset.url}" alt="" class="admin-modal-logo-preview" data-asset-picker-preview-image loading="lazy" decoding="async" />`
+        const img = document.createElement('img')
+        img.src = asset.url
+        img.alt = ''
+        img.className = 'admin-modal-logo-preview'
+        img.setAttribute('data-asset-picker-preview-image', '')
+        img.loading = 'lazy'
+        img.decoding = 'async'
+        preview.replaceChildren(img)
       }
     }
 
@@ -1381,20 +1448,26 @@
         linksEl.replaceChildren()
         const links = []
         if (leader.website) {
-          const website = document.createElement('a')
-          website.href = leader.website
-          website.rel = 'noopener noreferrer'
-          website.target = '_blank'
-          website.textContent = 'Company website'
-          links.push(website)
+          const href = window.nucaSafeHref(leader.website)
+          if (href) {
+            const website = document.createElement('a')
+            website.href = href
+            website.rel = 'noopener noreferrer'
+            website.target = '_blank'
+            website.textContent = 'Company website'
+            links.push(website)
+          }
         }
         if (leader.linkedin_url) {
-          const linkedin = document.createElement('a')
-          linkedin.href = leader.linkedin_url
-          linkedin.rel = 'noopener noreferrer'
-          linkedin.target = '_blank'
-          linkedin.textContent = 'LinkedIn'
-          links.push(linkedin)
+          const href = window.nucaSafeHref(leader.linkedin_url)
+          if (href) {
+            const linkedin = document.createElement('a')
+            linkedin.href = href
+            linkedin.rel = 'noopener noreferrer'
+            linkedin.target = '_blank'
+            linkedin.textContent = 'LinkedIn'
+            links.push(linkedin)
+          }
         }
         links.forEach((link) => linksEl.append(link))
         linksEl.hidden = links.length === 0
@@ -1499,12 +1572,15 @@
         linksEl.replaceChildren()
         const links = []
         if (member.website) {
-          const website = document.createElement('a')
-          website.href = member.website
-          website.rel = 'noopener noreferrer'
-          website.target = '_blank'
-          website.textContent = 'Website'
-          links.push(website)
+          const href = window.nucaSafeHref(member.website)
+          if (href) {
+            const website = document.createElement('a')
+            website.href = href
+            website.rel = 'noopener noreferrer'
+            website.target = '_blank'
+            website.textContent = 'Website'
+            links.push(website)
+          }
         }
         if (member.phone) {
           const phone = document.createElement('a')

@@ -61,6 +61,11 @@ export const RESERVED_PAGE_SLUGS = new Set([
   'the-dirt',
   'theme',
   'training',
+  'login',
+  'newsletter',
+  'sitemap',
+  'robots',
+  'wp-admin',
 ])
 
 export function isCommitteePageSlug(slug: string): boolean {

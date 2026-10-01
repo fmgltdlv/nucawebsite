@@ -1,9 +1,13 @@
-/** Escape a single CSV cell per RFC 4180. */
+/** Escape a single CSV cell per RFC 4180, neutralizing spreadsheet formulas. */
 export function csvCell(value: string): string {
-  if (/[",\n\r]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`
+  let cell = value
+  if (/^[=+\-@\t\r]/.test(cell)) {
+    cell = `'${cell}`
   }
-  return value
+  if (/[",\n\r]/.test(cell)) {
+    return `"${cell.replace(/"/g, '""')}"`
+  }
+  return cell
 }
 
 /** Build a CSV document from rows of string cells. */

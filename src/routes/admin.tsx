@@ -9,8 +9,10 @@ import { getAdminCtx } from '../lib/admin-guard'
 import { resolveAdminContext } from '../lib/admin-context'
 import { writeAuditLog } from '../lib/security/audit-log'
 import { generateCsrfToken } from '../lib/security/csrf'
+import { isProductionRequest, isUnsafeJwtSecret } from '../lib/security/env-check'
 import { clientIp, isLoginRateLimited, recordLoginAttempt } from '../lib/security/rate-limit'
 import { verifyTurnstile } from '../lib/security/turnstile'
+import { optionalSafeHref } from '../lib/security/urls'
 import { parseRepeatRule, parseRepeatUntil } from '../lib/event-repeat'
 import {
   applyEventImageUploads,
@@ -96,7 +98,7 @@ function parseMemberFormBody(body: Record<string, File | string>, allowedKeys: s
     company_name,
     member_type,
     description: description || undefined,
-    website: website || undefined,
+    website: optionalSafeHref(website),
     phone: phone || undefined,
     email: email || undefined,
     contacts,
@@ -126,6 +128,11 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     await seedAdminIfNeeded(c.env)
     const ip = clientIp(c.req.raw.headers)
     const turnstileSiteKey = c.env.TURNSTILE_SITE_KEY
+
+    const production = isProductionRequest(new URL(c.req.url))
+    if (production && isUnsafeJwtSecret(c.env.JWT_SECRET)) {
+      return c.text('Server configuration error', 500)
+    }
 
     if (await isLoginRateLimited(c.env.DB, ip)) {
       await writeAuditLog(c.env.DB, { action: 'login.rate_limited', ip })
@@ -173,7 +180,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
 
     const sessionVersion = await getSessionVersion(c.env.DB, user.id)
     const csrf = generateCsrfToken()
-    const token = await createSessionToken(user.id, c.env, { sessionVersion, csrf })
+    const token = await createSessionToken(user.id, c.env, { sessionVersion, csrf, production })
     await writeAuditLog(c.env.DB, { userId: user.id, action: 'login.success', ip })
     c.header('Set-Cookie', sessionCookieHeader(token, secure(c)))
     return c.redirect('/admin', 303)
@@ -514,7 +521,8 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     await changeUserPassword(c.env.DB, ctx.user.id, next)
     const sessionVersion = await getSessionVersion(c.env.DB, ctx.user.id)
     const csrf = generateCsrfToken()
-    const token = await createSessionToken(ctx.user.id, c.env, { sessionVersion, csrf })
+    const production = isProductionRequest(new URL(c.req.url))
+    const token = await createSessionToken(ctx.user.id, c.env, { sessionVersion, csrf, production })
     await writeAuditLog(c.env.DB, {
       userId: ctx.user.id,
       action: 'user.password_change',
@@ -700,7 +708,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const location = typeof body.location === 'string' ? body.location.trim() : ''
     const description = typeof body.description === 'string' ? body.description.trim() : ''
     const registration_url =
-      typeof body.registration_url === 'string' ? body.registration_url.trim() : ''
+      optionalSafeHref(typeof body.registration_url === 'string' ? body.registration_url : '') ?? ''
     const rsvp_enabled = body.rsvp_enabled === '1'
     const registration_limit = parseRegistrationLimit(body.registration_limit)
     const repeat_rule = parseRepeatRule(typeof body.repeat_rule === 'string' ? body.repeat_rule : '')
@@ -773,7 +781,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const location = typeof body.location === 'string' ? body.location.trim() : ''
     const description = typeof body.description === 'string' ? body.description.trim() : ''
     const registration_url =
-      typeof body.registration_url === 'string' ? body.registration_url.trim() : ''
+      optionalSafeHref(typeof body.registration_url === 'string' ? body.registration_url : '') ?? ''
     const rsvp_enabled = body.rsvp_enabled === '1'
     const registration_limit = parseRegistrationLimit(body.registration_limit)
     const repeat_rule = parseRepeatRule(typeof body.repeat_rule === 'string' ? body.repeat_rule : '')
@@ -822,7 +830,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     )
   })
 
-  app.get('/admin/events/:id/rsvps/export', async (c) => {
+  app.post('/admin/events/:id/rsvps/export', async (c) => {
     const ctx = getAdminCtx(c)
     const event = await getEventById(c.env.DB, c.req.param('id'))
     if (!event) return c.redirect('/admin/events', 303)

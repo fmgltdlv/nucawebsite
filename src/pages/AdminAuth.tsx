@@ -30,9 +30,6 @@ export function AdminLoginPage({
           </form>
         </div>
       </section>
-      {turnstileSiteKey ? (
-        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-      ) : null}
     </Layout>
   )
 }

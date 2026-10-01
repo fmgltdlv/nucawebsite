@@ -4,6 +4,7 @@ import { getUserById } from './auth'
 import type { User } from '../config/roles'
 import { readSessionCookie, verifySessionToken } from './session'
 import { getAdminInboxCounts, type AdminInboxCounts } from './admin-inbox-counts'
+import { isProductionRequest } from './security/env-check'
 
 export type AdminContext = {
   user: User
@@ -15,7 +16,8 @@ export async function resolveAdminContext(
   c: Pick<Context<{ Bindings: Env }>, 'env' | 'req'>,
 ): Promise<AdminContext | null> {
   const token = readSessionCookie(c.req.header('Cookie'))
-  const session = await verifySessionToken(token, c.env)
+  const production = isProductionRequest(new URL(c.req.url))
+  const session = await verifySessionToken(token, c.env, { production })
   if (!session) return null
 
   const user = await getUserById(c.env.DB, session.sub)

@@ -18,6 +18,10 @@ export function getAssetUrl(key: string): string {
   return `/assets/${key}`
 }
 
+export function isPrivateAssetKey(key: string): boolean {
+  return key === 'applications' || key.startsWith('applications/')
+}
+
 export async function uploadAsset(
   r2: R2Bucket,
   file: File,

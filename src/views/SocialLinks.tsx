@@ -1,4 +1,5 @@
 import { SOCIAL_PLATFORMS, type SocialLinks } from '../lib/social-links'
+import { SafeLink } from './SafeLink'
 
 export function SocialLinksList({
   social,
@@ -16,9 +17,9 @@ export function SocialLinksList({
     <ul class={className}>
       {items.map((platform) => (
         <li key={platform.key}>
-          <a href={social[platform.key]!} rel="noopener noreferrer" target="_blank">
+          <SafeLink href={social[platform.key]} rel="noopener noreferrer" target="_blank">
             {platform.label}
-          </a>
+          </SafeLink>
         </li>
       ))}
     </ul>

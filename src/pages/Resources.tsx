@@ -4,6 +4,7 @@ import { renderPageContent } from '../lib/page-blocks'
 import { groupResourceItems, type ResourceItemRecord } from '../lib/resource-items-db'
 import type { PageRecord } from '../lib/pages-db'
 import type { PageProps } from '../types/page'
+import { SafeLink } from '../views/SafeLink'
 
 export function ResourcesPage({
   theme,
@@ -45,9 +46,9 @@ export function ResourcesPage({
               <ul class="resource-link-list">
                 {group.items.map((item) => (
                   <li key={item.id}>
-                    <a href={item.url} rel="noopener noreferrer" target="_blank">
+                    <SafeLink href={item.url} rel="noopener noreferrer" target="_blank">
                       {item.label} ↗
-                    </a>
+                    </SafeLink>
                   </li>
                 ))}
               </ul>

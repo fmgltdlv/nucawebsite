@@ -1,3 +1,5 @@
+import { optionalSafeHref } from './security/urls'
+
 export type SocialLinks = {
   facebook?: string
   instagram?: string
@@ -29,7 +31,8 @@ export function parseSocialLinksFromBody(body: Record<string, unknown>): SocialL
     const field = `social_${platform.key}`
     const value = body[field]
     if (typeof value === 'string' && value.trim()) {
-      social[platform.key] = value.trim()
+      const href = optionalSafeHref(value)
+      if (href) social[platform.key] = href
     }
   }
   return hasSocialLinks(social) ? social : undefined

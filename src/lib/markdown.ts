@@ -1,19 +1,28 @@
 import { raw } from 'hono/html'
+import { escapeHtml, escapeAttr } from './security/html'
+import { safeHref } from './security/urls'
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
-function inlineMarkdown(text: string): string {
-  return text
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+function applyBoldItalicCode(escaped: string): string {
+  return escaped
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
+}
+
+function inlineMarkdown(text: string): string {
+  const parts: string[] = []
+  const re = /\[([^\]]+)\]\(([^)]+)\)/g
+  let last = 0
+  let match: RegExpExecArray | null
+  while ((match = re.exec(text))) {
+    parts.push(applyBoldItalicCode(escapeHtml(text.slice(last, match.index))))
+    const label = applyBoldItalicCode(escapeHtml(match[1]))
+    const href = safeHref(match[2])
+    parts.push(href ? `<a href="${escapeAttr(href)}">${label}</a>` : label)
+    last = match.index + match[0].length
+  }
+  parts.push(applyBoldItalicCode(escapeHtml(text.slice(last))))
+  return parts.join('')
 }
 
 /** Minimal markdown → HTML for FAQ answers and page bodies. */
@@ -39,19 +48,12 @@ export function renderMarkdown(md: string): string {
       const tag = level === 1 ? 'h2' : level === 2 ? 'h3' : 'h4'
       parts.push(`<${tag}>${inlineMarkdown(lines[0].replace(/^#{1,3}\s+/, ''))}</${tag}>`)
       if (lines.length > 1) {
-        parts.push(
-          `<p>${lines
-            .slice(1)
-            .map((l) => inlineMarkdown(l))
-            .join('<br>')}</p>`,
-        )
+        parts.push(`<p>${lines.slice(1).map((line) => inlineMarkdown(line)).join('<br>')}</p>`)
       }
       continue
     }
 
-    parts.push(
-      `<p>${lines.map((line) => inlineMarkdown(escapeHtml(line))).join('<br>')}</p>`,
-    )
+    parts.push(`<p>${lines.map((line) => inlineMarkdown(line)).join('<br>')}</p>`)
   }
 
   return parts.join('\n')

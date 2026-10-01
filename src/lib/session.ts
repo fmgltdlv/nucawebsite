@@ -1,5 +1,6 @@
 import { sign, verify } from 'hono/jwt'
 import type { Env } from '../env'
+import { isUnsafeJwtSecret } from './security/env-check'
 
 const COOKIE_NAME = 'nuca_admin_session'
 const MAX_AGE_SEC = 60 * 60 * 24
@@ -15,8 +16,11 @@ export type SessionPayload = {
 export async function createSessionToken(
   userId: string,
   env: Env,
-  opts: { sessionVersion: number; csrf: string },
+  opts: { sessionVersion: number; csrf: string; production?: boolean },
 ): Promise<string> {
+  if (opts.production && isUnsafeJwtSecret(env.JWT_SECRET)) {
+    throw new Error('JWT_SECRET is not configured for production')
+  }
   const exp = Math.floor(Date.now() / 1000) + MAX_AGE_SEC
   return await sign(
     {
@@ -34,8 +38,10 @@ export async function createSessionToken(
 export async function verifySessionToken(
   token: string | undefined,
   env: Env,
+  opts?: { production?: boolean },
 ): Promise<SessionPayload | null> {
   if (!token) return null
+  if (opts?.production && isUnsafeJwtSecret(env.JWT_SECRET)) return null
   try {
     const payload = await verify(token, env.JWT_SECRET, 'HS256')
     if (typeof payload.sub !== 'string' || payload.role !== 'admin') return null

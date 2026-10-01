@@ -1,5 +1,6 @@
 import type { Env } from '../env'
 import { getContactInfo } from './site-settings'
+import { stripHeaderChars } from './security/public-forms'
 
 export async function sendContactMessage(
   env: Env,
@@ -13,12 +14,14 @@ export async function sendContactMessage(
   const to = contact.email
 
   try {
+    const name = stripHeaderChars(data.name)
+    const email = stripHeaderChars(data.email)
     await env.EMAIL.send({
       to,
       from: 'NUCA Website <noreply@nucalasvegas.com>',
-      replyTo: data.email,
-      subject: `Contact form: ${data.name}`,
-      text: `Name: ${data.name}\nEmail: ${data.email}\n\n${data.message}`,
+      replyTo: email,
+      subject: `Contact form: ${name}`,
+      text: `Name: ${name}\nEmail: ${email}\n\n${data.message}`,
     })
     return { ok: true }
   } catch {

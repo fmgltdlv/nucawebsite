@@ -1,3 +1,5 @@
+import { toCsv } from './csv'
+
 export type EventRsvpRecord = {
   id: string
   event_id: string
@@ -158,17 +160,7 @@ export function buildEventRsvpsCsv(rsvps: EventRsvpRecord[]): string {
       rsvp.created_at,
     ]),
   ]
-  return rows
-    .map((row) =>
-      row
-        .map((cell) => {
-          const value = String(cell ?? '')
-          if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`
-          return value
-        })
-        .join(','),
-    )
-    .join('\n')
+  return toCsv(rows)
 }
 
 export function eventRsvpsExportFilename(eventTitle: string): string {
