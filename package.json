@@ -14,7 +14,11 @@
     "import-members": "node scripts/import-wp-members.mjs",
     "import-leadership": "node scripts/import-wp-leadership.mjs",
     "fix-event-timezones": "node scripts/fix-event-timezones.mjs",
-    "fix-event-timezones:remote": "node scripts/fix-event-timezones.mjs --remote"
+    "fix-event-timezones:remote": "node scripts/fix-event-timezones.mjs --remote",
+    "backup-events": "node scripts/backup-events.mjs",
+    "backup-events:remote": "node scripts/backup-events.mjs --remote",
+    "restore-events": "node scripts/restore-events.mjs",
+    "restore-events:remote": "node scripts/restore-events.mjs --remote"
   },
   "dependencies": {
     "hono": "^4.7.7"
