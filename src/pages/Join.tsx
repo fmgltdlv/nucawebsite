@@ -24,10 +24,12 @@ export function JoinPage({
   committees,
   page,
   membershipTypes = [],
+  membershipApplicationPdfUrl = null,
 }: PageProps & {
   committees: CommitteeRecord[]
   page?: PageRecord | null
   membershipTypes?: MembershipTypeRecord[]
+  membershipApplicationPdfUrl?: string | null
 }) {
   const title = page?.title ?? 'Join NUCA of Las Vegas'
   const lead =
@@ -67,11 +69,15 @@ export function JoinPage({
             </p>
             <JoinPdfUploadForm />
           </div>
-          <JoinApplicationAside />
+          <JoinApplicationAside pdfUrl={membershipApplicationPdfUrl} />
         </div>
       </section>
 
-      <JoinApplicationModal committees={committees} membershipTypes={membershipTypes} />
+      <JoinApplicationModal
+        committees={committees}
+        membershipTypes={membershipTypes}
+        pdfUrl={membershipApplicationPdfUrl}
+      />
     </Layout>
   )
 }

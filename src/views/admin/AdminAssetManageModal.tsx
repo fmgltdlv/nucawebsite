@@ -24,6 +24,8 @@ function linkedRecordLabel(type: AssetType): string {
       return 'Member'
     case 'dirt_pdf':
       return 'THE DIRT release'
+    case 'membership_pdf':
+      return 'Join page'
     case 'leadership_photo':
       return 'Leader'
     case 'event_thumbnail':

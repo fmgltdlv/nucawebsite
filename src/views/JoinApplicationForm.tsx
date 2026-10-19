@@ -2,7 +2,6 @@ import { site } from '../data/demo'
 import {
   JOIN_DIGITAL_FORM_ENABLED,
   MEMBERSHIP_APPLICATION_PDF_MAX_BYTES,
-  MEMBERSHIP_APPLICATION_PDF_URL,
   KEY_PERSON_ROW_COUNT,
   associateProducts,
   associateRevenueTiers,
@@ -76,9 +75,11 @@ export function JoinPdfUploadForm() {
 export function JoinApplicationModal({
   committees,
   membershipTypes = [],
+  pdfUrl = null,
 }: {
   committees: CommitteeRecord[]
   membershipTypes?: MembershipTypeRecord[]
+  pdfUrl?: string | null
 }) {
   const today = applicationDateDefault()
   const types =
@@ -104,9 +105,13 @@ export function JoinApplicationModal({
             <h2 id="join-application-dialog-title">Membership application</h2>
             <p class="join-application-dialog-lead">
               Complete the same information as the{' '}
-              <a href={MEMBERSHIP_APPLICATION_PDF_URL} target="_blank" rel="noopener noreferrer">
-                printable PDF application
-              </a>
+              {pdfUrl ? (
+                <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                  printable PDF application
+                </a>
+              ) : (
+                'printable PDF application'
+              )}
               . Membership renews every January.
             </p>
           </div>
@@ -415,16 +420,22 @@ export function JoinApplicationModal({
   )
 }
 
-export function JoinApplicationAside() {
+export function JoinApplicationAside({ pdfUrl = null }: { pdfUrl?: string | null }) {
   return (
     <aside class="join-aside">
       <h3>PDF application</h3>
       <p>
         Download the blank application, complete it, then upload it using the form on this page.
       </p>
-      <a class="btn btn-secondary" href={MEMBERSHIP_APPLICATION_PDF_URL} target="_blank" rel="noopener noreferrer">
-        Download PDF application
-      </a>
+      {pdfUrl ? (
+        <a class="btn btn-secondary" href={pdfUrl} target="_blank" rel="noopener noreferrer">
+          Download PDF application
+        </a>
+      ) : (
+        <p class="aside-note">
+          The application PDF is not available yet. Please check back or contact the chapter.
+        </p>
+      )}
       <p class="aside-note">
         For questions, contact Jennifer Bott at <a href="tel:7025778556">{site.phone}</a>.
       </p>

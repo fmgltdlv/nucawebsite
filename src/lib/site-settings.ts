@@ -171,6 +171,27 @@ export async function setSiteLogoR2Key(db: D1Database, key: string | null): Prom
   await setSetting(db, 'logo_r2_key', key)
 }
 
+export const MEMBERSHIP_APPLICATION_PDF_SETTING_KEY = 'membership_application_pdf_r2_key'
+
+export async function getMembershipApplicationPdfR2Key(db: D1Database): Promise<string | null> {
+  const stored = await getSetting<string>(db, MEMBERSHIP_APPLICATION_PDF_SETTING_KEY)
+  return stored ?? null
+}
+
+export async function setMembershipApplicationPdfR2Key(
+  db: D1Database,
+  key: string | null,
+): Promise<void> {
+  if (key === null) {
+    await db
+      .prepare('DELETE FROM site_settings WHERE key = ?')
+      .bind(MEMBERSHIP_APPLICATION_PDF_SETTING_KEY)
+      .run()
+    return
+  }
+  await setSetting(db, MEMBERSHIP_APPLICATION_PDF_SETTING_KEY, key)
+}
+
 export async function getSiteLogoSizePercent(db: D1Database): Promise<number> {
   const stored = await getSetting<number>(db, 'logo_size_percent')
   return parseLogoSizePercent(stored ?? DEFAULT_LOGO_SIZE_PERCENT)

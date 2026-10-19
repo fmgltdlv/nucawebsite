@@ -4,10 +4,6 @@ export const JOIN_DIGITAL_FORM_ENABLED = false
 /** Max size for uploaded membership application PDFs. */
 export const MEMBERSHIP_APPLICATION_PDF_MAX_BYTES = 10 * 1024 * 1024
 
-/** Official chapter membership PDF (Oct 2025). */
-export const MEMBERSHIP_APPLICATION_PDF_URL =
-  'https://nucalasvegas.com/wp-content/uploads/2025/10/NUCA-Application_MASTER-updated-OCT-2025.pdf'
-
 export const contractorRevenueTiers = [
   { id: 'contractor_under_2m', label: 'Less than $2,000,000', dues: '$2,000' },
   { id: 'contractor_2m_5m', label: '$2,000,001 to $5,000,000', dues: '$2,700' },

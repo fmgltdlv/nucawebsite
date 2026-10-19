@@ -11,8 +11,9 @@ import {
 import { applyMemberLogoChange } from './member-logos'
 import { getMemberLogoR2Key, updateMemberLogoKey } from './members-db'
 import { dirtPdfKey, leadershipPhotoKey, uploadImage, uploadPdf } from './r2-assets'
+import { applyMembershipApplicationPdfChange } from './membership-application-pdf'
 import { applySiteLogoChange } from './site-logo'
-import { getSiteLogoR2Key, setSiteLogoR2Key } from './site-settings'
+import { getMembershipApplicationPdfR2Key, getSiteLogoR2Key, setSiteLogoR2Key } from './site-settings'
 
 export function parseAssetManageRequest(body: Record<string, File | string>): {
   type?: AssetType
@@ -44,6 +45,8 @@ export async function applyAssetManage(
       return manageMemberLogo(r2, db, entityId, currentKey, body)
     case 'dirt_pdf':
       return manageDirtPdf(r2, db, entityId, currentKey, body)
+    case 'membership_pdf':
+      return manageMembershipPdf(r2, db, currentKey, body)
     case 'leadership_photo':
       return manageLeadershipPhoto(r2, db, entityId, currentKey, body)
     case 'event_thumbnail':
@@ -178,6 +181,28 @@ async function manageMemberLogo(
     mappedBody,
     previousKey,
   )
+  return error ? { ok: false, error } : { ok: true }
+}
+
+async function manageMembershipPdf(
+  r2: R2Bucket,
+  db: D1Database,
+  currentKey: string,
+  body: Record<string, File | string>,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const previousKey = await getMembershipApplicationPdfR2Key(db)
+  if ((previousKey ?? '') !== currentKey) {
+    return { ok: false, error: 'Membership application PDF has changed. Refresh and try again.' }
+  }
+
+  const mappedBody: Record<string, File | string> = {
+    membership_pdf: body.file,
+    existing_membership_pdf_key:
+      typeof body.existing_asset_key === 'string' ? body.existing_asset_key : '',
+    remove_membership_pdf: body.remove_asset === '1' ? '1' : '',
+  }
+
+  const error = await applyMembershipApplicationPdfChange(r2, db, mappedBody, previousKey)
   return error ? { ok: false, error } : { ok: true }
 }
 

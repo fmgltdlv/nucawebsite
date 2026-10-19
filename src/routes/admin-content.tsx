@@ -4,6 +4,7 @@ import type { AdminLayoutProps } from '../lib/site-context'
 import { parseThemeId } from '../config/themes'
 import type { Env } from '../env'
 import { getAdminCtx } from '../lib/admin-guard'
+import { applyMembershipApplicationPdfChange } from '../lib/membership-application-pdf'
 import { writeAuditLog } from '../lib/security/audit-log'
 import { clientIp } from '../lib/security/rate-limit'
 import { optionalSafeHref } from '../lib/security/urls'
@@ -74,6 +75,7 @@ import {
   getContactInfo,
   getFooterInfo,
   getHeaderBranding,
+  getMembershipApplicationPdfR2Key,
   getSiteLogoR2Key,
   getSiteLogoSizePercent,
   getThemeId,
@@ -805,14 +807,31 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
     return c.html(preview as string | Promise<string>)
   })
 
+  app.post('/admin/content/pages/join/application-pdf', async (c) => {
+    getAdminCtx(c)
+    const body = await c.req.parseBody()
+    const previousKey = await getMembershipApplicationPdfR2Key(c.env.DB)
+    const error = await applyMembershipApplicationPdfChange(
+      c.env.R2,
+      c.env.DB,
+      body as Record<string, File | string>,
+      previousKey,
+    )
+    if (error) {
+      return c.redirect(`/admin/content/pages/join?error=${encodeURIComponent(error)}`, 303)
+    }
+    return c.redirect('/admin/content/pages/join?ok=1', 303)
+  })
+
   app.get('/admin/content/pages/:slug', async (c) => {
     const ctx = getAdminCtx(c)
     const slug = c.req.param('slug')
     const page = await getPageBySlug(c.env.DB, slug)
-    const [committees, customPages, internalLinks] = await Promise.all([
+    const [committees, customPages, internalLinks, membershipPdfKey] = await Promise.all([
       listCommittees(c.env.DB),
       listCustomPageSummaries(c.env.DB),
       listSiteInternalLinks(c.env.DB),
+      slug === 'join' ? getMembershipApplicationPdfR2Key(c.env.DB) : Promise.resolve(null),
     ])
     const pageLabels = buildPageLabels(committees, customPages)
     return c.html(
@@ -824,7 +843,9 @@ export function registerAdminContentRoutes(app: Hono<{ Bindings: Env; Variables:
         pageLabel={pageLabels[slug] ?? page?.title ?? slug}
         committees={committees}
         internalLinks={internalLinks}
+        membershipApplicationPdfKey={membershipPdfKey}
         flash={flashMessage(c, '1')}
+        error={c.req.query('error')}
       />,
     )
   })

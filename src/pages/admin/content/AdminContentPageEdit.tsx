@@ -1,9 +1,11 @@
 import type { PageRecord } from '../../../lib/pages-db'
 import type { SiteInternalLink } from '../../../lib/site-internal-links'
 import type { CommitteeRecord } from '../../../lib/committees-db'
+import { membershipApplicationPdfUrl } from '../../../lib/membership-application-pdf'
 import { blocksFromMarkdown, parsePageBlocks, serializePageBlocks } from '../../../lib/page-blocks'
 import { pagePreviewDraftPath, pagePreviewPath, pagePublicPath } from '../../../lib/page-paths'
 import { isCustomPage } from '../../../lib/pages-db'
+import { AdminAssetPickerField } from '../../../views/admin/AdminAssetPickerField'
 import { AdminShell } from '../../../views/AdminShell'
 import type { AdminContext } from '../../../lib/admin-context'
 import type { PageProps } from '../../../types/page'
@@ -23,7 +25,9 @@ export function AdminContentPageEditPage({
   pageLabel,
   committees,
   internalLinks,
+  membershipApplicationPdfKey,
   flash,
+  error,
   ...site
 }: PageProps & {
   ctx: AdminContext
@@ -32,7 +36,9 @@ export function AdminContentPageEditPage({
   pageLabel: string
   committees: CommitteeRecord[]
   internalLinks: SiteInternalLink[]
+  membershipApplicationPdfKey?: string | null
   flash?: string
+  error?: string
 }) {
   const label = pageLabel
   const publicPath = pagePublicPath(slug)
@@ -68,9 +74,39 @@ export function AdminContentPageEditPage({
         )}
       </p>
       {flash && <p class="admin-flash">{flash}</p>}
+      {error && <p class="form-hint-warn">{error}</p>}
       <p id="page-edit-unsaved" class="admin-flash admin-flash-warn" hidden>
         You have unsaved changes.
       </p>
+      {slug === 'join' ? (
+        <form
+          class="form admin-form-section"
+          method="post"
+          action="/admin/content/pages/join/application-pdf"
+          encType="multipart/form-data"
+        >
+          <h2>Membership application PDF</h2>
+          <p class="admin-note">
+            This is the blank form visitors download on the Join page. Upload a PDF or choose one from
+            the asset library.
+          </p>
+          <AdminAssetPickerField
+            label="Application PDF"
+            kind="pdf"
+            hiddenInputName="existing_membership_pdf_key"
+            fileInputName="membership_pdf"
+            fileInputId="membership_pdf"
+            fileAccept="application/pdf"
+            currentKey={membershipApplicationPdfKey}
+            currentUrl={membershipApplicationPdfUrl(membershipApplicationPdfKey)}
+            removeCheckboxName="remove_membership_pdf"
+            hint="PDF up to 25 MB. Removing it hides the public download button until a new file is saved."
+          />
+          <button type="submit" class="btn btn-primary">
+            Save application PDF
+          </button>
+        </form>
+      ) : null}
       {page && isCustomPage(page) ? (
         <p class="admin-help">
           Public URL: <a href={publicPath}>{publicPath}</a>
@@ -114,7 +150,7 @@ export function AdminContentPageEditPage({
                 {slug === 'home'
                   ? 'Build the home page with a hero banner, upcoming events list, THE DIRT feed, and any other content blocks (sections, headings, paragraphs, calendars, images, and more). Use an image Display mode of full-screen banner for a fixed social banner that fades as visitors scroll, or popup overlay for a dismissible flyer. Event and news feed items are pulled automatically from the calendar and THE DIRT content.'
                   : slug === 'join'
-                    ? 'Build Join page content with benefits, stats, and membership types blocks. Application form chrome stays fixed below. Manage type labels in Membership types.'
+                    ? 'Build Join page content with benefits, stats, and membership types blocks. Application form chrome stays fixed below. The downloadable blank PDF is managed in the section above this editor. Manage type labels in Membership types.'
                     : slug === 'contact'
                       ? 'Edit contact form labels. Chapter contact details still come from Site settings. Newsletter signup is on the THE DIRT page.'
                       : slug === 'resources'

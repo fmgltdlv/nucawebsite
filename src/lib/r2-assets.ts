@@ -79,6 +79,10 @@ export function dirtPdfKey(id: string): string {
   return `dirt/${id}.pdf`
 }
 
+export function membershipApplicationPdfKey(): string {
+  return 'forms/membership-application.pdf'
+}
+
 export function leadershipPhotoKey(id: string, filename: string): string {
   const ext = filename.includes('.') ? filename.split('.').pop() : 'jpg'
   return `leadership/${id}.${ext}`

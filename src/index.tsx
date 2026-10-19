@@ -29,8 +29,8 @@ import { getPostBySlug, listPublishedPosts } from './lib/posts-db'
 import { listQaItems } from './lib/qa-db'
 import { listResourceItems } from './lib/resource-items-db'
 import { listMembershipTypes } from './lib/membership-types-db'
-import { getMemberGridLogoSize, getMemberListPaginationEnabled } from './lib/site-settings'
-import { getAssetObject, applicationPdfKey, deleteAsset, uploadAsset, isPrivateAssetKey } from './lib/r2-assets'
+import { getMemberGridLogoSize, getMemberListPaginationEnabled, getMembershipApplicationPdfR2Key } from './lib/site-settings'
+import { getAssetObject, applicationPdfKey, deleteAsset, getAssetUrl, uploadAsset, isPrivateAssetKey } from './lib/r2-assets'
 import { MEMBERSHIP_APPLICATION_PDF_MAX_BYTES } from './data/membership-application'
 import { parseUploadFiles } from './lib/library-asset-upload'
 import { subscribeNewsletter } from './lib/newsletter-db'
@@ -468,11 +468,12 @@ app.post('/events/:id/rsvp', async (c) => {
 app.get('/advocacy', (c) => c.redirect('/about/committees', 301))
 
 app.get('/join', async (c) => {
-  const [site, page, committees, membershipTypes] = await Promise.all([
+  const [site, page, committees, membershipTypes, membershipPdfKey] = await Promise.all([
     siteProps(c),
     getPageBySlug(c.env.DB, 'join', true),
     listCommittees(c.env.DB, true),
     listMembershipTypes(c.env.DB, true),
+    getMembershipApplicationPdfR2Key(c.env.DB),
   ])
   return c.html(
     <JoinPage
@@ -480,6 +481,7 @@ app.get('/join', async (c) => {
       page={page}
       committees={committees}
       membershipTypes={membershipTypes}
+      membershipApplicationPdfUrl={membershipPdfKey ? getAssetUrl(membershipPdfKey) : null}
     />,
   )
 })

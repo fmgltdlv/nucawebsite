@@ -73,7 +73,9 @@ export async function countAssetKeyReferences(db: D1Database, key: string): Prom
         (SELECT COUNT(*) FROM events WHERE thumbnail_r2_key = ?1) +
         (SELECT COUNT(*) FROM events WHERE flyer_r2_key = ?1) +
         (SELECT COUNT(*) FROM library_assets WHERE r2_key = ?1) +
-        (SELECT COUNT(*) FROM site_settings WHERE key = 'logo_r2_key' AND value_json = ?2)
+        (SELECT COUNT(*) FROM site_settings
+          WHERE key IN ('logo_r2_key', 'membership_application_pdf_r2_key')
+            AND value_json = ?2)
       AS total`,
     )
     .bind(key, JSON.stringify(key))

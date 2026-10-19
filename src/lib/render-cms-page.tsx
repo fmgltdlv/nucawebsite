@@ -95,6 +95,7 @@ export function renderCmsPage(
         page={page}
         committees={extras?.committees ?? []}
         membershipTypes={extras?.membershipTypes ?? []}
+        membershipApplicationPdfUrl={extras?.membershipApplicationPdfUrl ?? null}
       />
     )
   }

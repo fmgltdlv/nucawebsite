@@ -17,7 +17,9 @@ import { listQaItems, type QaRecord } from './qa-db'
 import { listLeadership, type LeadershipRecord } from './leadership-db'
 import type { DirtReleaseRecord } from './dirt-db'
 import type { PostRecord } from './posts-db'
+import { membershipApplicationPdfUrl } from './membership-application-pdf'
 import { listMembershipTypes, type MembershipTypeRecord } from './membership-types-db'
+import { getMembershipApplicationPdfR2Key } from './site-settings'
 
 export type EventsListExtras = {
   events: ExpandedEventRecord[]
@@ -43,6 +45,7 @@ export type CmsPageExtras = {
   leaders?: LeadershipRecord[]
   eventsList?: EventsListExtras
   membershipTypes?: MembershipTypeRecord[]
+  membershipApplicationPdfUrl?: string | null
 }
 
 export async function loadPageCalendarEvents(
@@ -120,12 +123,14 @@ export async function loadCmsPageExtras(
     extras.dirtReleases = dirtReleases
   }
   if (slug === 'join') {
-    const [committees, membershipTypes] = await Promise.all([
+    const [committees, membershipTypes, membershipPdfKey] = await Promise.all([
       listCommittees(db, true),
       listMembershipTypes(db, true),
+      getMembershipApplicationPdfR2Key(db),
     ])
     extras.committees = committees
     extras.membershipTypes = membershipTypes
+    extras.membershipApplicationPdfUrl = membershipApplicationPdfUrl(membershipPdfKey)
   }
   const committeeKey = committeeKeyFromSlug(slug)
   if (committeeKey) {

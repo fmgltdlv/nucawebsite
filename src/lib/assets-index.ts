@@ -2,6 +2,7 @@ export type AssetType =
   | 'site_logo'
   | 'member_logo'
   | 'dirt_pdf'
+  | 'membership_pdf'
   | 'leadership_photo'
   | 'event_thumbnail'
   | 'event_flyer'
@@ -11,6 +12,7 @@ export const ASSET_TYPES: AssetType[] = [
   'site_logo',
   'member_logo',
   'dirt_pdf',
+  'membership_pdf',
   'leadership_photo',
   'event_thumbnail',
   'event_flyer',
@@ -21,6 +23,7 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   site_logo: 'Site logo',
   member_logo: 'Member logos',
   dirt_pdf: 'THE DIRT PDFs',
+  membership_pdf: 'Membership application PDF',
   leadership_photo: 'Leadership photos',
   event_thumbnail: 'Event thumbnails',
   event_flyer: 'Event flyers',
@@ -96,6 +99,33 @@ async function listMemberLogoAssets(db: D1Database): Promise<AssetIndexEntry[]> 
     adminEditUrl: '/admin/members',
     contentKind: 'image' as const,
   }))
+}
+
+async function listMembershipPdfAssets(db: D1Database): Promise<AssetIndexEntry[]> {
+  const row = await db
+    .prepare('SELECT value_json FROM site_settings WHERE key = ?')
+    .bind('membership_application_pdf_r2_key')
+    .first<{ value_json: string }>()
+  if (!row) return []
+
+  let key: string | null = null
+  try {
+    key = JSON.parse(row.value_json) as string
+  } catch {
+    return []
+  }
+  if (!key) return []
+
+  return [
+    {
+      type: 'membership_pdf' as const,
+      key,
+      entityId: 'join',
+      label: 'Membership application',
+      adminEditUrl: '/admin/content/pages/join',
+      contentKind: 'pdf' as const,
+    },
+  ]
 }
 
 async function listDirtPdfAssets(db: D1Database): Promise<AssetIndexEntry[]> {
@@ -194,6 +224,7 @@ export async function listIndexedAssets(
     site_logo: () => listSiteLogoAssets(db),
     member_logo: () => listMemberLogoAssets(db),
     dirt_pdf: () => listDirtPdfAssets(db),
+    membership_pdf: () => listMembershipPdfAssets(db),
     leadership_photo: () => listLeadershipPhotoAssets(db),
     event_thumbnail: () => listEventImageAssets(db, 'thumbnail_r2_key', 'event_thumbnail'),
     event_flyer: () => listEventImageAssets(db, 'flyer_r2_key', 'event_flyer'),
