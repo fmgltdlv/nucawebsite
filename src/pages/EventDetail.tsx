@@ -101,6 +101,7 @@ export function EventDetailPage({
   headerBranding,
   navigation,
   staffInboxCount,
+  turnstileSiteKey,
   occurrence,
   rsvpCount = 0,
   rsvpError,
@@ -120,7 +121,7 @@ export function EventDetailPage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount, turnstileSiteKey })}
       title={master.title}
       description={master.description ?? undefined}
     >

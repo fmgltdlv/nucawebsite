@@ -20,6 +20,7 @@ export function EventsPage({
   headerBranding,
   navigation,
   staffInboxCount,
+  turnstileSiteKey,
   events,
   calendarEvents,
   view,
@@ -55,7 +56,7 @@ export function EventsPage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount, turnstileSiteKey })}
       title={title}
       description={cmsPage?.meta_description ?? undefined}
     >

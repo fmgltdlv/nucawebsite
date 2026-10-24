@@ -16,6 +16,7 @@ export function ResourcesPage({
   headerBranding,
   navigation,
   staffInboxCount,
+  turnstileSiteKey,
   page,
   items,
   calendarEvents,
@@ -29,7 +30,7 @@ export function ResourcesPage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount, turnstileSiteKey })}
       title="Resources"
       description={page?.meta_description ?? undefined}
     >

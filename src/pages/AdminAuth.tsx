@@ -7,7 +7,7 @@ export function AdminLoginPage({
   ...site
 }: PageProps & { error?: string; turnstileSiteKey?: string }) {
   return (
-    <Layout {...pickLayoutSite(site)} title="Admin sign in">
+    <Layout {...pickLayoutSite({ ...site, turnstileSiteKey })} title="Admin sign in">
       <PageHeader title="Staff sign in" lead="Secretary and authorized staff only." />
       <section class="section">
         <div class="container">

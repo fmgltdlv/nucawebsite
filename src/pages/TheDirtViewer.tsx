@@ -16,12 +16,13 @@ export function TheDirtViewerPage({
   headerBranding,
   navigation,
   staffInboxCount,
+  turnstileSiteKey,
   release,
 }: PageProps & { release: DirtReleaseRecord }) {
   const pdfUrl = getAssetUrl(release.pdf_r2_key)
 
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount })} title={release.title}>
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount, turnstileSiteKey })} title={release.title}>
       <PageHeader title={release.title} lead={`Published ${formatArchiveDate(release.published_at)}`} />
       <section class="section">
         <div class="container">

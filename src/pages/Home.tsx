@@ -192,6 +192,7 @@ export function HomePage({
   headerBranding,
   navigation,
   staffInboxCount,
+  turnstileSiteKey,
   page,
   events,
   dirtReleases,
@@ -209,7 +210,7 @@ export function HomePage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount, turnstileSiteKey })}
       title="Home"
       description={page?.meta_description ?? HOME_DESCRIPTION}
     >

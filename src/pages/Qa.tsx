@@ -15,6 +15,7 @@ export function QaPage({
   headerBranding,
   navigation,
   staffInboxCount,
+  turnstileSiteKey,
   items,
   page,
 }: PageProps & { items: QaRecord[]; page?: PageRecord | null }) {
@@ -25,7 +26,7 @@ export function QaPage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount, turnstileSiteKey })}
       title={title}
       description={page?.meta_description ?? undefined}
     >

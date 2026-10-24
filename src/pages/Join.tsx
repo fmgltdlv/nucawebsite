@@ -21,6 +21,7 @@ export function JoinPage({
   headerBranding,
   navigation,
   staffInboxCount,
+  turnstileSiteKey,
   committees,
   page,
   membershipTypes = [],
@@ -39,7 +40,7 @@ export function JoinPage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount, turnstileSiteKey })}
       title={title}
       description={page?.meta_description ?? undefined}
     >

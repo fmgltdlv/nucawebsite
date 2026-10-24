@@ -15,6 +15,7 @@ export function CommitteeDetailPage({
   headerBranding,
   navigation,
   staffInboxCount,
+  turnstileSiteKey,
   committee,
   page,
   calendarEvents,
@@ -25,7 +26,7 @@ export function CommitteeDetailPage({
 }) {
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount, turnstileSiteKey })}
       title={page.title}
       description={page.meta_description ?? undefined}
     >

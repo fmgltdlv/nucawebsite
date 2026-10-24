@@ -21,6 +21,7 @@ export function StatusPage({
   headerBranding,
   navigation,
   staffInboxCount,
+  turnstileSiteKey,
   title,
   heading,
   lead,
@@ -30,7 +31,7 @@ export function StatusPage({
   children,
 }: StatusPageProps) {
   return (
-    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount })} title={title}>
+    <Layout {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount, turnstileSiteKey })} title={title}>
       <PageHeader title={heading} lead={lead} />
       <section class="section">
         <div class={`container${prose ? ' prose' : ''}`}>

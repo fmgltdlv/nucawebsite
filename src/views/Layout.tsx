@@ -161,7 +161,7 @@ export function Layout({
             </p>
           </div>
         </footer>
-        <script src="/site.js?v=21" defer></script>
+        <script src="/site.js?v=22" defer></script>
         {turnstileSiteKey ? (
           <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
         ) : null}

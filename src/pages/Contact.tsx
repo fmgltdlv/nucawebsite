@@ -30,6 +30,7 @@ export function ContactPage({
   headerBranding,
   navigation,
   staffInboxCount,
+  turnstileSiteKey,
   page,
 }: PageProps & { contact?: ContactInfo; page?: PageRecord | null }) {
   const title = page?.title ?? 'Contact us'
@@ -43,7 +44,7 @@ export function ContactPage({
 
   return (
     <Layout
-      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount })}
+      {...pickLayoutSite({ theme, contact, footer, breakingNews, logoUrl, logoSizePercent, headerBranding, navigation, staffInboxCount, turnstileSiteKey })}
       title={title}
       description={page?.meta_description ?? undefined}
     >
