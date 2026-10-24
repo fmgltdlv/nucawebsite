@@ -23,15 +23,18 @@ function chapterDateKey(isoOrDate) {
 
   window.nucaSafeHref = safeHref
 
-  function isPublicProtectedForm(form) {
-    if (!(form instanceof HTMLFormElement)) return false
-    if ((form.getAttribute('method') || 'get').toLowerCase() !== 'post') return false
+  function publicFormAction(form) {
+    if (!(form instanceof HTMLFormElement)) return null
+    if ((form.getAttribute('method') || 'get').toLowerCase() !== 'post') return null
     try {
       const path = new URL(form.getAttribute('action') || '', window.location.origin).pathname
-      if (path === '/contact' || path === '/join' || path === '/newsletter/subscribe') return true
-      return /^\/events\/[^/]+\/rsvp$/.test(path)
+      if (path === '/contact') return 'contact'
+      if (path === '/join') return 'join'
+      if (path === '/newsletter/subscribe') return 'newsletter'
+      if (/^\/events\/[^/]+\/rsvp$/.test(path)) return 'rsvp'
+      return null
     } catch {
-      return false
+      return null
     }
   }
 
@@ -39,15 +42,17 @@ function chapterDateKey(isoOrDate) {
     const sitekey = document.querySelector('meta[name="cf-turnstile-sitekey"]')?.getAttribute('content')
     if (!sitekey) return
     document.querySelectorAll('form').forEach((form) => {
-      if (!isPublicProtectedForm(form) || form.querySelector('.cf-turnstile')) return
+      const action = publicFormAction(form)
+      if (!action || form.querySelector('.cf-turnstile')) return
       const el = document.createElement('div')
       el.className = 'cf-turnstile'
       el.setAttribute('data-sitekey', sitekey)
+      el.setAttribute('data-action', action)
       const submit = form.querySelector('[type="submit"]')
       if (submit) submit.before(el)
       else form.append(el)
       if (window.turnstile && typeof window.turnstile.render === 'function') {
-        window.turnstile.render(el, { sitekey })
+        window.turnstile.render(el, { sitekey, action })
       }
     })
   }

@@ -149,7 +149,7 @@ export function registerAdminRoutes(app: Hono<{ Bindings: Env; Variables: AdminV
     const body = await c.req.parseBody()
     const turnstileToken =
       typeof body['cf-turnstile-response'] === 'string' ? body['cf-turnstile-response'] : undefined
-    if (!(await verifyTurnstile(c.env, turnstileToken, ip))) {
+    if (!(await verifyTurnstile(c.env, turnstileToken, 'login', ip))) {
       await writeAuditLog(c.env.DB, { action: 'login.turnstile_failed', ip })
       return c.html(
         <AdminLoginPage

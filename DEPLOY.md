@@ -82,24 +82,27 @@ Apply migrations `0021_security.sql` and `0030_form_attempts.sql` before deployi
 
 Use both for defense in depth, or code-only if you prefer everything in the repo.
 
-### Turnstile (optional bot protection)
+### Turnstile (bot protection)
 
-Turnstile is **wired but off** until you add **both** keys. If only one key is set, login and public forms fail closed (the security check is rejected).
+Turnstile is **on** when both keys are set. If only one key is set, login and public forms fail closed.
 
-1. In [Cloudflare Turnstile](https://dash.cloudflare.com/?to=/:account/turnstile), create a widget for your site hostname.
-2. Set the **site key** (public) as a Worker var and the **secret key** as a Worker secret:
+The Worker also requires Siteverify `action` to match the form (`contact`, `join`, `newsletter`, `rsvp`, `login`) and `hostname` to be listed in `TURNSTILE_HOSTNAMES`. Production hostnames must not include `localhost` or `127.0.0.1`.
+
+1. Create a managed widget for `www.nucalasvegas.com`, `nucalasvegas.com`, `localhost`, and `127.0.0.1`.
+2. Set the **site key** (public) and hostname allowlist as Worker vars, and the **secret key** as a Worker secret:
 
 ```bash
-# wrangler.jsonc vars (or dashboard → Settings → Variables)
+# wrangler.jsonc vars
 "TURNSTILE_SITE_KEY": "0x..."
+"TURNSTILE_HOSTNAMES": "www.nucalasvegas.com,nucalasvegas.com"
 
 npx wrangler secret put TURNSTILE_SECRET_KEY
 ```
 
 3. Redeploy. The login form and public POST forms (contact, join, newsletter, RSVP) show the widget when `TURNSTILE_SITE_KEY` is set.
-4. The Worker verifies `cf-turnstile-response` when `TURNSTILE_SECRET_KEY` is set.
+4. The Worker verifies `cf-turnstile-response` with Siteverify.
 
-If **neither** Turnstile key is set, forms work as before (rate limiting still applies).
+If **neither** Turnstile key is set, forms work as before (rate limiting still applies). Local `.dev.vars` should set `TURNSTILE_HOSTNAMES=localhost,127.0.0.1`.
 
 ### Bootstrap admin password
 
@@ -116,13 +119,13 @@ Keep `JWT_SECRET` as a long random value (32+ characters). Production login retu
 |--------------|---------|
 | `JWT_SECRET` | Signs admin session JWT cookies (use 32+ random characters) |
 | `ADMIN_PASSWORD` | Password for the pre-seeded admin |
-| `TURNSTILE_SITE_KEY` | Optional Turnstile widget (public var) |
-| `TURNSTILE_SECRET_KEY` | Optional Turnstile verification (secret) |
+| `TURNSTILE_SITE_KEY` | Turnstile widget (public var) |
+| `TURNSTILE_SECRET_KEY` | Turnstile verification (secret) |
+| `TURNSTILE_HOSTNAMES` | Comma-separated frontend hostnames allowed by Siteverify |
 
 ```bash
 npx wrangler secret put JWT_SECRET
 npx wrangler secret put ADMIN_PASSWORD
-# optional:
 npx wrangler secret put TURNSTILE_SECRET_KEY
 ```
 

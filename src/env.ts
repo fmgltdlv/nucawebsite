@@ -11,4 +11,6 @@ export type Env = {
   TURNSTILE_SECRET_KEY?: string
   /** Cloudflare Turnstile site key (public; shown on login form). */
   TURNSTILE_SITE_KEY?: string
+  /** Comma-separated frontend hostnames allowed by Siteverify (no localhost in production). */
+  TURNSTILE_HOSTNAMES?: string
 }

@@ -23,7 +23,7 @@ export function AdminLoginPage({
             </div>
             {turnstileSiteKey ? (
               <div class="form-field">
-                <div class="cf-turnstile" data-sitekey={turnstileSiteKey} />
+                <div class="cf-turnstile" data-sitekey={turnstileSiteKey} data-action="login" />
               </div>
             ) : null}
             <button type="submit" class="btn btn-primary">Sign in</button>

@@ -28,6 +28,8 @@
     }
   ],
   "vars": {
-    "ADMIN_EMAIL": "info@nucalasvegas.com"
+    "ADMIN_EMAIL": "info@nucalasvegas.com",
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAFklHpN8lNSJ0E_q",
+    "TURNSTILE_HOSTNAMES": "www.nucalasvegas.com,nucalasvegas.com"
   }
 }

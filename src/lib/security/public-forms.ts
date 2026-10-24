@@ -32,7 +32,7 @@ export async function enforcePublicFormGuard(
 ): Promise<PublicFormGuardResult> {
   if (await isFormRateLimited(env.DB, ip, action)) return 'rate'
   await recordFormAttempt(env.DB, ip, action)
-  if (!(await verifyTurnstile(env, turnstileToken, ip))) return 'turnstile'
+  if (!(await verifyTurnstile(env, turnstileToken, action, ip))) return 'turnstile'
   return 'ok'
 }
 
