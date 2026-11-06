@@ -27,6 +27,9 @@
       "name": "EMAIL"
     }
   ],
+  "version_metadata": {
+    "binding": "CF_VERSION_METADATA"
+  },
   "vars": {
     "ADMIN_EMAIL": "info@nucalasvegas.com",
     "TURNSTILE_SITE_KEY": "0x4AAAAAAFklHpN8lNSJ0E_q",

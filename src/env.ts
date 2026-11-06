@@ -3,6 +3,7 @@ export type Env = {
   R2: R2Bucket
   ASSETS: Fetcher
   EMAIL?: SendEmail
+  CF_VERSION_METADATA?: WorkerVersionMetadata
   JWT_SECRET: string
   /** Only used to seed the first admin when `users` is empty. Optional after bootstrap. */
   ADMIN_PASSWORD?: string
