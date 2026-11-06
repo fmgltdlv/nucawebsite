@@ -40,3 +40,15 @@ export function formatAdminDate(iso: string) {
     timeZone: CHAPTER_TIMEZONE,
   })
 }
+
+export function formatAdminDateTime(iso: string) {
+  return new Date(iso).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: CHAPTER_TIMEZONE,
+    timeZoneName: 'short',
+  })
+}

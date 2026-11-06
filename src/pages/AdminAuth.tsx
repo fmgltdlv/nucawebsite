@@ -1,4 +1,5 @@
 import { Layout, PageHeader, pickLayoutSite } from '../views/Layout'
+import { ServerLastUpdated } from '../views/admin/ServerLastUpdated'
 import type { PageProps } from '../types/page'
 
 export function AdminLoginPage({
@@ -28,6 +29,12 @@ export function AdminLoginPage({
             ) : null}
             <button type="submit" class="btn btn-primary">Sign in</button>
           </form>
+          {site.serverLastUpdated && (
+            <ServerLastUpdated
+              value={site.serverLastUpdated}
+              className="admin-server-updated admin-server-updated-login"
+            />
+          )}
         </div>
       </section>
     </Layout>

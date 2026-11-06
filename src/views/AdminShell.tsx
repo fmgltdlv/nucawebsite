@@ -5,6 +5,7 @@ import type { SiteLayoutProps } from '../types/page'
 import { Layout, pickLayoutSite } from './Layout'
 import { AdminAssetLibraryDialog } from './admin/AdminAssetLibraryDialog'
 import { AdminCountBadge } from './admin/AdminCountBadge'
+import { ServerLastUpdated } from './admin/ServerLastUpdated'
 
 type NavItem = { href: string; label: string; badge?: number }
 
@@ -23,6 +24,7 @@ export function AdminShell({
   title,
   children,
   activePath,
+  serverLastUpdated,
 }: SiteLayoutProps & {
   user: User
   inboxCounts: AdminInboxCounts
@@ -88,9 +90,12 @@ export function AdminShell({
               </li>
             </ul>
           </nav>
-          <form method="post" action="/admin/logout" class="admin-logout">
-            <button type="submit" class="btn btn-secondary btn-sm">Sign out</button>
-          </form>
+          <div class="admin-sidebar-footer">
+            <form method="post" action="/admin/logout" class="admin-logout">
+              <button type="submit" class="btn btn-secondary btn-sm">Sign out</button>
+            </form>
+            {serverLastUpdated && <ServerLastUpdated value={serverLastUpdated} />}
+          </div>
         </aside>
         <div class="admin-main">
           <header class="admin-main-header">

@@ -19,6 +19,7 @@ import {
   type FooterInfo,
   type HeaderBranding,
 } from './site-settings'
+import { readServerLastUpdated, type ServerLastUpdated } from './worker-version'
 
 export type PublicSiteContext = {
   theme: ThemeId
@@ -34,6 +35,7 @@ export type PublicSiteContext = {
 
 export type AdminLayoutProps = PublicSiteContext & {
   staffInboxCount?: number
+  serverLastUpdated: ServerLastUpdated
 }
 
 export async function loadPublicSiteContext(env: Env): Promise<PublicSiteContext> {
@@ -70,5 +72,6 @@ export async function loadAdminLayoutProps(
   return {
     ...site,
     staffInboxCount: total > 0 ? total : undefined,
+    serverLastUpdated: readServerLastUpdated(env),
   }
 }

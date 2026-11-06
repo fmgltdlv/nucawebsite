@@ -4075,6 +4075,8 @@ body:has(.page-preview-banner) .page-image-overlay-card::before,
   position: sticky;
   top: var(--header-height);
   align-self: start;
+  display: flex;
+  flex-direction: column;
   max-height: calc(100vh - var(--header-height));
   overflow-y: auto;
   background: var(--color-surface-elevated, #f4f4f5);
@@ -4176,8 +4178,32 @@ body:has(.page-preview-banner) .page-image-overlay-card::before,
   color: var(--color-muted);
 }
 
+.admin-sidebar-footer {
+  margin-top: auto;
+  padding-top: 1.5rem;
+}
+
 .admin-logout {
-  margin-top: 1.5rem;
+  margin: 0;
+}
+
+.admin-server-updated {
+  margin: 1rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--color-muted);
+}
+
+.admin-server-updated-label {
+  display: block;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.2rem;
+}
+
+.admin-server-updated-login {
+  margin-top: 1.25rem;
 }
 
 .admin-main {
