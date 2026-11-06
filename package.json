@@ -21,24 +21,24 @@
     "restore-events:remote": "node scripts/restore-events.mjs --remote"
   },
   "dependencies": {
-    "hono": "^4.7.7"
+    "hono": "^4.13.16"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260722.1",
-    "@tiptap/core": "^3.29.2",
-    "@tiptap/extension-color": "^3.29.2",
-    "@tiptap/extension-font-family": "^3.29.2",
-    "@tiptap/extension-highlight": "^3.29.2",
-    "@tiptap/extension-image": "^3.29.2",
-    "@tiptap/extension-link": "^3.29.2",
-    "@tiptap/extension-placeholder": "^3.29.2",
-    "@tiptap/extension-text-align": "^3.29.2",
-    "@tiptap/extension-text-style": "^3.29.2",
-    "@tiptap/extension-underline": "^3.29.2",
-    "@tiptap/pm": "^3.29.2",
-    "@tiptap/starter-kit": "^3.29.2",
+    "@cloudflare/workers-types": "^5.20261106.1",
+    "@tiptap/core": "^3.33.0",
+    "@tiptap/extension-color": "^3.33.0",
+    "@tiptap/extension-font-family": "^3.33.0",
+    "@tiptap/extension-highlight": "^3.33.0",
+    "@tiptap/extension-image": "^3.33.0",
+    "@tiptap/extension-link": "^3.33.0",
+    "@tiptap/extension-placeholder": "^3.33.0",
+    "@tiptap/extension-text-align": "^3.33.0",
+    "@tiptap/extension-text-style": "^3.33.0",
+    "@tiptap/extension-underline": "^3.33.0",
+    "@tiptap/pm": "^3.33.0",
+    "@tiptap/starter-kit": "^3.33.0",
     "esbuild": "^0.28.1",
     "typescript": "^5.8.3",
-    "wrangler": "^4.24.0"
+    "wrangler": "^4.158.0"
   }
 }
